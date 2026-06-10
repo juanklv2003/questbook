@@ -1,0 +1,62 @@
+Actúa como un Senior Full-Stack Developer experto en React, TypeScript, Tailwind CSS, Node.js, Express y bases de datos SQL (Neon/PostgreSQL).
+
+Quiero inicializar un proyecto llamado "Memo AI", una aplicación de estudio gratuita e inteligente.
+
+1. Stack Tecnológico
+
+Frontend: React con TypeScript (.tsx), inicializado con Vite. Estilos con Tailwind CSS y Lucide React para iconos.
+
+Backend: Node.js con Express.js (escrito en TypeScript preferiblemente).
+
+Base de Datos: PostgreSQL alojado en Neon (Serverless).
+
+IA: Google Gemini API (para generación de texto).
+
+2. Descripción de la Aplicación
+
+Memo AI es una plataforma donde los usuarios pueden organizar sus asignaturas en "Carpetas", dentro de las cuales hay "Mazos" de flashcards.
+Visualmente, el dashboard es un panel lateral oscuro y el área principal muestra los mazos como si fueran libros físicos con lomo, páginas y un marcapáginas (usando puro CSS/Tailwind).
+
+3. Flujo Principal (Core Features)
+
+Creación de Mazos (PDF a Flashcards):
+
+El frontend envía un PDF al backend.
+
+El backend usa multer para recibirlo y pdf-parse para extraer el texto.
+
+El backend envía el texto a Gemini con un prompt estricto para que devuelva un JSON estructurado con Preguntas y Respuestas.
+
+El backend guarda el Mazo y las Tarjetas en Neon y se las devuelve al frontend.
+
+Sesión de Estudio (Texto Libre):
+
+El usuario NO elige opciones A/B/C. Debe escribir la respuesta a mano en un <textarea>.
+
+El frontend envía: pregunta, respuesta_modelo y respuesta_usuario al backend.
+
+El backend le pide a Gemini que evalúe la respuesta del usuario comparándola con el modelo, y devuelva un JSON con: { aprobado: boolean, porcentaje: number, consejo: string }.
+
+4. Estructura de Base de Datos (Neon)
+
+Necesitaremos un esquema relacional básico:
+
+Tabla Folders (Carpetas)
+
+Tabla Decks (Mazos, con foreign key a Folders)
+
+Tabla Flashcards (con foreign key a Decks, columnas: pregunta, respuesta_modelo)
+
+5. Tarea Inicial Solicitada
+
+Para empezar, por favor provéeme lo siguiente:
+
+Los comandos exactos de terminal (npm/yarn) para inicializar las dos carpetas: memo-client (Vite React TS Tailwind) y memo-server (Node Express).
+
+La estructura de carpetas recomendada para el backend.
+
+El código inicial del archivo server.ts (o index.js) en Node/Express, configurando CORS, express.json, y la conexión básica a la base de datos usando el driver de neon-http o pg.
+
+El código del modelo SQL para crear las tablas en Neon.
+
+No me des todo el código de la app de golpe. Dame solo estas bases para poder arrancar el entorno de desarrollo local y confirmar que el servidor y el cliente se comunican.

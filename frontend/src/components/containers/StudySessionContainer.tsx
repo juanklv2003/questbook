@@ -1,0 +1,98 @@
+import { useFlashcardStudy } from "../../hooks/useFlashcardStudy"
+import { useDeckFlashcards } from "../../hooks/useDeckFlashcards"
+import { StudyPlayer } from "../organisms/StudyPlayer"
+import { PdfViewer } from "../organisms/PdfViewer"
+import { Loader2, AlertCircle, ArrowLeft } from "lucide-react"
+import { Button } from "../atoms/Button"
+
+export function StudySessionContainer({ deckId, onBack }: { deckId: string, onBack: () => void }) {
+  const { flashcards, deck, isLoading, error } = useDeckFlashcards(deckId);
+  
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Cargando sesión de estudio...</p>
+      </div>
+    );
+  }
+
+  if (error || !flashcards.length) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <AlertCircle className="w-12 h-12 text-rose-500" />
+        <p className="text-muted-foreground">{error || "No se encontraron tarjetas en este mazo."}</p>
+        <Button variant="outline" onClick={onBack}>Volver</Button>
+      </div>
+    );
+  }
+
+  return <StudySessionInner flashcards={flashcards} deck={deck} onBack={onBack} />;
+}
+
+function StudySessionInner({ flashcards, deck, onBack }: { flashcards: any[], deck: any, onBack: () => void }) {
+  const {
+    tarjetaActual,
+    progreso,
+    total,
+    haTerminado,
+    respuestaUsuario,
+    setRespuestaUsuario,
+    evaluarRespuesta,
+    isEvaluating,
+    feedbackIA,
+    siguienteTarjeta,
+    reintentar
+  } = useFlashcardStudy(flashcards);
+
+  if (haTerminado) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center animate-in zoom-in-95">
+        <div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
+          <span className="text-4xl">🎉</span>
+        </div>
+        <h2 className="text-3xl font-bold tracking-tight">¡Sesión Completada!</h2>
+        <p className="text-muted-foreground max-w-md">
+          Has repasado con éxito todas las {total} tarjetas de este mazo. ¡Buen trabajo!
+        </p>
+        <Button onClick={onBack} size="lg" className="mt-4">
+          Volver al Panel
+        </Button>
+      </div>
+    );
+  }
+
+  const hasPdf = Boolean(deck?.pdfUrl);
+
+  return (
+    <div className="w-full flex flex-col gap-4">
+      <div className="w-full flex justify-start">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground">
+          <ArrowLeft className="w-4 h-4 mr-2" /> Volver
+        </Button>
+      </div>
+      
+      <div className={`w-full ${hasPdf ? 'grid grid-cols-1 lg:grid-cols-2 gap-8' : ''}`}>
+        {hasPdf && (
+          <div className="h-full min-h-[600px]">
+            <PdfViewer pdfUrl={deck.pdfUrl} title={deck.name || 'Documento Original'} />
+          </div>
+        )}
+        <div className={hasPdf ? 'flex justify-center items-start' : ''}>
+          <StudyPlayer
+            card={tarjetaActual}
+            progress={progreso}
+            total={total}
+            userAnswer={respuestaUsuario}
+            setUserAnswer={setRespuestaUsuario}
+            onSubmit={evaluarRespuesta}
+            isEvaluating={isEvaluating}
+            evaluation={feedbackIA}
+            onNext={siguienteTarjeta}
+            onRetry={reintentar}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
