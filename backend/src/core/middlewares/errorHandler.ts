@@ -6,5 +6,7 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     return res.status(err.statusCode).json({ error: err.message });
   }
   console.error('UNEXPECTED ERROR:', err);
-  return res.status(500).json({ error: 'Internal Server Error' });
+  // En desarrollo mostramos el mensaje real para poder depurar rápido.
+  const message = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message;
+  return res.status(500).json({ error: message });
 };

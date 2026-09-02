@@ -1,12 +1,13 @@
 import * as React from "react"
-import { UploadCloud } from "lucide-react"
+import { UploadCloud, BrainCircuit, Loader2 } from "lucide-react"
 export interface DeckUploaderProps {
   onUpload: (file: File) => void;
   isGenerating: boolean;
   progress: number;
+  isAiProcessing?: boolean;
 }
 
-export function DeckUploader({ onUpload, isGenerating, progress }: DeckUploaderProps) {
+export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing = false }: DeckUploaderProps) {
   const [dragActive, setDragActive] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -71,15 +72,32 @@ export function DeckUploader({ onUpload, isGenerating, progress }: DeckUploaderP
       {isGenerating && (
         <div className="flex flex-col gap-2 w-full animate-in fade-in slide-in-from-bottom-4">
           <div className="flex justify-between text-sm font-medium">
-            <span>Generando tarjetas...</span>
+            <span className="flex items-center gap-2">
+              {isAiProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  La IA está generando tus tarjetas, puede tardar unos segundos...
+                </>
+              ) : (
+                <>
+                  <BrainCircuit className="w-4 h-4 text-primary" />
+                  Subiendo y leyendo el PDF...
+                </>
+              )}
+            </span>
             <span>{Math.round(progress)}%</span>
           </div>
           <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
             <div 
-              className="h-full bg-primary transition-all duration-300 ease-out"
-              style={{ width: `${progress}%` }}
+              className={`h-full bg-primary transition-all duration-300 ease-out ${isAiProcessing ? "animate-pulse" : ""}`}
+              style={{ width: `${Math.min(progress, 95)}%` }}
             />
           </div>
+          {isAiProcessing && (
+            <p className="text-xs text-muted-foreground text-center">
+              Los documentos muy extensos pueden tardar. No cierres ni recargues la página.
+            </p>
+          )}
         </div>
       )}
     </div>

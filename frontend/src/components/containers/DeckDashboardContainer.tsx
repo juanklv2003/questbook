@@ -8,7 +8,7 @@ import { Play, Plus, BookOpen } from "lucide-react"
 
 export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: string) => void }) {
   const { decks, isLoading, setDecks } = useDecks();
-  const { generateDeckFromPdf, isGenerating, progress, error } = useDeckGenerator();
+  const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error } = useDeckGenerator();
   const [showUploader, setShowUploader] = React.useState(false);
 
   const handleUpload = async (file: File) => {
@@ -37,6 +37,7 @@ export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: st
           onUpload={handleUpload} 
           isGenerating={isGenerating} 
           progress={progress} 
+          isAiProcessing={isAiProcessing}
         />
         {error && <p className="text-rose-500 font-medium">{error}</p>}
         <Button variant="ghost" onClick={() => setShowUploader(false)} disabled={isGenerating}>

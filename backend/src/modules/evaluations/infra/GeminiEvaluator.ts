@@ -1,12 +1,12 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { IEvaluatorPort } from '../domain/IEvaluatorPort';
-import { env } from '../../../config/env';
+import { GeminiFailover } from '../../../core/ai/GeminiFailover';
 
 export class GeminiEvaluator implements IEvaluatorPort {
-  private genAI: GoogleGenerativeAI;
+  private readonly gemini: GeminiFailover;
+  private readonly TIMEOUT_MS = 30000;
 
   constructor() {
-    this.genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+    this.gemini = new GeminiFailover();
   }
 
   async evaluate(question: string, correctAnswer: string, userAnswer: string): Promise<{
@@ -14,25 +14,30 @@ export class GeminiEvaluator implements IEvaluatorPort {
     isCorrect: boolean;
     feedback: string;
   }> {
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    
     const prompt = `
-You are a strict but fair teacher evaluating a student's answer to a flashcard.
+Eres un profesor estricto pero justo que evalúa la respuesta de un estudiante a una tarjeta de estudio.
+Tanto la pregunta, como la respuesta correcta y la respuesta del estudiante están en español.
 
-Question: ${question}
-Correct Answer: ${correctAnswer}
-Student's Answer: ${userAnswer}
+Pregunta: ${question}
+Respuesta correcta: ${correctAnswer}
+Respuesta del estudiante: ${userAnswer}
 
-Evaluate the student's answer based on comprehension, not exact wording. Does it capture the core concept?
-Return STRICTLY a JSON object with the following fields:
-- 'score': an integer from 0 to 100 representing how correct the answer is.
-- 'isCorrect': a boolean indicating if the answer is considered passing (score >= 70).
-- 'feedback': a brief, constructive explanation of what was right, wrong, or missing (max 2 sentences).
+Evalúa la respuesta del estudiante basándote en la comprensión del concepto, no en que use las mismas palabras.
+Responde ÚNICAMENTE con un objeto JSON con estos campos:
+- 'score': un número entero del 0 al 100 que indique lo correcta que es la respuesta.
+- 'isCorrect': un booleano que indique si la respuesta se considera aprobada (score >= 70).
+- 'feedback': una explicación breve y constructiva de qué estuvo bien, mal o faltó (máximo 2 frases).
 
-Do NOT include markdown blocks, greetings, or any other text. ONLY the JSON object.
+IMPORTANTE: El campo 'feedback' debe escribirse SIEMPRE EN ESPAÑOL, nunca en inglés. Usa un tono amable y motivador, en segunda persona, hablándole directamente al estudiante (por ejemplo: "Tu respuesta es demasiado vaga... Intenta mencionar...").
+
+No incluyas bloques de markdown, saludos ni ningún otro texto. SOLO el objeto JSON.
     `;
 
-    const result = await model.generateContent(prompt);
+    const result = await this.gemini.withFailover((client) =>
+      client
+        .getGenerativeModel({ model: 'gemini-2.5-flash' })
+        .generateContent(prompt, { timeout: this.TIMEOUT_MS })
+    );
     const responseText = result.response.text();
     
     let jsonStr = responseText.trim();

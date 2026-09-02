@@ -29,9 +29,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(response.data);
       setIsAuthenticated(true);
     } catch (err: any) {
-      setUser(null);
-      setIsAuthenticated(false);
-      // We don't set error here usually since checking auth is passive
+      // Solo consideramos "sin sesión" cuando el servidor responde 401 (token inválido/caducado).
+      // Si es un error de red o el servidor no responde (500/timeout/ECONNREFUSED),
+      // NO deslogueamos al usuario: podría ser un fallo momentáneo y lo echaríamos
+      // de la página injustamente (ej: un PDF pesado aún procesándose).
+      const status = err?.response?.status;
+      if (status === 401) {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -39,6 +45,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     checkAuth();
+
+    // Si cualquier petición autenticada responde 401 (sesión inválida/caducada),
+    // limpiamos el estado de autenticación para volver al login automáticamente.
+    const handleUnauthorized = () => {
+      setUser(null);
+      setIsAuthenticated(false);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, []);
 
   const login = async (credentials: LoginCredentials) => {

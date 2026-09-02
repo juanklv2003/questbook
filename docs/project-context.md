@@ -13,6 +13,7 @@ Memo AI is an AI-powered flashcard generation and study application. It allows u
 - **Language**: TypeScript
 - **Database**: PostgreSQL (using `pg` driver)
 - **AI Integration**: Google Generative AI (`@google/generative-ai`)
+- **PDF parsing**: `pdf-parse` (extracción de texto real desde archivos PDF binarios)
 - **Other tools**: `multer` for file uploads, `zod` for validation.
 
 ### Frontend (`frontend`)
@@ -104,7 +105,7 @@ The API is served at `/api/v1`.
 
 ### Decks (`/api/v1/decks`)
 - `GET /`: Lists all decks, ordered by creation date descending. Returns an array of decks including a computed `flashcardsCount`.
-- `POST /generate`: Uploads a PDF or text to generate a new deck. Expects `multipart/form-data` with `file` (optional) and `name` (required). Uses Gemini AI to extract flashcards. Returns the new deck info.
+- `POST /generate`: Uploads a PDF or text to generate a new deck. Expects `multipart/form-data` with `file` (optional) and `name` (required). If a `file` is provided, its text is extracted with `pdf-parse` (`PdfTextExtractor`) before being sent to Gemini AI to extract flashcards. To keep requests responsive, the text is truncated to the first 40,000 characters and the AI is limited to 15 flashcards per deck; the Gemini call has a 60s timeout. Returns the new deck info.
 - `GET /:deckId/flashcards`: Retrieves all flashcards associated with a specific `deckId`.
 - `DELETE /:id`: Deletes a specific deck. Uses DB cascades to remove associated flashcards and removes the source file from Cloudinary (via `ICloudStoragePort`).
 

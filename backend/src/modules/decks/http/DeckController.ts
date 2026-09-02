@@ -5,6 +5,7 @@ import { ListDecksUseCase } from '../useCases/ListDecksUseCase';
 import { DeleteDeckUseCase } from '../useCases/DeleteDeckUseCase';
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
+import { extractTextFromPdf } from '../infra/PdfTextExtractor';
 
 export class DeckController {
   constructor(
@@ -33,9 +34,9 @@ export class DeckController {
     }
 
     if (req.file) {
-      // Assuming a simple extraction for now, usually you'd parse PDF.
-      // We will just read buffer to string for simplicity or assume it's text.
-      content = req.file.buffer.toString('utf-8');
+      // Real PDF parsing: PDFs are binary — passing the buffer as utf-8 corrupts
+      // the text and makes Gemini fail. Extract the readable text instead.
+      content = await extractTextFromPdf(req.file.buffer);
     }
 
     if (!content) {
