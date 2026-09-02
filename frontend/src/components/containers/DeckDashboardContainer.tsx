@@ -79,7 +79,7 @@ export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: st
       ) : decks.length > 0 ? (
         /* Bookshelf with books */
         <Bookshelf>
-          {decks.map(deck => (
+          {decks.map((deck, index) => (
             <BookCard
               key={deck.id}
               deckId={deck.id}
@@ -89,6 +89,7 @@ export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: st
               onDeleteSuccess={() => {
                 setDecks(prev => prev.filter(d => d.id !== deck.id))
               }}
+              horizontal={index % 4 === 3}
             />
           ))}
         </Bookshelf>
