@@ -5,15 +5,16 @@ import { DeckUploader } from "../organisms/DeckUploader"
 import { DeckDeleteButton } from "../atoms/DeckDeleteButton"
 import { Button } from "../atoms/Button"
 import { Play, Plus, BookOpen } from "lucide-react"
+import type { DeckGenerationOptions } from "../../types"
 
 export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: string) => void }) {
   const { decks, isLoading, setDecks } = useDecks();
   const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error } = useDeckGenerator();
   const [showUploader, setShowUploader] = React.useState(false);
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (file: File, options: DeckGenerationOptions) => {
     try {
-      const result = await generateDeckFromPdf(file);
+      const result = await generateDeckFromPdf(file, options);
       // Optimistic addition
       setDecks(prev => [{
         id: result.deckId,

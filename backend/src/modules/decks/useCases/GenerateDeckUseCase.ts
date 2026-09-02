@@ -1,5 +1,5 @@
 import { IDeckRepository } from '../domain/IDeckRepository';
-import { IFlashcardGeneratorPort } from '../domain/IFlashcardGeneratorPort';
+import { IFlashcardGeneratorPort, Difficulty } from '../domain/IFlashcardGeneratorPort';
 import { IFlashcardRepository } from '../../flashcards/domain/IFlashcardRepository';
 import { ICloudStoragePort } from '../domain/ICloudStoragePort';
 
@@ -9,6 +9,8 @@ interface GenerateDeckDTO {
   folderId?: string;
   content: string;
   fileBuffer?: Buffer;
+  cardCount?: number;
+  difficulty?: Difficulty;
 }
 
 export class GenerateDeckUseCase {
@@ -21,7 +23,10 @@ export class GenerateDeckUseCase {
 
   async execute(dto: GenerateDeckDTO) {
     // 1. Generate flashcards from content
-    const generatedCards = await this.aiGenerator.generateFromText(dto.content);
+    const generatedCards = await this.aiGenerator.generateFromText(dto.content, {
+      cardCount: dto.cardCount,
+      difficulty: dto.difficulty,
+    });
     
     if (!generatedCards || generatedCards.length === 0) {
       throw new Error('Failed to generate flashcards: No content generated.');

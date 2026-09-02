@@ -21,7 +21,7 @@ export class DeckController {
   }
 
   async generate(req: Request, res: Response) {
-    const { name, folderId, content: reqContent } = req.body;
+    const { name, folderId, content: reqContent, cardCount, difficulty } = req.body;
     let content = reqContent;
     
     const userId = req.user?.userId;
@@ -43,12 +43,27 @@ export class DeckController {
       throw new AppError(400, 'Either file or content is required');
     }
 
+    // Validate cardCount
+    const parsedCardCount = cardCount ? Number(cardCount) : undefined;
+    if (parsedCardCount !== undefined && (isNaN(parsedCardCount) || parsedCardCount < 1 || parsedCardCount > 50)) {
+      throw new AppError(400, 'cardCount must be between 1 and 50');
+    }
+
+    // Validate difficulty
+    const validDifficulties = ['easy', 'medium', 'hard'];
+    const parsedDifficulty = difficulty || undefined;
+    if (parsedDifficulty && !validDifficulties.includes(parsedDifficulty)) {
+      throw new AppError(400, 'difficulty must be easy, medium, or hard');
+    }
+
     const result = await this.generateDeckUseCase.execute({
       name,
       userId,
       folderId,
       content,
-      fileBuffer: req.file?.buffer
+      fileBuffer: req.file?.buffer,
+      cardCount: parsedCardCount,
+      difficulty: parsedDifficulty as 'easy' | 'medium' | 'hard' | undefined,
     });
 
     res.status(201).json(result);

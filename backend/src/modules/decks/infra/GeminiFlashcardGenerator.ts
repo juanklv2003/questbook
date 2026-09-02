@@ -1,4 +1,4 @@
-import { IFlashcardGeneratorPort } from '../domain/IFlashcardGeneratorPort';
+import { IFlashcardGeneratorPort, GenerateOptions } from '../domain/IFlashcardGeneratorPort';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
 
 export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
@@ -7,14 +7,17 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
   // Las peticiones a Gemini con textos enormes pueden tardar minutos o colgarse.
   // Limitamos el tamaño del prompt y el nº de tarjetas para mantener la app responsiva.
   private readonly MAX_TEXT_CHARS = 40000;
-  private readonly MAX_CARDS = 15;
+  private readonly DEFAULT_CARDS = 15;
   private readonly TIMEOUT_MS = 60000;
 
   constructor() {
     this.gemini = new GeminiFailover();
   }
 
-  async generateFromText(text: string): Promise<Array<{ question: string; answer: string }>> {
+  async generateFromText(text: string, options?: GenerateOptions): Promise<Array<{ question: string; answer: string }>> {
+    const maxCards = options?.cardCount ?? this.DEFAULT_CARDS;
+    const difficulty = options?.difficulty ?? 'medium';
+
     // Truncamos el texto si excede el límite para que la IA responda en tiempo razonable.
     let truncated = false;
     let promptText = text;
@@ -27,6 +30,31 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
       ? `\n\nNOTA: El documento original era demasiado largo y solo tienes los primeros ${this.MAX_TEXT_CHARS} caracteres. Genera las tarjetas basándote en esta parte.\n`
       : '';
 
+    // Instrucciones de dificultad según el nivel seleccionado
+    const difficultyInstructions: Record<string, string> = {
+      easy: `NIVEL FÁCIL — Genera tarjetas enfocadas en:
+- Definiciones simples y directas de conceptos clave
+- Términos básicos y su significado
+- Ideas principales del texto, sin detalles complejos
+- Preguntas que requieran recordar o reconocer información
+- Respuestas cortas y claras (1-2 oraciones máximo)`,
+
+      medium: `NIVEL MEDIO — Genera tarjetas con dificultad equilibrada:
+- Mezcla de definiciones y relaciones entre conceptos
+- Preguntas que conecten ideas del texto
+- Algunas preguntas de comprensión (no solo memorización)
+- Respuestas de extensión media (2-3 oraciones)
+- Incluye ejemplos cuando el texto los tenga`,
+
+      hard: `NIVEL DIFÍCIL — Genera tarjetas avanzadas y desafiantes:
+- Relaciones complejas entre múltiples conceptos
+- Preguntas que requieran análisis, comparación o síntesis
+- Detalles específicos, matices y excepciones
+- Preguntas de razonamiento (¿por qué?, ¿cómo se relaciona con...?)
+- Respuestas detalladas que demuestren comprensión profunda
+- Incluye preguntas tipo "¿cuál es la diferencia entre X e Y?"`,
+    };
+
     const prompt = `
 You are an expert educator. Your task is to analyze the provided text and generate high-quality flashcards for studying. Focus on key concepts, definitions, and relationships.
 
@@ -34,8 +62,11 @@ GENERA TODAS LAS PREGUNTAS Y RESPUESTAS ESTRICTAMENTE EN ESPAÑOL.
 NO INVENTES INFORMACIÓN (0% alucinación).
 BASATE ÚNICAMENTE EN EL TEXTO PROPORCIONADO.
 EXTRAE CONCEPTOS REALES, COHERENTES Y LEGIBLES.
-GENERA MÁXIMO ${this.MAX_CARDS} TARJETAS, sólo las más importantes.
+GENERA MÁXIMO ${maxCards} TARJETAS, sólo las más importantes.
 Si el texto es demasiado corto o vacío, devuelve un array vacío [].
+
+DIFICULTAD SOLICITADA:
+${difficultyInstructions[difficulty]}
 
 Return the output STRICTLY as a JSON array of objects with the exact keys: 'question' and 'answer'.
 Do NOT include markdown blocks, greetings, or any other text. ONLY the JSON array.

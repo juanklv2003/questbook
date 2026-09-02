@@ -32,3 +32,11 @@ export interface RegisterCredentials {
   email: string;
   password: string;
 }
+
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+export interface DeckGenerationOptions {
+  name: string;
+  cardCount: number;
+  difficulty: Difficulty;
+}

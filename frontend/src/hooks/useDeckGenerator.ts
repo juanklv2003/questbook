@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
+import type { DeckGenerationOptions } from '../types';
 
 export function useDeckGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -8,7 +9,7 @@ export function useDeckGenerator() {
   // true = el archivo ya subió y la IA está generando las tarjetas
   const [isAiProcessing, setIsAiProcessing] = useState(false);
 
-  const generateDeckFromPdf = async (file: File) => {
+  const generateDeckFromPdf = async (file: File, options: DeckGenerationOptions) => {
     setIsGenerating(true);
     setIsAiProcessing(false);
     setProgress(0);
@@ -17,7 +18,9 @@ export function useDeckGenerator() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('name', file.name.replace('.pdf', ''));
+      formData.append('name', options.name);
+      formData.append('cardCount', String(options.cardCount));
+      formData.append('difficulty', options.difficulty);
 
       setProgress(20);
 
