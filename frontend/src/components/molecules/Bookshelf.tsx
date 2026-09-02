@@ -51,14 +51,14 @@ export function Bookshelf({ children, className, shelves = 3 }: BookshelfProps) 
             {shelfData.map((shelfBooks, shelfIndex) => (
               <div key={shelfIndex}>
                 {/* Shelf content */}
-                <div className="relative px-4 pt-3 pb-0 min-h-[180px]">
+                <div className="relative px-4 h-[180px] flex flex-col justify-end">
                   {/* Back panel subtle texture */}
-                  <div className="absolute inset-0 opacity-20">
+                  <div className="absolute inset-0 opacity-20 pointer-events-none">
                     <div className="absolute inset-0 bg-gradient-to-b from-[#4A2C1A]/30 to-transparent" />
                   </div>
 
                   {/* Books on this shelf - aligned to bottom, touching shelf floor */}
-                  <div className="relative flex items-end gap-1 h-[160px] pb-0">
+                  <div className="relative flex items-end gap-1 pb-1">
                     {shelfBooks.map((child, bookIndex) => (
                       <div
                         key={bookIndex}

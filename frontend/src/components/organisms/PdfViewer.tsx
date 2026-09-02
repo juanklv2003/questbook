@@ -5,6 +5,11 @@ export interface PdfViewerProps {
 }
 
 export function PdfViewer({ pdfUrl, title, fallbackText = "No se pudo cargar el PDF." }: PdfViewerProps) {
+  // Ensure Cloudinary PDFs display inline instead of downloading
+  const inlineUrl = pdfUrl.includes("cloudinary.com")
+    ? `${pdfUrl}?fl_attachment=false`
+    : pdfUrl;
+
   return (
     <div className="w-full h-full min-h-[600px] flex flex-col border rounded-lg overflow-hidden bg-muted/10">
       {title && (
@@ -13,7 +18,7 @@ export function PdfViewer({ pdfUrl, title, fallbackText = "No se pudo cargar el 
         </div>
       )}
       <iframe
-        src={`${pdfUrl}#toolbar=0`}
+        src={`${inlineUrl}#toolbar=0`}
         className="flex-1 w-full border-none"
         title={title || "PDF Viewer"}
       >
