@@ -1,5 +1,5 @@
-import * as React from "react"
 import { cn } from "../../lib/utils"
+import { Children } from "react"
 
 export interface BookshelfProps {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export interface BookshelfProps {
  * Books are distributed evenly across shelves.
  */
 export function Bookshelf({ children, className, shelves = 3 }: BookshelfProps) {
-  const childrenArray = React.Children.toArray(children);
+  const childrenArray = Children.toArray(children);
   const booksPerShelf = Math.ceil(childrenArray.length / shelves);
 
   // Split children into shelves
@@ -51,23 +51,23 @@ export function Bookshelf({ children, className, shelves = 3 }: BookshelfProps) 
             {shelfData.map((shelfBooks, shelfIndex) => (
               <div key={shelfIndex}>
                 {/* Shelf content */}
-                <div className="relative px-4 pt-4 pb-2 min-h-[180px]">
+                <div className="relative px-4 pt-3 pb-0 min-h-[180px]">
                   {/* Back panel subtle texture */}
                   <div className="absolute inset-0 opacity-20">
                     <div className="absolute inset-0 bg-gradient-to-b from-[#4A2C1A]/30 to-transparent" />
                   </div>
 
-                  {/* Books on this shelf */}
-                  <div className="relative flex items-end gap-1 h-[160px]">
+                  {/* Books on this shelf - aligned to bottom, touching shelf floor */}
+                  <div className="relative flex items-end gap-1 h-[160px] pb-0">
                     {shelfBooks.map((child, bookIndex) => (
                       <div
                         key={bookIndex}
                         className={cn(
                           "flex-shrink-0",
                           // Slight random tilt for realism
-                          bookIndex % 3 === 0 && "rotate-[-1deg] self-end",
-                          bookIndex % 3 === 1 && "rotate-[0.5deg] self-end",
-                          bookIndex % 3 === 2 && "rotate-[-0.5deg] self-end"
+                          bookIndex % 3 === 0 && "rotate-[-1deg]",
+                          bookIndex % 3 === 1 && "rotate-[0.5deg]",
+                          bookIndex % 3 === 2 && "rotate-[-0.5deg]"
                         )}
                       >
                         {child}
