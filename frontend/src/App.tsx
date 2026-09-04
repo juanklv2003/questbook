@@ -29,7 +29,7 @@ function App() {
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <BrainCircuit className="h-4 w-4" aria-hidden="true" />
               </div>
-              <span className="text-[15px] font-semibold tracking-tight">Memo AI</span>
+              <span className="text-[15px] font-semibold tracking-tight">Andel</span>
             </div>
           </div>
         </header>
@@ -45,13 +45,13 @@ function App() {
           <button
             type="button"
             onClick={goHome}
-            aria-label="Memo AI — ir a mi biblioteca"
+            aria-label="Andel — ir a mi biblioteca"
             className="-ml-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-1.5 py-1 transition-colors duration-200 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <BrainCircuit className="h-4 w-4" aria-hidden="true" />
             </span>
-            <span className="text-[15px] font-semibold tracking-tight">Memo AI</span>
+            <span className="text-[15px] font-semibold tracking-tight">Andel</span>
           </button>
 
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">

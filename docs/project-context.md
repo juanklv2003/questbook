@@ -1,9 +1,9 @@
-# Memo AI - Project Context
+# Andel - Project Context
 
-> **Note for AI Agents**: This document is the single source of truth for the architecture, tech stack, and conventions of the Memo AI project. Read it carefully before making any structural changes or implementations.
+> **Note for AI Agents**: This document is the single source of truth for the architecture, tech stack, and conventions of the Andel project. Read it carefully before making any structural changes or implementations.
 
 ## 1. Project Overview
-Memo AI is an AI-powered flashcard generation and study application. It allows users to upload PDF documents or text, automatically generates flashcards using AI, and provides a study interface that evaluates user answers using AI to give accurate feedback and scores.
+Andel is an AI-powered flashcard generation and study application. It allows users to upload PDF documents or text, automatically generates flashcards using AI, and provides a study interface that evaluates user answers using AI to give accurate feedback and scores.
 
 ## 2. Tech Stack
 
