@@ -9,6 +9,7 @@ interface GenerateDeckDTO {
   folderId?: string;
   content: string;
   fileBuffer?: Buffer;
+  fileName?: string;
   cardCount?: number;
   difficulty?: Difficulty;
   shelfIndex?: number;
@@ -37,7 +38,7 @@ export class GenerateDeckUseCase {
     let pdfPublicId: string | undefined;
 
     if (dto.fileBuffer) {
-      const uploadResult = await this.cloudStorage.uploadPdf(dto.fileBuffer);
+      const uploadResult = await this.cloudStorage.uploadPdf(dto.fileBuffer, dto.fileName);
       pdfUrl = uploadResult.url;
       pdfPublicId = uploadResult.publicId;
     }

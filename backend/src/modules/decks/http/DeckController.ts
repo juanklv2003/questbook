@@ -65,6 +65,7 @@ export class DeckController {
       folderId,
       content,
       fileBuffer: req.file?.buffer,
+      fileName: req.file?.originalname,
       cardCount: parsedCardCount,
       difficulty: parsedDifficulty as 'easy' | 'medium' | 'hard' | undefined,
       shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),

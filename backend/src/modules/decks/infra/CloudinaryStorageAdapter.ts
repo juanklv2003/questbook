@@ -10,14 +10,21 @@ cloudinary.config({
 });
 
 export class CloudinaryStorageAdapter implements ICloudStoragePort {
-  async uploadPdf(fileBuffer: Buffer): Promise<UploadResult> {
+  async uploadPdf(fileBuffer: Buffer, filename?: string): Promise<UploadResult> {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: 'raw',
+          // `auto` detects PDFs as image-type assets (`.../image/upload/...pdf`),
+          // which Cloudinary serves with `Content-Type: application/pdf` and an
+          // inline disposition. Uploading as `raw` without the original extension
+          // produced extensionless URLs (`.../raw/upload/...`) that browsers
+          // download as attachments instead of rendering inline.
+          resource_type: 'auto',
           folder: 'flashy_ai_pdfs',
-          // PDFs require raw format in some configurations, or 'auto'
-          // Using 'image' with format 'pdf' can also work, but 'raw' or 'auto' is safer for PDFs
+          // Image-type public_ids must NOT include the extension; Cloudinary
+          // appends `.pdf` to the delivery URL itself.
+          ...(filename ? { public_id: toSafePublicId(filename) } : {}),
+          unique_filename: true,
         },
         (error, result) => {
           if (error) {
@@ -39,13 +46,30 @@ export class CloudinaryStorageAdapter implements ICloudStoragePort {
   }
 
   async deletePdf(publicId: string): Promise<void> {
+    // New uploads are image-type; decks stored before the inline-display fix
+    // are raw-type. Try image first, fall back to raw for legacy records.
+    const result = await this.destroy(publicId, 'image');
+    if (result === 'not found') {
+      await this.destroy(publicId, 'raw');
+    }
+  }
+
+  private destroy(publicId: string, resourceType: 'image' | 'raw'): Promise<string> {
     return new Promise((resolve, reject) => {
-      cloudinary.uploader.destroy(publicId, { resource_type: 'raw' }, (error, result) => {
+      cloudinary.uploader.destroy(publicId, { resource_type: resourceType }, (error, result) => {
         if (error) {
           return reject(error);
         }
-        resolve();
+        resolve((result?.result as string) ?? 'ok');
       });
     });
   }
+}
+
+/** Derive a Cloudinary-safe public_id (no extension, no slashes) from the original filename. */
+function toSafePublicId(filename: string): string {
+  const base = filename.split(/[\\/]/).pop() ?? filename;
+  const withoutExt = base.replace(/\.[^.]+$/, '');
+  const safe = withoutExt.trim().replace(/[^A-Za-z0-9_-]+/g, '_').slice(0, 120);
+  return safe || 'document';
 }

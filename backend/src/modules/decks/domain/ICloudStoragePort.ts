@@ -4,6 +4,6 @@ export interface UploadResult {
 }
 
 export interface ICloudStoragePort {
-  uploadPdf(fileBuffer: Buffer): Promise<UploadResult>;
+  uploadPdf(fileBuffer: Buffer, filename?: string): Promise<UploadResult>;
   deletePdf(publicId: string): Promise<void>;
 }

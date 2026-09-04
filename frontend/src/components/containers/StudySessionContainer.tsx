@@ -1,7 +1,7 @@
 import { useFlashcardStudy } from "../../hooks/useFlashcardStudy"
 import { useDeckFlashcards } from "../../hooks/useDeckFlashcards"
 import { StudyPlayer } from "../organisms/StudyPlayer"
-import { PdfViewer } from "../organisms/PdfViewer"
+import { PdfViewer, isInlineViewablePdfUrl } from "../organisms/PdfViewer"
 import { Loader2, AlertCircle, ArrowLeft } from "lucide-react"
 import { Button } from "../atoms/Button"
 
@@ -62,7 +62,10 @@ function StudySessionInner({ flashcards, deck, onBack }: { flashcards: any[], de
     );
   }
 
-  const hasPdf = Boolean(deck?.pdfUrl);
+  // Only split the view when the PDF can actually render inline. Legacy raw
+  // Cloudinary URLs trigger a download instead, so they fall back to the
+  // single-column study layout.
+  const hasPdf = Boolean(deck?.pdfUrl) && isInlineViewablePdfUrl(deck.pdfUrl);
 
   return (
     <div className="w-full flex flex-col gap-4">
