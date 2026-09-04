@@ -5,6 +5,7 @@ import { Button } from './components/atoms/Button'
 import { BrainCircuit, LogOut } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { AuthContainer } from './components/containers/AuthContainer'
+import { MysticForestBackground } from './components/atoms/MysticForestBackground'
 
 function App() {
   const [activeDeckId, setActiveDeckId] = React.useState<string | null>(null);
@@ -22,7 +23,8 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 flex flex-col">
+      <div className="min-h-screen bg-transparent text-foreground font-sans selection:bg-primary/20 flex flex-col">
+        <MysticForestBackground />
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
           <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
@@ -33,13 +35,16 @@ function App() {
             </div>
           </div>
         </header>
-        <AuthContainer />
+        <div className="relative z-10 flex flex-1 flex-col">
+          <AuthContainer />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20">
+    <div className="min-h-screen bg-transparent text-foreground font-sans selection:bg-primary/20">
+      <MysticForestBackground />
       <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <button
@@ -79,7 +84,7 @@ function App() {
         </div>
       </header>
 
-      <div className="flex min-h-screen flex-col">
+      <div className="relative z-10 flex min-h-screen flex-col">
         <main className="flex w-full flex-1 flex-col px-4">
           <div className="container mx-auto w-full max-w-6xl flex-1 flex flex-col">
             {activeDeckId ? (

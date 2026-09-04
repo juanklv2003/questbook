@@ -1,5 +1,7 @@
 import { cn } from "../../lib/utils"
 import { Children, useRef, useState } from "react"
+import ramas from "../../assets/ramas.png"
+import rug from "../../assets/alfombra.png"
 
 export interface BookshelfProps {
   children: React.ReactNode;
@@ -233,6 +235,39 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
 
   return (
     <div className={cn("relative", className)}>
+      {/* Decorative canopy (ramas.png) wrapping the furniture, shown WHOLE.
+          True transparent PNG (669x373, aspect 669:373 kept intact): two side
+          trunks and a branch arch across the top, empty transparent center.
+          The image spans the SAME width as the wood frame (w-full, sm:w-[103%]
+          lets the trunks peek past the edges), so the arch crosses the top
+          board in front and the side trunks fall exactly on the left/right
+          frames — the bookshelf looks wrapped by the branches. On mobile the
+          frame is taller than wide, so the image is stretched vertically
+          (h-[460px] object-fill) to make the trunks run down the sides;
+          on sm+ it keeps its natural aspect (object-contain) and sits one
+          layer below the hovered book wrapper (hover:z-30 / card z-50) via
+          z-20. PRIMARY LOWERING KNOB = translate-y-24 (96px): it physically
+          moves the artwork DOWN over the frame, which is what actually lowers
+          the branch arch onto the shelf (-mb only pulls the frame up behind
+          the image and saturates once it passes the transparent middle, so
+          increasing it alone stops lowering the arch). Raise/lower by editing
+          translate-y-NN (each unit = 4px... the scale step is 16px per 4).
+          It stays in-flow: grows upward into free air and never paints over
+          the "Mi Biblioteca" title or the New Book button. pointer-events-none
+          + aria-hidden keep DnD and a11y untouched. Static image, no
+          animation. No negative side margins, max-w-full guard on mobile, so
+          360px never scrolls sideways. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none relative z-20 -mb-28 flex justify-center select-none sm:-mb-28"
+      >
+        <img
+          src={ramas}
+          alt=""
+          draggable={false}
+          className="translate-y-24 h-[560px] w-full object-fill sm:h-auto sm:object-contain sm:w-[103%]"
+        />
+      </div>
       {/* Main wooden frame */}
       <div className="relative rounded-lg overflow-hidden shadow-[0_12px_60px_-12px_rgba(60,30,10,0.35)]">
         {/* Top frame - thick wooden bar */}
@@ -412,6 +447,24 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
           {/* Bottom shadow */}
           <div className="absolute -bottom-3 inset-x-2 h-3 bg-gradient-to-b from-black/15 to-transparent" />
         </div>
+      </div>
+      {/* Decorative floor piece (alfombra.png) under the furniture.
+          True transparent PNG (1140x219): shelf plank with shell, stone,
+          compass, and leaves. Centered, slightly overlapping the bottom
+          frame shadow (-mt-1) so the furniture feels grounded. Width tracks
+          the furniture (88% mobile, 82% sm+) with max-w cap and max-w-full
+          guard, so 360px never scrolls. pointer-events-none + aria-hidden:
+          purely decorative, never intercepts DnD. Static, no animation. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none -mt-1 flex justify-center select-none"
+      >
+        <img
+          src={rug}
+          alt=""
+          draggable={false}
+          className="h-auto w-[88%] max-w-full sm:w-[82%] sm:max-w-[720px] object-contain drop-shadow-[0_12px_16px_rgba(0,0,0,0.35)]"
+        />
       </div>
     </div>
   )
