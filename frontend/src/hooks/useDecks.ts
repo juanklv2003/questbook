@@ -17,7 +17,7 @@ export function useDecks() {
         // Let's just set response.data directly.
         setDecks(response.data);
       } catch (err: any) {
-        setError(err.response?.data?.error || err.message || 'Error al cargar mazos');
+        setError(err.response?.data?.error || err.message || 'Error al cargar libros');
       } finally {
         setIsLoading(false);
       }

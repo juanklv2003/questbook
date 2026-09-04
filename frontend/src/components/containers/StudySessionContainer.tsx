@@ -21,7 +21,7 @@ export function StudySessionContainer({ deckId, onBack }: { deckId: string, onBa
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <AlertCircle className="w-12 h-12 text-rose-500" />
-        <p className="text-muted-foreground">{error || "No se encontraron tarjetas en este mazo."}</p>
+        <p className="text-muted-foreground">{error || "No se encontraron tarjetas en este libro."}</p>
         <Button variant="outline" onClick={onBack}>Volver</Button>
       </div>
     );
@@ -53,7 +53,7 @@ function StudySessionInner({ flashcards, deck, onBack }: { flashcards: any[], de
         </div>
         <h2 className="text-3xl font-bold tracking-tight">¡Sesión Completada!</h2>
         <p className="text-muted-foreground max-w-md">
-          Has repasado con éxito todas las {total} tarjetas de este mazo. ¡Buen trabajo!
+          Has repasado con éxito todas las {total} tarjetas de este libro. ¡Buen trabajo!
         </p>
         <Button onClick={onBack} size="lg" className="mt-4">
           Volver al Panel

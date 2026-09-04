@@ -82,14 +82,14 @@ export function DeckDashboardContainer({
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Mi Biblioteca</h2>
             <p className="text-muted-foreground mt-0.5">
-              Tu colección de mazos de estudio.
+              Tu colección de libros de estudio.
               {isPersisting && <span className="ml-2 text-xs">Guardando orden…</span>}
             </p>
           </div>
         </div>
         <Button onClick={() => setShowUploader(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Nuevo Mazo
+          Nuevo Libro
         </Button>
       </div>
 
@@ -167,11 +167,11 @@ export function DeckDashboardContainer({
             </div>
             <h3 className="text-xl font-medium mb-2">Tu biblioteca está vacía</h3>
             <p className="text-muted-foreground max-w-sm mb-6 text-center px-4">
-              Creá tu primer mazo subiendo un documento PDF y la IA generará tarjetas de estudio por vos.
+              Creá tu primer libro subiendo un documento PDF y la IA generará tarjetas de estudio por vos.
             </p>
             <Button onClick={() => setShowUploader(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Crear Primer Mazo
+              Crear Primer Libro
             </Button>
           </div>
         </div>

@@ -62,7 +62,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
 
         {/* Deck name */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="deck-name" className="text-sm font-medium">Nombre del mazo</label>
+          <label htmlFor="deck-name" className="text-sm font-medium">Nombre del libro</label>
           <input
             id="deck-name"
             data-autofocus
@@ -135,7 +135,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
       <div
         role="button"
         tabIndex={isGenerating ? -1 : 0}
-        aria-label="Seleccionar archivo PDF para generar un mazo"
+        aria-label="Seleccionar archivo PDF para generar un libro"
         aria-disabled={isGenerating}
         className={`relative flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
           dragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 bg-card hover:bg-accent/50"
@@ -164,7 +164,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
             <UploadCloud className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold mb-2">Generar Mazo desde PDF</h3>
+            <h3 className="text-xl font-semibold mb-2">Generar Libro desde PDF</h3>
             <p className="text-sm text-muted-foreground max-w-[260px]">
               Arrastra y suelta tu documento aquí, o haz clic para explorar. Deja que la IA haga el trabajo pesado.
             </p>

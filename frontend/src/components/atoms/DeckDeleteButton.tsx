@@ -15,14 +15,14 @@ export function DeckDeleteButton({ deckId, onDeleteSuccess, onDeleteError }: Dec
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation() // Prevent triggering card click
     
-    if (window.confirm("¿Estás seguro de que deseas eliminar este mazo? Esta acción no se puede deshacer.")) {
+    if (window.confirm("¿Estás seguro de que deseas eliminar este libro? Esta acción no se puede deshacer.")) {
       try {
         setIsDeleting(true)
         await apiClient.delete(`/decks/${deckId}`)
         onDeleteSuccess()
       } catch (err: any) {
         if (onDeleteError) {
-          onDeleteError(err instanceof Error ? err : new Error(err?.response?.data?.error || "Error al eliminar el mazo"))
+          onDeleteError(err instanceof Error ? err : new Error(err?.response?.data?.error || "Error al eliminar el libro"))
         }
       } finally {
         setIsDeleting(false)
@@ -38,7 +38,7 @@ export function DeckDeleteButton({ deckId, onDeleteSuccess, onDeleteError }: Dec
       onClick={handleDelete}
       disabled={isDeleting}
       isLoading={isDeleting}
-      aria-label="Eliminar mazo"
+      aria-label="Eliminar libro"
     >
       {!isDeleting && <Trash2 className="h-4 w-4" />}
     </Button>

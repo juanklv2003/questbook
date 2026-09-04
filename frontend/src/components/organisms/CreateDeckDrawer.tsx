@@ -15,7 +15,7 @@ export function CreateDeckDrawer({
   open,
   onClose,
   disableClose = false,
-  title = "Crear nuevo mazo",
+  title = "Crear nuevo libro",
   description = "Subí un PDF y generaremos tarjetas de estudio usando IA.",
   children,
 }: CreateDeckDrawerProps) {

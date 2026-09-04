@@ -119,7 +119,7 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
           onKeyDown={handleKeyDown}
           tabIndex={0}
           role="button"
-          aria-label={`Abrir mazo ${name}`}
+          aria-label={`Abrir libro ${name}`}
           className={cn(
             "relative cursor-pointer select-none",
             "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
@@ -174,16 +174,16 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
         onClick={(e) => { e.preventDefault(); onSelect(); }}
         onKeyDown={handleKeyDown}
         tabIndex={0}
-        role="button"
-        aria-label={`Abrir mazo ${name}`}
-        className={cn(
-          "relative cursor-pointer select-none",
-          "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-          "hover:-translate-y-1 focus-visible:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-sm",
-          styles.hover
-        )}
-      >
-        {/* Bookmark */}
+          role="button"
+          aria-label={`Abrir libro ${name}`}
+          className={cn(
+            "relative cursor-pointer select-none",
+            "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+            "hover:-translate-y-1 focus-visible:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-sm",
+            styles.hover
+          )}
+        >
+          {/* Bookmark */}
         <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
           <div className={cn(
             "w-3 h-6",
@@ -293,7 +293,7 @@ function HoverCard({
 
       {/* Description placeholder */}
       <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-        Mazo de estudio con {flashcardsCount} preguntas y respuestas.
+        Libro de estudio con {flashcardsCount} preguntas y respuestas.
       </p>
 
       {/* Actions */}
@@ -311,7 +311,7 @@ function HoverCard({
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-          aria-label="Editar mazo"
+          aria-label="Editar libro"
           className={cn(
             "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg",
             "bg-secondary text-secondary-foreground text-xs font-medium",
