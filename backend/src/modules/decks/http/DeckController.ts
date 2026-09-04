@@ -3,6 +3,7 @@ import { GenerateDeckUseCase } from '../useCases/GenerateDeckUseCase';
 import { GetDeckFlashcardsUseCase } from '../useCases/GetDeckFlashcardsUseCase';
 import { ListDecksUseCase } from '../useCases/ListDecksUseCase';
 import { DeleteDeckUseCase } from '../useCases/DeleteDeckUseCase';
+import { UpdateDeckShelfUseCase } from '../useCases/UpdateDeckShelfUseCase';
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { extractTextFromPdf } from '../infra/PdfTextExtractor';
@@ -12,16 +13,18 @@ export class DeckController {
     private readonly generateDeckUseCase: GenerateDeckUseCase,
     private readonly getDeckFlashcardsUseCase: GetDeckFlashcardsUseCase,
     private readonly listDecksUseCase: ListDecksUseCase,
-    private readonly deleteDeckUseCase: DeleteDeckUseCase
+    private readonly deleteDeckUseCase: DeleteDeckUseCase,
+    private readonly updateDeckShelfUseCase: UpdateDeckShelfUseCase
   ) {
     this.generate = catchAsync(this.generate.bind(this));
     this.getFlashcards = catchAsync(this.getFlashcards.bind(this));
     this.listDecks = catchAsync(this.listDecks.bind(this));
     this.deleteDeck = catchAsync(this.deleteDeck.bind(this));
+    this.updateShelf = catchAsync(this.updateShelf.bind(this));
   }
 
   async generate(req: Request, res: Response) {
-    const { name, folderId, content: reqContent, cardCount, difficulty } = req.body;
+    const { name, folderId, content: reqContent, cardCount, difficulty, shelf_index, shelfIndex } = req.body;
     let content = reqContent;
     
     const userId = req.user?.userId;
@@ -64,6 +67,7 @@ export class DeckController {
       fileBuffer: req.file?.buffer,
       cardCount: parsedCardCount,
       difficulty: parsedDifficulty as 'easy' | 'medium' | 'hard' | undefined,
+      shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),
     });
 
     res.status(201).json(result);
@@ -105,4 +109,42 @@ export class DeckController {
     await this.deleteDeckUseCase.execute(id as string, userId);
     res.status(204).send();
   }
+
+  async updateShelf(req: Request, res: Response) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(401, 'Unauthorized');
+    }
+
+    const { id } = req.params;
+    if (!id) {
+      throw new AppError(400, 'Deck ID is required');
+    }
+
+    const rawShelf = req.body?.shelf_index ?? req.body?.shelfIndex;
+    const rawPosition = req.body?.position;
+    const shelfIndex = rawShelf === undefined ? undefined : Number(rawShelf);
+    const position = rawPosition === undefined ? undefined : Number(rawPosition);
+
+    if (shelfIndex === undefined || position === undefined || isNaN(shelfIndex) || isNaN(position)) {
+      throw new AppError(400, 'shelf_index (0..2) and position (>= 0) are required');
+    }
+
+    const result = await this.updateDeckShelfUseCase.execute({
+      deckId: id as string,
+      userId,
+      shelfIndex,
+      position,
+    });
+    res.status(200).json(result);
+  }
+}
+
+function parseShelfIndex(raw: unknown): number | undefined {
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 2) {
+    throw new AppError(400, 'shelf_index must be an integer between 0 and 2');
+  }
+  return parsed;
 }

@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useDecks } from "../../hooks/useDecks"
 import { useDeckGenerator } from "../../hooks/useDeckGenerator"
+import { useDeckShelf } from "../../hooks/useDeckShelf"
 import { DeckUploader } from "../organisms/DeckUploader"
 import { BookCard } from "../molecules/BookCard"
 import { Bookshelf } from "../molecules/Bookshelf"
@@ -11,16 +12,37 @@ import type { DeckGenerationOptions } from "../../types"
 export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: string) => void }) {
   const { decks, isLoading, setDecks } = useDecks();
   const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error } = useDeckGenerator();
+  const {
+    shelves,
+    shelfCount,
+    moveDeck,
+    moveWithinShelf,
+    moveToShelf,
+    isPersisting,
+    shelfError,
+    clearShelfError,
+  } = useDeckShelf(decks, setDecks);
   const [showUploader, setShowUploader] = React.useState(false);
+
+  // Flat shelf-by-shelf order for rendering (left to right, top to bottom).
+  const orderedBooks = React.useMemo(
+    () =>
+      shelves.flatMap((shelfDecks, shelf) =>
+        shelfDecks.map((deck, index) => ({ deck, shelf, index, size: shelfDecks.length }))
+      ),
+    [shelves]
+  );
 
   const handleUpload = async (file: File, options: DeckGenerationOptions) => {
     try {
       const result = await generateDeckFromPdf(file, options);
-      // Optimistic addition
+      // Optimistic addition: new books land first on shelf 0 (matches backend bump).
       setDecks(prev => [{
         id: result.deckId,
         name: result.name,
         flashcardsCount: result.flashcardsCount,
+        shelfIndex: 0,
+        position: 0,
       } as any, ...prev]);
       setShowUploader(false);
     } catch (err) {
@@ -59,7 +81,10 @@ export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: st
           </div>
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Mi Biblioteca</h2>
-            <p className="text-muted-foreground mt-0.5">Tu colección de mazos de estudio.</p>
+            <p className="text-muted-foreground mt-0.5">
+              Tu colección de mazos de estudio.
+              {isPersisting && <span className="ml-2 text-xs">Guardando orden…</span>}
+            </p>
           </div>
         </div>
         <Button onClick={() => setShowUploader(true)}>
@@ -77,22 +102,47 @@ export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: st
           ))}
         </Bookshelf>
       ) : decks.length > 0 ? (
-        /* Bookshelf with books */
-        <Bookshelf>
-          {decks.map((deck, index) => (
-            <BookCard
-              key={deck.id}
-              deckId={deck.id}
-              name={deck.name || (deck as any).title}
-              flashcardsCount={deck.flashcardsCount || (deck as any).cardCount}
-              onSelect={() => onSelectDeck(deck.id)}
-              onDeleteSuccess={() => {
-                setDecks(prev => prev.filter(d => d.id !== deck.id))
-              }}
-              horizontal={index % 4 === 3}
-            />
-          ))}
-        </Bookshelf>
+        <>
+          {shelfError && (
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              <span>{shelfError}</span>
+              <Button variant="ghost" size="sm" onClick={clearShelfError}>
+                Entendido
+              </Button>
+            </div>
+          )}
+          {/* Bookshelf with books */}
+          <Bookshelf
+            shelves={shelfCount}
+            shelfOf={(i) => orderedBooks[i]?.shelf ?? 0}
+            bookIds={(i) => orderedBooks[i]?.deck.id ?? null}
+            onMoveBook={moveDeck}
+          >
+            {orderedBooks.map(({ deck, shelf, index, size }, flatIndex) => (
+              <BookCard
+                key={deck.id}
+                deckId={deck.id}
+                name={deck.name || (deck as any).title}
+                flashcardsCount={deck.flashcardsCount || (deck as any).cardCount}
+                onSelect={() => onSelectDeck(deck.id)}
+                onDeleteSuccess={() => {
+                  setDecks(prev => prev.filter(d => d.id !== deck.id))
+                }}
+                horizontal={flatIndex % 4 === 3}
+                shelfIndex={shelf}
+                shelfCount={shelfCount}
+                onMoveLeft={() => moveWithinShelf(deck.id, -1)}
+                onMoveRight={() => moveWithinShelf(deck.id, 1)}
+                onMoveToShelf={(target) => moveToShelf(deck.id, target)}
+                canMoveLeft={index > 0}
+                canMoveRight={index < size - 1}
+              />
+            ))}
+          </Bookshelf>
+        </>
       ) : (
         /* Empty state */
         <div className="relative">

@@ -32,11 +32,22 @@ async function initDb() {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
         folder_id UUID REFERENCES folders(id) ON DELETE SET NULL,
+        shelf_index INT NOT NULL DEFAULT 0,
+        position INT NOT NULL DEFAULT 0,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
     console.log("Created table: decks");
+
+    // Shelf columns for databases created before this change
+    await sql`
+      ALTER TABLE decks ADD COLUMN IF NOT EXISTS shelf_index INT NOT NULL DEFAULT 0;
+    `;
+    await sql`
+      ALTER TABLE decks ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0;
+    `;
+    console.log("Ensured columns: decks.shelf_index, decks.position");
 
     // Flashcards table
     await sql`

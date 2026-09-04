@@ -1,5 +1,6 @@
+import type { KeyboardEvent } from "react"
 import { cn } from "../../lib/utils"
-import { BookOpen, Play, Pencil } from "lucide-react"
+import { BookOpen, Play, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
 import { DeckDeleteButton } from "../atoms/DeckDeleteButton"
 
 export interface BookCardProps {
@@ -13,35 +14,45 @@ export interface BookCardProps {
   accentColor?: "primary" | "violet" | "emerald" | "amber" | "rose";
   /** Show as horizontal book (laying down) */
   horizontal?: boolean;
+  /** 0-based shelf where this book sits (for the move fallbacks). */
+  shelfIndex?: number;
+  /** Total shelf count (for the move fallbacks). */
+  shelfCount?: number;
+  /** Button fallbacks so the book can be moved without drag & drop. */
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
+  onMoveToShelf?: (shelf: number) => void;
+  canMoveLeft?: boolean;
+  canMoveRight?: boolean;
 }
 
 const ACCENT_STYLES = {
   primary: {
-    spine: "from-primary via-primary/90 to-primary/80",
+    spine: "bg-primary",
     hover: "hover:shadow-[0_4px_20px_-2px_hsl(var(--primary)/0.4)]",
     bookmark: "bg-primary",
     badge: "bg-primary/10 text-primary",
   },
   violet: {
-    spine: "from-violet-600 via-violet-500 to-violet-400",
+    spine: "bg-violet-600",
     hover: "hover:shadow-[0_4px_20px_-2px_rgba(139,92,246,0.4)]",
     bookmark: "bg-violet-500",
     badge: "bg-violet-500/10 text-violet-600",
   },
   emerald: {
-    spine: "from-emerald-600 via-emerald-500 to-emerald-400",
+    spine: "bg-emerald-600",
     hover: "hover:shadow-[0_4px_20px_-2px_rgba(16,185,129,0.4)]",
     bookmark: "bg-emerald-500",
     badge: "bg-emerald-500/10 text-emerald-600",
   },
   amber: {
-    spine: "from-amber-600 via-amber-500 to-amber-400",
+    spine: "bg-amber-600",
     hover: "hover:shadow-[0_4px_20px_-2px_rgba(245,158,11,0.4)]",
     bookmark: "bg-amber-500",
     badge: "bg-amber-500/10 text-amber-600",
   },
   rose: {
-    spine: "from-rose-600 via-rose-500 to-rose-400",
+    spine: "bg-rose-600",
     hover: "hover:shadow-[0_4px_20px_-2px_rgba(244,63,94,0.4)]",
     bookmark: "bg-rose-500",
     badge: "bg-rose-500/10 text-rose-600",
@@ -78,29 +89,47 @@ function getWidthForCards(count: number): string {
   return "w-14";
 }
 
-export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal }: BookCardProps) {
+export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal, shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight }: BookCardProps) {
   const accent = accentColor ?? getAccentForDeck(name);
   const styles = ACCENT_STYLES[accent];
   const height = getHeightForDeck(name);
   const width = getWidthForCards(flashcardsCount);
+  const moveProps = { shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight };
+  // Adaptive popover anchoring so the card grows toward free space instead of
+  // under a wooden board: first shelf opens downward, last shelf upward.
+  const isFirstShelf = shelfIndex === 0;
+  const isLastShelf =
+    shelfIndex !== undefined && shelfCount !== undefined && shelfCount > 1 && shelfIndex === shelfCount - 1;
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Let the action buttons inside the hover card handle their own keys.
+    if ((e.target as HTMLElement).closest("button")) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect();
+    }
+  };
 
   // Horizontal book (laying down)
   if (horizontal) {
     return (
-      <div className="group relative">
+      <div className="group relative hover:z-30 focus-within:z-30">
         <div
           onClick={(e) => { e.preventDefault(); onSelect(); }}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          role="button"
+          aria-label={`Abrir mazo ${name}`}
           className={cn(
             "relative cursor-pointer select-none",
             "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-            "hover:-translate-y-1",
+            "hover:-translate-y-1 focus-visible:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-sm",
             styles.hover
           )}
         >
           {/* Horizontal book spine */}
           <div className={cn(
             "relative h-8 rounded-sm overflow-hidden",
-            "bg-gradient-to-r",
             styles.spine,
             "shadow-md",
             "flex items-center px-3 gap-2"
@@ -114,11 +143,14 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
               <BookOpen className="w-2.5 h-2.5" />
               <span>{flashcardsCount}</span>
             </div>
-            <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-white/30 via-white/20 to-white/30" />
+            <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/10" />
           </div>
 
-          {/* Hover card for horizontal */}
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto">
+          {/* Hover card for horizontal (first shelf opens downward, rest upward) */}
+          <div className={cn(
+            "absolute left-1/2 -translate-x-1/2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+            isFirstShelf ? "top-full mt-2" : "bottom-full mb-2"
+          )}>
             <HoverCard
               name={name}
               flashcardsCount={flashcardsCount}
@@ -127,6 +159,7 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
               onEdit={onEdit}
               onSelect={onSelect}
               badgeStyle={styles.badge}
+              {...moveProps}
             />
           </div>
         </div>
@@ -136,13 +169,17 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
 
   // Vertical book (standing up) - spine view
   return (
-    <div className="group relative">
+    <div className="group relative hover:z-30 focus-within:z-30">
       <div
         onClick={(e) => { e.preventDefault(); onSelect(); }}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-label={`Abrir mazo ${name}`}
         className={cn(
           "relative cursor-pointer select-none",
           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-          "hover:-translate-y-1",
+          "hover:-translate-y-1 focus-visible:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-sm",
           styles.hover
         )}
       >
@@ -163,7 +200,6 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
         <div className={cn(
           "relative rounded-sm overflow-hidden",
           height, width,
-          "bg-gradient-to-b",
           styles.spine,
           "shadow-lg",
           "flex flex-col items-center justify-between py-2",
@@ -183,11 +219,14 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
             <div className="w-3 h-px bg-white/20" />
             <div className="w-4 h-0.5 bg-white/30 rounded-full" />
           </div>
-          <div className="absolute right-0 top-1 bottom-1 w-0.5 bg-gradient-to-b from-white/40 via-white/25 to-white/40" />
+          <div className="absolute right-0 top-1 bottom-1 w-0.5 bg-white/10" />
         </div>
 
-        {/* Hover card */}
-        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto">
+        {/* Hover card (side-anchored; grows away from the nearest board) */}
+        <div className={cn(
+          "absolute left-full ml-3 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+          isLastShelf ? "bottom-0" : isFirstShelf ? "top-0" : "top-1/2 -translate-y-1/2"
+        )}>
           <HoverCard
             name={name}
             flashcardsCount={flashcardsCount}
@@ -196,6 +235,7 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
             onEdit={onEdit}
             onSelect={onSelect}
             badgeStyle={styles.badge}
+            {...moveProps}
           />
         </div>
       </div>
@@ -212,6 +252,13 @@ function HoverCard({
   onEdit,
   onSelect,
   badgeStyle,
+  shelfIndex,
+  shelfCount,
+  onMoveLeft,
+  onMoveRight,
+  onMoveToShelf,
+  canMoveLeft,
+  canMoveRight,
 }: {
   name: string;
   flashcardsCount: number;
@@ -220,7 +267,19 @@ function HoverCard({
   onEdit?: () => void;
   onSelect: () => void;
   badgeStyle: string;
+  shelfIndex?: number;
+  shelfCount?: number;
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
+  onMoveToShelf?: (shelf: number) => void;
+  canMoveLeft?: boolean;
+  canMoveRight?: boolean;
 }) {
+  const showMoveControls = onMoveLeft !== undefined || onMoveToShelf !== undefined;
+  const shelfOptions =
+    shelfCount !== undefined && shelfCount > 0
+      ? Array.from({ length: shelfCount }, (_, i) => i)
+      : [];
   return (
     <div className="bg-card rounded-xl border shadow-xl p-4 animate-in fade-in zoom-in-95 duration-200">
       {/* Header */}
@@ -252,6 +311,7 @@ function HoverCard({
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+          aria-label="Editar mazo"
           className={cn(
             "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg",
             "bg-secondary text-secondary-foreground text-xs font-medium",
@@ -265,6 +325,78 @@ function HoverCard({
           onDeleteSuccess={onDeleteSuccess}
         />
       </div>
+
+      {/* Move fallbacks (keyboard / touch): same actions as drag & drop */}
+      {showMoveControls && (
+        <div className="mt-3 pt-2.5 border-t">
+          <p className="text-[11px] font-medium text-muted-foreground mb-1.5">
+            Mover en la biblioteca
+          </p>
+          <div className="flex items-center gap-1.5">
+            {onMoveLeft && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onMoveLeft(); }}
+                  disabled={!canMoveLeft}
+                  aria-label="Mover a la izquierda"
+                  className={cn(
+                    "flex items-center justify-center w-7 h-7 rounded-lg",
+                    "bg-secondary text-secondary-foreground",
+                    "hover:bg-secondary/80 transition-colors cursor-pointer",
+                    "disabled:opacity-40 disabled:cursor-not-allowed"
+                  )}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {onMoveRight && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onMoveRight(); }}
+                    disabled={!canMoveRight}
+                    aria-label="Mover a la derecha"
+                    className={cn(
+                      "flex items-center justify-center w-7 h-7 rounded-lg",
+                      "bg-secondary text-secondary-foreground",
+                      "hover:bg-secondary/80 transition-colors cursor-pointer",
+                      "disabled:opacity-40 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
+              </>
+            )}
+            {onMoveLeft && onMoveToShelf && shelfOptions.length > 0 && (
+              <div className="w-px self-stretch bg-border mx-0.5" aria-hidden="true" />
+            )}
+            {onMoveToShelf && shelfOptions.length > 0 && (
+              <div className="flex items-center gap-1" role="group" aria-label="Mover a balda">
+                {shelfOptions.map((shelf) => {
+                  const isCurrent = shelf === shelfIndex;
+                  return (
+                    <button
+                      key={shelf}
+                      onClick={(e) => { e.stopPropagation(); onMoveToShelf(shelf); }}
+                      disabled={isCurrent}
+                      aria-label={`Mover a balda ${shelf + 1}`}
+                      aria-pressed={isCurrent}
+                      title={isCurrent ? `Ya está en la balda ${shelf + 1}` : `Mover a balda ${shelf + 1}`}
+                      className={cn(
+                        "min-w-7 h-7 px-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                        isCurrent
+                          ? "bg-primary text-primary-foreground cursor-default"
+                          : "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                        "disabled:cursor-default"
+                      )}
+                    >
+                      {shelf + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

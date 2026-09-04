@@ -5,4 +5,5 @@ export interface IDeckRepository {
   findById(id: string): Promise<Deck | null>;
   findAll(userId: string): Promise<Deck[]>;
   delete(deckId: string): Promise<void>;
+  updateShelf(deckId: string, shelfIndex: number, position: number): Promise<Deck | null>;
 }

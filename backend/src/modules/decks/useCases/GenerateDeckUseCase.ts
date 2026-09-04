@@ -11,6 +11,7 @@ interface GenerateDeckDTO {
   fileBuffer?: Buffer;
   cardCount?: number;
   difficulty?: Difficulty;
+  shelfIndex?: number;
 }
 
 export class GenerateDeckUseCase {
@@ -47,7 +48,9 @@ export class GenerateDeckUseCase {
       userId: dto.userId,
       folderId: dto.folderId,
       pdfUrl,
-      pdfPublicId
+      pdfPublicId,
+      shelfIndex: dto.shelfIndex ?? 0,
+      position: 0,
     });
 
     // 3. Save Flashcards

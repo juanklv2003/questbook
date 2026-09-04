@@ -21,6 +21,8 @@ export function useDeckGenerator() {
       formData.append('name', options.name);
       formData.append('cardCount', String(options.cardCount));
       formData.append('difficulty', options.difficulty);
+      // New books land on the first shelf; the backend stores it on create.
+      formData.append('shelf_index', '0');
 
       setProgress(20);
 
