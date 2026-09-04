@@ -3,13 +3,21 @@ import { useDecks } from "../../hooks/useDecks"
 import { useDeckGenerator } from "../../hooks/useDeckGenerator"
 import { useDeckShelf } from "../../hooks/useDeckShelf"
 import { DeckUploader } from "../organisms/DeckUploader"
+import { CreateDeckDrawer } from "../organisms/CreateDeckDrawer"
 import { BookCard } from "../molecules/BookCard"
 import { Bookshelf } from "../molecules/Bookshelf"
 import { Button } from "../atoms/Button"
 import { Plus, BookOpen, Library } from "lucide-react"
 import type { DeckGenerationOptions } from "../../types"
 
-export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: string) => void }) {
+export function DeckDashboardContainer({
+  onSelectDeck,
+  createSignal = 0,
+}: {
+  onSelectDeck: (id: string) => void;
+  /** Increment to open the create-deck drawer from outside (e.g. topbar CTA). */
+  createSignal?: number;
+}) {
   const { decks, isLoading, setDecks } = useDecks();
   const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error } = useDeckGenerator();
   const {
@@ -23,6 +31,15 @@ export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: st
     clearShelfError,
   } = useDeckShelf(decks, setDecks);
   const [showUploader, setShowUploader] = React.useState(false);
+  const prevSignal = React.useRef(createSignal);
+
+  // External trigger (topbar CTA) opens the existing drawer. No logic change.
+  React.useEffect(() => {
+    if (createSignal > prevSignal.current) {
+      setShowUploader(true);
+    }
+    prevSignal.current = createSignal;
+  }, [createSignal]);
 
   // Flat shelf-by-shelf order for rendering (left to right, top to bottom).
   const orderedBooks = React.useMemo(
@@ -50,26 +67,9 @@ export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: st
     }
   };
 
-  if (showUploader) {
-    return (
-      <div className="w-full flex flex-col items-center py-12 gap-8 animate-in fade-in slide-in-from-bottom-4">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight mb-2">Crear Nuevo Mazo</h2>
-          <p className="text-muted-foreground">Sube un PDF y generaremos tarjetas de estudio usando IA.</p>
-        </div>
-        <DeckUploader
-          onUpload={handleUpload}
-          isGenerating={isGenerating}
-          progress={progress}
-          isAiProcessing={isAiProcessing}
-        />
-        {error && <p className="text-rose-500 font-medium">{error}</p>}
-        <Button variant="ghost" onClick={() => setShowUploader(false)} disabled={isGenerating}>
-          Cancelar
-        </Button>
-      </div>
-    );
-  }
+  const closeUploader = React.useCallback(() => {
+    if (!isGenerating) setShowUploader(false);
+  }, [isGenerating]);
 
   return (
     <div className="w-full flex flex-col gap-8 py-8 animate-in fade-in">
@@ -176,6 +176,22 @@ export function DeckDashboardContainer({ onSelectDeck }: { onSelectDeck: (id: st
           </div>
         </div>
       )}
+
+      <CreateDeckDrawer
+        open={showUploader}
+        onClose={closeUploader}
+        disableClose={isGenerating}
+      >
+        <div className="flex flex-col items-center gap-6">
+          <DeckUploader
+            onUpload={handleUpload}
+            isGenerating={isGenerating}
+            progress={progress}
+            isAiProcessing={isAiProcessing}
+          />
+          {error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>}
+        </div>
+      </CreateDeckDrawer>
     </div>
   )
 }

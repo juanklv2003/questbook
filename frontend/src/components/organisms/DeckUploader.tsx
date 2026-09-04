@@ -65,11 +65,18 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
           <label htmlFor="deck-name" className="text-sm font-medium">Nombre del mazo</label>
           <input
             id="deck-name"
+            data-autofocus
             type="text"
             value={deckName}
             onChange={(e) => setDeckName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                inputRef.current?.click();
+              }
+            }}
             placeholder="Ej: Biología Celular, Derecho Penal..."
-            className="w-full px-3 py-2 rounded-lg text-sm border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
+            className="w-full px-3 py-2 rounded-lg text-sm border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           />
           <p className="text-xs text-muted-foreground">Si lo dejás vacío, se usará el nombre del archivo PDF.</p>
         </div>
@@ -83,7 +90,8 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
                 key={count}
                 type="button"
                 onClick={() => setCardCount(count)}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                aria-pressed={cardCount === count}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
                   cardCount === count
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
@@ -104,7 +112,8 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
                 key={option.value}
                 type="button"
                 onClick={() => setDifficulty(option.value)}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                aria-pressed={difficulty === option.value}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
                   difficulty === option.value
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
@@ -124,7 +133,11 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
 
       {/* Dropzone */}
       <div
-        className={`relative flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl transition-all duration-200 ${
+        role="button"
+        tabIndex={isGenerating ? -1 : 0}
+        aria-label="Seleccionar archivo PDF para generar un mazo"
+        aria-disabled={isGenerating}
+        className={`relative flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
           dragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 bg-card hover:bg-accent/50"
         } ${isGenerating ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
         onDragEnter={handleDrag}
@@ -132,6 +145,12 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
         onDragOver={handleDrag}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && !isGenerating) {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
       >
         <input
           ref={inputRef}
