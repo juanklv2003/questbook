@@ -176,7 +176,7 @@ export function DeckDashboardContainer({
             bookIds={(i) => orderedBooks[i]?.deck.id ?? null}
             onMoveBook={moveDeck}
           >
-            {orderedBooks.map(({ deck, shelf, index, size }, flatIndex) => (
+            {orderedBooks.map(({ deck, shelf, index, size }) => (
               <BookCard
                 key={deck.id}
                 deckId={deck.id}
@@ -187,7 +187,6 @@ export function DeckDashboardContainer({
                 onDeleteSuccess={() => {
                   setDecks(prev => prev.filter(d => d.id !== deck.id))
                 }}
-                horizontal={flatIndex % 4 === 3}
                 shelfIndex={shelf}
                 shelfCount={shelfCount}
                 onMoveLeft={() => moveWithinShelf(deck.id, -1)}
@@ -272,7 +271,6 @@ export function DeckDashboardContainer({
             pattern={settings.pattern}
             onPickTheme={settings.pickTheme}
             onCustomColorChange={settings.changeCustomColor}
-            onAddSavedColor={settings.addColor}
             onRemoveSavedColor={settings.removeColor}
             hiddenThemes={settings.hiddenThemes}
             onHidePreset={settings.hidePreset}

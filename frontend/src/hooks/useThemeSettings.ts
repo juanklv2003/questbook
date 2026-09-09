@@ -27,7 +27,6 @@ export interface ThemeSettings {
   pattern: PatternId;
   pickTheme: (id: string) => void;
   changeCustomColor: (color: string) => void;
-  addColor: (color: string) => void;
   removeColor: (color: string) => void;
   hidePreset: (id: string) => void;
   restorePresets: () => void;
@@ -46,6 +45,10 @@ export function useThemeSettings(): ThemeSettings {
   const [persisted, setPersisted] = React.useState(loadTheme);
   const [background, setBackground] = React.useState<BackgroundMode>(loadBackground);
   const [pattern, setPattern] = React.useState<PatternId>(loadPattern);
+  const saveTimer = React.useRef<number | undefined>(undefined);
+
+  // Limpia el debounce de autoguardado al desmontar.
+  React.useEffect(() => () => window.clearTimeout(saveTimer.current), []);
 
   // Re-aplica por si el módulo se importó tarde (HMR, tests).
   React.useEffect(() => {
@@ -84,11 +87,14 @@ export function useThemeSettings(): ThemeSettings {
       applyTheme(theme.brand, theme.dark);
       return next;
     });
-  }, []);
-
-  const addColor = React.useCallback((color: string) => {
-    const savedColors = addSavedColor(color);
-    setPersisted((prev) => ({ ...prev, savedColors }));
+    // Autoguardado con debounce: el picker nativo dispara onChange decenas
+    // de veces al arrastrar; se guarda el color final 800ms después de parar.
+    // Los clicks discretos caen en duplicado y se ignoran (addSavedColor).
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      const savedColors = addSavedColor(color);
+      setPersisted((prev) => ({ ...prev, savedColors }));
+    }, 800);
   }, []);
 
   const removeColor = React.useCallback((color: string) => {
@@ -125,7 +131,6 @@ export function useThemeSettings(): ThemeSettings {
     pattern,
     pickTheme,
     changeCustomColor,
-    addColor,
     removeColor,
     hidePreset,
     restorePresets,
