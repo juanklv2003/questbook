@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { DeckDashboardContainer } from './components/containers/DeckDashboardContainer'
 import { StudySessionContainer } from './components/containers/StudySessionContainer'
-import { Navbar } from './components/organisms/Navbar'
+import { Navbar, type TopbarRoute } from './components/organisms/Navbar'
+import type { PanelSignal } from './components/containers/DeckDashboardContainer'
 import { BrainCircuit } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { AuthContainer } from './components/containers/AuthContainer'
@@ -12,6 +13,10 @@ function App() {
   // Incrementada por el CTA de la topbar para abrir el drawer de subida
   // (ver DeckDashboardContainer: createSignal).
   const [createSignal, setCreateSignal] = React.useState(0);
+  // Same deferred pattern for the topbar progress panel:
+  // the dashboard unmounts during a study session, so opening from there
+  // returns home first and defers one frame.
+  const [panelSignal, setPanelSignal] = React.useState<PanelSignal | null>(null);
   const { isAuthenticated, isLoading, logout, user } = useAuth();
   const goHome = React.useCallback(() => setActiveDeckId(null), []);
   // "+ Nuevo Libro / Subir PDF" desde cualquier vista: vuelve a la biblioteca y
@@ -25,6 +30,17 @@ function App() {
     }
     setActiveDeckId(null);
     window.setTimeout(() => setCreateSignal((s) => s + 1), 0);
+  }, [activeDeckId]);
+  const openPanel = React.useCallback((route: TopbarRoute) => {
+    if (activeDeckId === null) {
+      setPanelSignal((s) => ({ route, n: (s?.n ?? 0) + 1 }));
+      return;
+    }
+    setActiveDeckId(null);
+    window.setTimeout(
+      () => setPanelSignal((s) => ({ route, n: (s?.n ?? 0) + 1 })),
+      0
+    );
   }, [activeDeckId]);
 
   if (isLoading) {
@@ -64,6 +80,7 @@ function App() {
         onGoHome={goHome}
         onLogout={logout}
         onOpenCreator={openCreator}
+        onNavigate={openPanel}
       />
 
       <div className="relative z-10 flex flex-1 flex-col">
@@ -78,6 +95,7 @@ function App() {
               <DeckDashboardContainer
                 onSelectDeck={setActiveDeckId}
                 createSignal={createSignal}
+                panelSignal={panelSignal}
               />
             )}
           </div>

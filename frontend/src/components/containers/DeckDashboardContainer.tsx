@@ -4,6 +4,8 @@ import { useDeckGenerator } from "../../hooks/useDeckGenerator"
 import { useDeckShelf } from "../../hooks/useDeckShelf"
 import { DeckUploader } from "../organisms/DeckUploader"
 import { CreateDeckDrawer } from "../organisms/CreateDeckDrawer"
+import { ProgressPanel, type ProgressBook } from "../organisms/ProgressPanel"
+import type { TopbarRoute } from "../organisms/Navbar"
 import { BookCard } from "../molecules/BookCard"
 import { Bookshelf } from "../molecules/Bookshelf"
 import { Button } from "../atoms/Button"
@@ -30,13 +32,25 @@ const demoProgressFor = (name: string): number => {
   return Math.abs(hash) % 101
 }
 
+const PANEL_META: Record<TopbarRoute, { title: string; description: string }> = {
+  progress: { title: "Progreso", description: "Tu avance de estudio por libro." },
+};
+
+export interface PanelSignal {
+  route: TopbarRoute;
+  n: number;
+}
+
 export function DeckDashboardContainer({
   onSelectDeck,
   createSignal = 0,
+  panelSignal = null,
 }: {
   onSelectDeck: (id: string) => void;
   /** Increment to open the create-deck drawer from outside (e.g. topbar CTA). */
   createSignal?: number;
+  /** Increment to open the progress side panel from the topbar. */
+  panelSignal?: PanelSignal | null;
 }) {
   const { decks, isLoading, setDecks } = useDecks();
   const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error } = useDeckGenerator();
@@ -50,7 +64,9 @@ export function DeckDashboardContainer({
     clearShelfError,
   } = useDeckShelf(decks, setDecks);
   const [showUploader, setShowUploader] = React.useState(false);
+  const [activePanel, setActivePanel] = React.useState<TopbarRoute | null>(null);
   const prevSignal = React.useRef(createSignal);
+  const prevPanelSignal = React.useRef(panelSignal?.n ?? 0);
 
   // External trigger (topbar CTA) opens the existing drawer. No logic change.
   React.useEffect(() => {
@@ -59,6 +75,14 @@ export function DeckDashboardContainer({
     }
     prevSignal.current = createSignal;
   }, [createSignal]);
+
+  // External trigger (topbar links) opens the matching side panel.
+  React.useEffect(() => {
+    if (panelSignal && panelSignal.n > prevPanelSignal.current) {
+      setActivePanel(panelSignal.route);
+    }
+    prevPanelSignal.current = panelSignal?.n ?? prevPanelSignal.current;
+  }, [panelSignal]);
 
   // Flat shelf-by-shelf order for rendering (left to right, top to bottom).
   const orderedBooks = React.useMemo(
@@ -89,6 +113,34 @@ export function DeckDashboardContainer({
   const closeUploader = React.useCallback(() => {
     if (!isGenerating) setShowUploader(false);
   }, [isGenerating]);
+
+  const closePanel = React.useCallback(() => setActivePanel(null), []);
+
+  // Real study data only: deck.progressPercent as-is, null = untracked.
+  const cardCountOf = (d: Deck): number =>
+    d.flashcardsCount || (d as DeckLike).cardCount || 0;
+  const progressBooks: ProgressBook[] = React.useMemo(
+    () =>
+      decks.map((d) => ({
+        id: d.id,
+        name: deckTitle(d),
+        cards: cardCountOf(d),
+        progress: d.progressPercent ?? null,
+      })),
+    [decks]
+  );
+  const totalCards = React.useMemo(
+    () => progressBooks.reduce((sum, b) => sum + b.cards, 0),
+    [progressBooks]
+  );
+  const averageProgress = React.useMemo(() => {
+    const tracked = progressBooks.filter(
+      (b): b is ProgressBook & { progress: number } => typeof b.progress === "number"
+    );
+    if (tracked.length === 0) return null;
+    return Math.round(tracked.reduce((sum, b) => sum + b.progress, 0) / tracked.length);
+  }, [progressBooks]);
+  const panelMeta = activePanel ? PANEL_META[activePanel] : null;
 
   return (
     <div className="w-full flex-1 flex flex-col justify-center animate-in fade-in">
@@ -191,6 +243,22 @@ export function DeckDashboardContainer({
           />
           {error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>}
         </div>
+      </CreateDeckDrawer>
+
+      <CreateDeckDrawer
+        open={activePanel !== null}
+        onClose={closePanel}
+        title={panelMeta?.title ?? ""}
+        description={panelMeta?.description ?? ""}
+      >
+        {activePanel === "progress" && (
+          <ProgressPanel
+            totalBooks={decks.length}
+            totalCards={totalCards}
+            averageProgress={averageProgress}
+            books={progressBooks}
+          />
+        )}
       </CreateDeckDrawer>
     </div>
   )

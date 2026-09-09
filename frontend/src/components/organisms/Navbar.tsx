@@ -1,7 +1,7 @@
 import { Button } from "../atoms/Button"
-import { BrainCircuit, LogOut, Plus, Settings, TrendingUp, User } from "lucide-react"
+import { BrainCircuit, LogOut, Plus, TrendingUp, User } from "lucide-react"
 
-export type TopbarRoute = "profile" | "progress" | "settings"
+export type TopbarRoute = "progress"
 
 export interface NavbarProps {
   userEmail?: string;
@@ -14,15 +14,13 @@ export interface NavbarProps {
 }
 
 const LINKS: { route: TopbarRoute; label: string; icon: typeof User }[] = [
-  { route: "profile", label: "Perfil", icon: User },
   { route: "progress", label: "Progreso", icon: TrendingUp },
-  { route: "settings", label: "Ajustes", icon: Settings },
 ]
 
 /**
  * Andel topbar — solid card surface, same background as the "Crear libro"
  * drawer (bg-card), floating over the mystic forest background.
- * Logo (library home) on the left; profile/progress/settings links,
+ * Logo (library home) on the left; progress link,
  * the primary CTA "+ Nuevo Libro / Subir PDF" and avatar/logout on the right.
  * Labels collapse to icons below `sm`; the CTA keeps a compact "Nuevo" label.
  */
