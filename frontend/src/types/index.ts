@@ -6,6 +6,8 @@ export interface Deck {
   shelfIndex?: number | null;
   /** 0-based order within the shelf (left to right). Null/undefined keeps server order. */
   position?: number | null;
+  /** 0–100 study progress. Absent/null = not tracked yet (progress UI hidden). */
+  progressPercent?: number | null;
   /** Snake_case aliases as returned by legacy payloads. Prefer camelCase. */
   shelf_index?: number | null;
 }

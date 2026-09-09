@@ -157,3 +157,16 @@
   display: none;
 }
 
+/* The app is designed as a single full-screen view — disable page scroll. */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+

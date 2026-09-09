@@ -1,7 +1,5 @@
 import { cn } from "../../lib/utils"
 import { Children, useRef, useState } from "react"
-import ramas from "../../assets/ramas.png"
-import rug from "../../assets/alfombra.png"
 
 export interface BookshelfProps {
   children: React.ReactNode;
@@ -235,60 +233,27 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
 
   return (
     <div className={cn("relative", className)}>
-      {/* Decorative canopy (ramas.png) wrapping the furniture, shown WHOLE.
-          True transparent PNG (669x373, aspect 669:373 kept intact): two side
-          trunks and a branch arch across the top, empty transparent center.
-          The image spans the SAME width as the wood frame (w-full, sm:w-[103%]
-          lets the trunks peek past the edges), so the arch crosses the top
-          board in front and the side trunks fall exactly on the left/right
-          frames — the bookshelf looks wrapped by the branches. On mobile the
-          frame is taller than wide, so the image is stretched vertically
-          (h-[460px] object-fill) to make the trunks run down the sides;
-          on sm+ it keeps its natural aspect (object-contain) and sits one
-          layer below the hovered book wrapper (hover:z-30 / card z-50) via
-          z-20. PRIMARY LOWERING KNOB = translate-y-24 (96px): it physically
-          moves the artwork DOWN over the frame, which is what actually lowers
-          the branch arch onto the shelf (-mb only pulls the frame up behind
-          the image and saturates once it passes the transparent middle, so
-          increasing it alone stops lowering the arch). Raise/lower by editing
-          translate-y-NN (each unit = 4px... the scale step is 16px per 4).
-          It stays in-flow: grows upward into free air and never paints over
-          the "Mi Biblioteca" title or the New Book button. pointer-events-none
-          + aria-hidden keep DnD and a11y untouched. Static image, no
-          animation. No negative side margins, max-w-full guard on mobile, so
-          360px never scrolls sideways. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none relative z-20 -mb-28 flex justify-center select-none sm:-mb-28"
-      >
-        <img
-          src={ramas}
-          alt=""
-          draggable={false}
-          className="translate-y-24 h-[560px] w-full object-fill sm:h-auto sm:object-contain sm:w-[103%]"
-        />
-      </div>
       {/* Main wooden frame */}
       <div className="relative rounded-lg overflow-hidden shadow-[0_12px_60px_-12px_rgba(60,30,10,0.35)]">
         {/* Top frame - thick wooden bar */}
-        <div className="h-6 bg-gradient-to-b from-[#8B5A2B] via-[#A0522D] to-[#6B3E1F] relative">
+        <div className="h-6 bg-gradient-to-b from-[#6E4526] via-[#6E3A1F] to-[#472A12] relative">
           <div className="absolute inset-0 opacity-40">
-            <div className="absolute top-1 left-[5%] right-[10%] h-px bg-[#5D3A1A]/60" />
-            <div className="absolute top-2 left-[15%] right-[5%] h-px bg-[#5D3A1A]/40" />
-            <div className="absolute top-3 left-[8%] right-[20%] h-px bg-[#5D3A1A]/50" />
+            <div className="absolute top-1 left-[5%] right-[10%] h-px bg-[#3D2412]/60" />
+            <div className="absolute top-2 left-[15%] right-[5%] h-px bg-[#3D2412]/40" />
+            <div className="absolute top-3 left-[8%] right-[20%] h-px bg-[#3D2412]/50" />
           </div>
           {/* Highlight on top edge */}
-          <div className="absolute inset-x-0 top-0 h-px bg-[#C4884D]/60" />
+          <div className="absolute inset-x-0 top-0 h-px bg-[#A06B42]/60" />
         </div>
 
         {/* Side frames + shelves */}
         <div className="flex">
           {/* Left frame */}
-          <div className="w-5 bg-gradient-to-r from-[#8B5A2B] via-[#A0522D] to-[#6B3E1F] relative flex-shrink-0">
+          <div className="w-5 bg-gradient-to-r from-[#6E4526] via-[#6E3A1F] to-[#472A12] relative flex-shrink-0">
             <div className="absolute inset-0 opacity-40">
-              <div className="absolute left-1.5 top-[10%] bottom-[10%] w-px bg-[#5D3A1A]/50" />
+              <div className="absolute left-1.5 top-[10%] bottom-[10%] w-px bg-[#3D2412]/50" />
             </div>
-            <div className="absolute inset-y-0 right-0 w-px bg-[#5D3A1A]/60" />
+            <div className="absolute inset-y-0 right-0 w-px bg-[#3D2412]/60" />
           </div>
 
           {/* Interior - dark background with shelves */}
@@ -301,7 +266,7 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
                 <div
                   data-shelf-container
                   className={cn(
-                    "relative px-4 h-[180px] flex flex-col justify-end rounded-sm",
+                    "relative px-4 h-[min(180px,calc((100vh-170px)/3))] flex flex-col justify-end rounded-sm",
                     isOverShelf && "ring-2 ring-inset ring-background/40 bg-background/5"
                   )}
                   onDragOver={dndEnabled ? (e) => handleShelfDragOver(e, shelfIndex) : undefined}
@@ -310,7 +275,7 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
                 >
                   {/* Back panel subtle texture */}
                   <div className="absolute inset-0 opacity-20 pointer-events-none">
-                    <div className="absolute inset-0 bg-gradient-to-b from-[#4A2C1A]/30 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#2E1C0E]/30 to-transparent" />
                   </div>
 
                   {/* Books on this shelf - base sits flush on shelf board.
@@ -405,17 +370,17 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
                 {/* Wooden shelf board (kept at z-0 so a hovered/focused
                     book with hover:z-30 always floats above it). */}
                 {shelfIndex < shelves - 1 && (
-                  <div className="relative h-4 z-0">
+                  <div className="relative h-3 z-0">
                     {/* Main shelf board */}
-                    <div className="absolute inset-x-0 h-full bg-gradient-to-b from-[#A0522D] via-[#8B5A2B] to-[#6B3E1F]" />
+                    <div className="absolute inset-x-0 h-full bg-gradient-to-b from-[#6E3A1F] via-[#6E4526] to-[#472A12]" />
                     {/* Top highlight */}
-                    <div className="absolute inset-x-0 top-0 h-px bg-[#C4884D]/50" />
+                    <div className="absolute inset-x-0 top-0 h-px bg-[#A06B42]/50" />
                     {/* Bottom shadow */}
                     <div className="absolute inset-x-0 bottom-0 h-px bg-[#3D2317]/80" />
                     {/* Wood grain */}
                     <div className="absolute inset-0 opacity-30">
-                      <div className="absolute top-1 left-[10%] right-[15%] h-px bg-[#5D3A1A]/40" />
-                      <div className="absolute top-2 left-[20%] right-[8%] h-px bg-[#5D3A1A]/30" />
+                      <div className="absolute top-1 left-[10%] right-[15%] h-px bg-[#3D2412]/40" />
+                      <div className="absolute top-2 left-[20%] right-[8%] h-px bg-[#3D2412]/30" />
                     </div>
                     {/* Shadow under shelf */}
                     <div className="absolute -bottom-1 inset-x-0 h-2 bg-gradient-to-b from-black/20 to-transparent" />
@@ -427,44 +392,26 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
           </div>
 
           {/* Right frame */}
-          <div className="w-5 bg-gradient-to-l from-[#8B5A2B] via-[#A0522D] to-[#6B3E1F] relative flex-shrink-0">
+          <div className="w-5 bg-gradient-to-l from-[#6E4526] via-[#6E3A1F] to-[#472A12] relative flex-shrink-0">
             <div className="absolute inset-0 opacity-40">
-              <div className="absolute right-1.5 top-[10%] bottom-[10%] w-px bg-[#5D3A1A]/50" />
+              <div className="absolute right-1.5 top-[10%] bottom-[10%] w-px bg-[#3D2412]/50" />
             </div>
-            <div className="absolute inset-y-0 left-0 w-px bg-[#5D3A1A]/60" />
+            <div className="absolute inset-y-0 left-0 w-px bg-[#3D2412]/60" />
           </div>
         </div>
 
         {/* Bottom frame - thick wooden bar */}
-        <div className="h-7 bg-gradient-to-b from-[#8B5A2B] via-[#7A4E2A] to-[#5D3A1A] relative">
+        <div className="h-7 bg-gradient-to-b from-[#6E4526] via-[#54341A] to-[#3D2412] relative">
           <div className="absolute inset-0 opacity-40">
-            <div className="absolute top-1.5 left-[5%] right-[10%] h-px bg-[#4A2C1A]/50" />
-            <div className="absolute top-2.5 left-[12%] right-[8%] h-px bg-[#4A2C1A]/40" />
-            <div className="absolute top-3.5 left-[8%] right-[15%] h-px bg-[#4A2C1A]/50" />
+            <div className="absolute top-1.5 left-[5%] right-[10%] h-px bg-[#2E1C0E]/50" />
+            <div className="absolute top-2.5 left-[12%] right-[8%] h-px bg-[#2E1C0E]/40" />
+            <div className="absolute top-3.5 left-[8%] right-[15%] h-px bg-[#2E1C0E]/50" />
           </div>
           {/* Top highlight */}
-          <div className="absolute inset-x-0 top-0 h-px bg-[#C4884D]/40" />
+          <div className="absolute inset-x-0 top-0 h-px bg-[#A06B42]/40" />
           {/* Bottom shadow */}
           <div className="absolute -bottom-3 inset-x-2 h-3 bg-gradient-to-b from-black/15 to-transparent" />
         </div>
-      </div>
-      {/* Decorative floor piece (alfombra.png) under the furniture.
-          True transparent PNG (1140x219): shelf plank with shell, stone,
-          compass, and leaves. Centered, slightly overlapping the bottom
-          frame shadow (-mt-1) so the furniture feels grounded. Width tracks
-          the furniture (88% mobile, 82% sm+) with max-w cap and max-w-full
-          guard, so 360px never scrolls. pointer-events-none + aria-hidden:
-          purely decorative, never intercepts DnD. Static, no animation. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none -mt-1 flex justify-center select-none"
-      >
-        <img
-          src={rug}
-          alt=""
-          draggable={false}
-          className="h-auto w-[88%] max-w-full sm:w-[82%] sm:max-w-[720px] object-contain drop-shadow-[0_12px_16px_rgba(0,0,0,0.35)]"
-        />
       </div>
     </div>
   )

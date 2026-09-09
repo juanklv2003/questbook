@@ -1,4 +1,5 @@
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { AnimatePresence, motion } from "framer-motion"
 import { X } from "lucide-react"
 
@@ -53,10 +54,12 @@ export function CreateDeckDrawer({
     return () => window.clearTimeout(t);
   }, [open ]);
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50">
+          {/* Invisible click-catcher (no darkening): clicking outside the panel
+              still closes it, but the library stays fully visible behind. */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -66,7 +69,7 @@ export function CreateDeckDrawer({
               if (!disableClose) onClose();
             }}
             aria-hidden="true"
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-transparent"
           />
           <motion.div
             ref={panelRef}
@@ -100,6 +103,7 @@ export function CreateDeckDrawer({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

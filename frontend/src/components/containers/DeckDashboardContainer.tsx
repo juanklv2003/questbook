@@ -7,8 +7,28 @@ import { CreateDeckDrawer } from "../organisms/CreateDeckDrawer"
 import { BookCard } from "../molecules/BookCard"
 import { Bookshelf } from "../molecules/Bookshelf"
 import { Button } from "../atoms/Button"
-import { Plus, BookOpen, Library } from "lucide-react"
-import type { DeckGenerationOptions } from "../../types"
+import { Plus, BookOpen } from "lucide-react"
+import type { Deck, DeckGenerationOptions } from "../../types"
+
+/** Legacy payload aliases (title/cardCount) tolerated by the dashboard. */
+type DeckLike = Deck & { title?: string; cardCount?: number }
+
+/** Book display name with legacy `title` fallback. */
+const deckTitle = (d: Deck): string => d.name || (d as DeckLike).title || ""
+
+/**
+ * DEMO ONLY — study progress is not persisted by the backend yet.
+ * Deterministic 0–100 per book so the progress affordance is visible.
+ * TODO(backend): replace with the real deck.progressPercent once evaluations
+ * expose a per-deck completion percentage (GET /decks).
+ */
+const demoProgressFor = (name: string): number => {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return Math.abs(hash) % 101
+}
 
 export function DeckDashboardContainer({
   onSelectDeck,
@@ -26,7 +46,6 @@ export function DeckDashboardContainer({
     moveDeck,
     moveWithinShelf,
     moveToShelf,
-    isPersisting,
     shelfError,
     clearShelfError,
   } = useDeckShelf(decks, setDecks);
@@ -60,7 +79,7 @@ export function DeckDashboardContainer({
         flashcardsCount: result.flashcardsCount,
         shelfIndex: 0,
         position: 0,
-      } as any, ...prev]);
+      } as Deck, ...prev]);
       setShowUploader(false);
     } catch (err) {
       console.error(err);
@@ -72,27 +91,7 @@ export function DeckDashboardContainer({
   }, [isGenerating]);
 
   return (
-    <div className="w-full flex flex-col gap-8 py-8 animate-in fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Library className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Mi Biblioteca</h2>
-            <p className="text-muted-foreground mt-0.5">
-              Tu colección de libros de estudio.
-              {isPersisting && <span className="ml-2 text-xs">Guardando orden…</span>}
-            </p>
-          </div>
-        </div>
-        <Button onClick={() => setShowUploader(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo Libro
-        </Button>
-      </div>
-
+    <div className="w-full flex-1 flex flex-col justify-center animate-in fade-in">
       {/* Content */}
       {isLoading ? (
         /* Loading skeleton */
@@ -125,8 +124,9 @@ export function DeckDashboardContainer({
               <BookCard
                 key={deck.id}
                 deckId={deck.id}
-                name={deck.name || (deck as any).title}
-                flashcardsCount={deck.flashcardsCount || (deck as any).cardCount}
+                name={deckTitle(deck)}
+                flashcardsCount={deck.flashcardsCount || (deck as DeckLike).cardCount || 0}
+                progressPercent={deck.progressPercent ?? demoProgressFor(deckTitle(deck))}
                 onSelect={() => onSelectDeck(deck.id)}
                 onDeleteSuccess={() => {
                   setDecks(prev => prev.filter(d => d.id !== deck.id))

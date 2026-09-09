@@ -7,6 +7,8 @@ export interface BookCardProps {
   deckId: string;
   name: string;
   flashcardsCount: number;
+  /** 0–100 study progress. Absent/null = not tracked yet (bar hidden). */
+  progressPercent?: number | null;
   onSelect: () => void;
   onDeleteSuccess: () => void;
   onEdit?: () => void;
@@ -89,11 +91,13 @@ function getWidthForCards(count: number): string {
   return "w-14";
 }
 
-export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal, shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight }: BookCardProps) {
+export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal, shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight }: BookCardProps) {
   const accent = accentColor ?? getAccentForDeck(name);
   const styles = ACCENT_STYLES[accent];
   const height = getHeightForDeck(name);
   const width = getWidthForCards(flashcardsCount);
+  const progress =
+    typeof progressPercent === "number" ? Math.min(100, Math.max(0, Math.round(progressPercent))) : null;
   const moveProps = { shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight };
   // Adaptive popover anchoring so the card grows toward free space instead of
   // under a wooden board: first shelf opens downward, last shelf upward.
@@ -144,6 +148,12 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
               <span>{flashcardsCount}</span>
             </div>
             <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/10" />
+            {/* Subtle study-progress bar at the base of the horizontal spine */}
+            {progress !== null && (
+              <div className="absolute bottom-0 inset-x-0 h-[2px] bg-white/10" aria-hidden="true">
+                <div className="h-full bg-white/35" style={{ width: `${progress}%` }} />
+              </div>
+            )}
           </div>
 
           {/* Hover card for horizontal (first shelf opens downward, rest upward) */}
@@ -220,6 +230,12 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
             <div className="w-4 h-0.5 bg-white/30 rounded-full" />
           </div>
           <div className="absolute right-0 top-1 bottom-1 w-0.5 bg-white/10" />
+          {/* Subtle study-progress bar at the base of the spine */}
+          {progress !== null && (
+            <div className="absolute bottom-0 inset-x-0 h-[3px] bg-white/10" aria-hidden="true">
+              <div className="h-full bg-white/35" style={{ width: `${progress}%` }} />
+            </div>
+          )}
         </div>
 
         {/* Hover card (side-anchored; grows away from the nearest board) */}
@@ -247,6 +263,7 @@ export function BookCard({ deckId, name, flashcardsCount, onSelect, onDeleteSucc
 function HoverCard({
   name,
   flashcardsCount,
+  progressPercent,
   deckId,
   onDeleteSuccess,
   onEdit,
@@ -262,6 +279,7 @@ function HoverCard({
 }: {
   name: string;
   flashcardsCount: number;
+  progressPercent?: number | null;
   deckId: string;
   onDeleteSuccess: () => void;
   onEdit?: () => void;
@@ -276,6 +294,8 @@ function HoverCard({
   canMoveRight?: boolean;
 }) {
   const showMoveControls = onMoveLeft !== undefined || onMoveToShelf !== undefined;
+  const progress =
+    typeof progressPercent === "number" ? Math.min(100, Math.max(0, Math.round(progressPercent))) : null;
   const shelfOptions =
     shelfCount !== undefined && shelfCount > 0
       ? Array.from({ length: shelfCount }, (_, i) => i)
@@ -287,14 +307,23 @@ function HoverCard({
         <h4 className="font-semibold text-sm leading-tight text-foreground line-clamp-2">{name}</h4>
         <div className={cn("inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium", badgeStyle)}>
           <BookOpen className="w-3 h-3" />
-          {flashcardsCount} tarjetas
+          {flashcardsCount} flashcards
         </div>
       </div>
 
-      {/* Description placeholder */}
-      <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-        Libro de estudio con {flashcardsCount} preguntas y respuestas.
-      </p>
+      {/* Secondary text: flashcards + completed % (brief). Fallback description. */}
+      {progress !== null ? (
+        <div className="mt-2.5">
+          <p className="text-[11px] font-medium text-muted-foreground">{progress}% completo</p>
+          <div className="mt-1 h-1.5 rounded-full bg-secondary/60 overflow-hidden">
+            <div className="h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+          Libro de estudio con {flashcardsCount} preguntas y respuestas.
+        </p>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-2">
