@@ -6,6 +6,9 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [respuestaUsuario, setRespuestaUsuario] = useState('');
   const [feedbackIA, setFeedbackIA] = useState<EvaluationResult | null>(null);
+  // Resultado por tarjeta (keyed by id: sobrevive a reordenados y evita
+  // sincronizar longitudes si cambia el mazo). null/ausente = pendiente.
+  const [resultsById, setResultsById] = useState<Record<string, boolean>>({});
   
   const { evaluateAnswer, isEvaluating } = useEvaluator();
 
@@ -21,11 +24,20 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
       respuestaUsuario
     );
     
+    setResultsById(prev => ({ ...prev, [tarjetaActual.id]: result.isCorrect }));
     setFeedbackIA(result);
   };
 
   const siguienteTarjeta = () => {
     setCurrentIndex(prev => prev + 1);
+    setRespuestaUsuario('');
+    setFeedbackIA(null);
+  };
+
+  /** Salto directo a una tarjeta (lista de repaso). No altera resultados. */
+  const goToCard = (index: number) => {
+    if (index < 0 || index >= tarjetas.length) return;
+    setCurrentIndex(index);
     setRespuestaUsuario('');
     setFeedbackIA(null);
   };
@@ -37,6 +49,7 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
 
   return {
     tarjetaActual,
+    currentIndex,
     progreso,
     total: tarjetas.length,
     haTerminado,
@@ -46,6 +59,8 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
     isEvaluating,
     feedbackIA,
     siguienteTarjeta,
-    reintentar
+    reintentar,
+    resultsById,
+    goToCard
   };
 }

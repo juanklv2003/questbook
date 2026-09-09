@@ -36,6 +36,15 @@
 
 @layer base {
   :root {
+    /* Color de fondo (sistema tipo Pomopopo, ver lib/theme.ts).
+       Arena neutra por defecto; theme.ts los pisa con el color persistido
+       antes del primer paint. El fondo por defecto es plano ("color") para
+       cambiarlo a gusto en Ajustes. SOLO tiñe el fondo: --primary/--ring
+       quedan intactos para que menú, botones y símbolo usen siempre el
+       marrón biblioteca original. */
+    --brand: #D9C6A5;
+    --brand-dark: #8D806B;
+
     /* Warm beige library background */
     --background: 36 39% 94%;
     --foreground: 24 10% 10%;

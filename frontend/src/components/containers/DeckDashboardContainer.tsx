@@ -5,6 +5,8 @@ import { useDeckShelf } from "../../hooks/useDeckShelf"
 import { DeckUploader } from "../organisms/DeckUploader"
 import { CreateDeckDrawer } from "../organisms/CreateDeckDrawer"
 import { ProgressPanel, type ProgressBook } from "../organisms/ProgressPanel"
+import { SettingsPanel } from "../organisms/SettingsPanel"
+import { useThemeSettings } from "../../hooks/useThemeSettings"
 import type { TopbarRoute } from "../organisms/Navbar"
 import { BookCard } from "../molecules/BookCard"
 import { Bookshelf } from "../molecules/Bookshelf"
@@ -34,6 +36,7 @@ const demoProgressFor = (name: string): number => {
 
 const PANEL_META: Record<TopbarRoute, { title: string; description: string }> = {
   progress: { title: "Progreso", description: "Tu avance de estudio por libro." },
+  settings: { title: "Ajustes", description: "Colores y fondo a tu gusto." },
 };
 
 export interface PanelSignal {
@@ -65,6 +68,7 @@ export function DeckDashboardContainer({
   } = useDeckShelf(decks, setDecks);
   const [showUploader, setShowUploader] = React.useState(false);
   const [activePanel, setActivePanel] = React.useState<TopbarRoute | null>(null);
+  const settings = useThemeSettings();
   const prevSignal = React.useRef(createSignal);
   const prevPanelSignal = React.useRef(panelSignal?.n ?? 0);
 
@@ -257,6 +261,16 @@ export function DeckDashboardContainer({
             totalCards={totalCards}
             averageProgress={averageProgress}
             books={progressBooks}
+          />
+        )}
+        {activePanel === "settings" && (
+          <SettingsPanel
+            themeId={settings.themeId}
+            customColor={settings.customColor}
+            background={settings.background}
+            onPickTheme={settings.pickTheme}
+            onCustomColorChange={settings.changeCustomColor}
+            onBackgroundChange={settings.changeBackground}
           />
         )}
       </CreateDeckDrawer>

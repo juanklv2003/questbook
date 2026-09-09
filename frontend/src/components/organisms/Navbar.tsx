@@ -1,7 +1,7 @@
 import { Button } from "../atoms/Button"
-import { BrainCircuit, LogOut, Plus, TrendingUp, User } from "lucide-react"
+import { BrainCircuit, LogOut, Plus, Settings, TrendingUp, User } from "lucide-react"
 
-export type TopbarRoute = "progress"
+export type TopbarRoute = "progress" | "settings";
 
 export interface NavbarProps {
   userEmail?: string;
@@ -15,11 +15,11 @@ export interface NavbarProps {
 
 const LINKS: { route: TopbarRoute; label: string; icon: typeof User }[] = [
   { route: "progress", label: "Progreso", icon: TrendingUp },
+  { route: "settings", label: "Ajustes", icon: Settings },
 ]
 
 /**
- * Andel topbar — solid card surface, same background as the "Crear libro"
- * drawer (bg-card), floating over the mystic forest background.
+ * Andel topbar — solid surface over the page background.
  * Logo (library home) on the left; progress link,
  * the primary CTA "+ Nuevo Libro / Subir PDF" and avatar/logout on the right.
  * Labels collapse to icons below `sm`; the CTA keeps a compact "Nuevo" label.
@@ -33,7 +33,7 @@ export function Navbar({ userEmail, onGoHome, onLogout, onOpenCreator, onNavigat
       <div className="container mx-auto w-full max-w-6xl px-3 sm:px-4">
         <nav
           aria-label="Navegación principal"
-          className="flex h-14 items-center justify-between gap-3 rounded-2xl border bg-card px-3 text-card-foreground shadow-[0_10px_28px_rgba(46,28,14,0.22)] sm:px-5"
+          className="flex h-14 items-center justify-between gap-3 rounded-2xl border bg-card px-3 shadow-[0_10px_28px_rgba(46,28,14,0.22)] sm:px-5"
         >
         {/* Logo — vuelve a la biblioteca */}
         <button
@@ -59,7 +59,7 @@ export function Navbar({ userEmail, onGoHome, onLogout, onOpenCreator, onNavigat
               onClick={() => navigate(route)}
               aria-label={label}
               title={label}
-              className="h-9 w-9 select-none text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              className="h-9 w-9 select-none text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
             </Button>

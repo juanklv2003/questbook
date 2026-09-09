@@ -1,6 +1,8 @@
 import { useFlashcardStudy } from "../../hooks/useFlashcardStudy"
 import { useDeckFlashcards } from "../../hooks/useDeckFlashcards"
 import { StudyPlayer } from "../organisms/StudyPlayer"
+import type { Flashcard } from "../../types"
+import type { ReviewListItem } from "../molecules/StudyReviewList"
 import { PdfViewer, isInlineViewablePdfUrl } from "../organisms/PdfViewer"
 import { Loader2, AlertCircle, ArrowLeft } from "lucide-react"
 import { Button } from "../atoms/Button"
@@ -30,9 +32,10 @@ export function StudySessionContainer({ deckId, onBack }: { deckId: string, onBa
   return <StudySessionInner flashcards={flashcards} deck={deck} onBack={onBack} />;
 }
 
-function StudySessionInner({ flashcards, deck, onBack }: { flashcards: any[], deck: any, onBack: () => void }) {
+function StudySessionInner({ flashcards, deck, onBack }: { flashcards: Flashcard[], deck: any, onBack: () => void }) {
   const {
     tarjetaActual,
+    currentIndex,
     progreso,
     total,
     haTerminado,
@@ -42,7 +45,9 @@ function StudySessionInner({ flashcards, deck, onBack }: { flashcards: any[], de
     isEvaluating,
     feedbackIA,
     siguienteTarjeta,
-    reintentar
+    reintentar,
+    resultsById,
+    goToCard
   } = useFlashcardStudy(flashcards);
 
   if (haTerminado) {
@@ -66,6 +71,18 @@ function StudySessionInner({ flashcards, deck, onBack }: { flashcards: any[], de
   // Cloudinary URLs trigger a download instead, so they fall back to the
   // single-column study layout.
   const hasPdf = Boolean(deck?.pdfUrl) && isInlineViewablePdfUrl(deck.pdfUrl);
+
+  // Lista de repaso: estado por tarjeta desde el historial del hook.
+  const reviewItems: ReviewListItem[] = flashcards.map((f) => ({
+    id: f.id,
+    question: f.question,
+    status:
+      resultsById[f.id] === true
+        ? "correct"
+        : resultsById[f.id] === false
+          ? "incorrect"
+          : "pending",
+  }));
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -93,6 +110,9 @@ function StudySessionInner({ flashcards, deck, onBack }: { flashcards: any[], de
             evaluation={feedbackIA}
             onNext={siguienteTarjeta}
             onRetry={reintentar}
+            reviewItems={reviewItems}
+            activeIndex={currentIndex}
+            onSelectCard={goToCard}
           />
         </div>
       </div>

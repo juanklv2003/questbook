@@ -7,6 +7,9 @@ import { BrainCircuit } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { AuthContainer } from './components/containers/AuthContainer'
 import { MysticForestBackground } from './components/atoms/MysticForestBackground'
+import { AmbientGlow } from './components/atoms/AmbientGlow'
+import { BrandBackground } from './components/atoms/BrandBackground'
+import { useThemeSettings } from './hooks/useThemeSettings'
 
 function App() {
   const [activeDeckId, setActiveDeckId] = React.useState<string | null>(null);
@@ -18,6 +21,12 @@ function App() {
   // returns home first and defers one frame.
   const [panelSignal, setPanelSignal] = React.useState<PanelSignal | null>(null);
   const { isAuthenticated, isLoading, logout, user } = useAuth();
+  // Solo el fondo: el color se aplica directo al DOM en lib/theme.ts
+  // (solo --brand/--brand-dark; los botones usan el primary original).
+  const { background } = useThemeSettings();
+  const showForest = background === "bosque";
+  const showGlow = background === "bosque" || background === "resplandor";
+  const showBrand = background === "color";
   const goHome = React.useCallback(() => setActiveDeckId(null), []);
   // "+ Nuevo Libro / Subir PDF" desde cualquier vista: vuelve a la biblioteca y
   // abre el drawer. Desde una sesión de estudio el dashboard se monta de nuevo y
@@ -54,7 +63,9 @@ function App() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-transparent text-foreground font-sans selection:bg-primary/20 flex flex-col">
-        <MysticForestBackground />
+        {showForest && <MysticForestBackground />}
+        {showGlow && <AmbientGlow />}
+        {showBrand && <BrandBackground />}
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
           <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
@@ -74,7 +85,9 @@ function App() {
 
   return (
     <div className="flex h-screen flex-col bg-transparent text-foreground font-sans selection:bg-primary/20">
-      <MysticForestBackground />
+      {showForest && <MysticForestBackground />}
+      {showGlow && <AmbientGlow />}
+      {showBrand && <BrandBackground />}
       <Navbar
         userEmail={user?.email}
         onGoHome={goHome}
