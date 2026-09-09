@@ -3,12 +3,11 @@ import { useDeckFlashcards } from "../../hooks/useDeckFlashcards"
 import { StudyPlayer } from "../organisms/StudyPlayer"
 import type { Flashcard } from "../../types"
 import type { ReviewListItem } from "../molecules/StudyReviewList"
-import { PdfViewer, isInlineViewablePdfUrl } from "../organisms/PdfViewer"
 import { Loader2, AlertCircle, ArrowLeft } from "lucide-react"
 import { Button } from "../atoms/Button"
 
 export function StudySessionContainer({ deckId, onBack }: { deckId: string, onBack: () => void }) {
-  const { flashcards, deck, isLoading, error } = useDeckFlashcards(deckId);
+  const { flashcards, isLoading, error } = useDeckFlashcards(deckId);
   
   if (isLoading) {
     return (
@@ -29,10 +28,10 @@ export function StudySessionContainer({ deckId, onBack }: { deckId: string, onBa
     );
   }
 
-  return <StudySessionInner flashcards={flashcards} deck={deck} onBack={onBack} />;
+  return <StudySessionInner flashcards={flashcards} onBack={onBack} />;
 }
 
-function StudySessionInner({ flashcards, deck, onBack }: { flashcards: Flashcard[], deck: any, onBack: () => void }) {
+function StudySessionInner({ flashcards, onBack }: { flashcards: Flashcard[], onBack: () => void }) {
   const {
     tarjetaActual,
     currentIndex,
@@ -67,10 +66,8 @@ function StudySessionInner({ flashcards, deck, onBack }: { flashcards: Flashcard
     );
   }
 
-  // Only split the view when the PDF can actually render inline. Legacy raw
-  // Cloudinary URLs trigger a download instead, so they fall back to the
-  // single-column study layout.
-  const hasPdf = Boolean(deck?.pdfUrl) && isInlineViewablePdfUrl(deck.pdfUrl);
+  // Sin visor de PDF: la columna izquierda es la lista de preguntas
+  // (StudyPlayer la pinta como aside) y la derecha la tarjeta activa.
 
   // Lista de repaso: estado por tarjeta desde el historial del hook.
   const reviewItems: ReviewListItem[] = flashcards.map((f) => ({
@@ -92,29 +89,22 @@ function StudySessionInner({ flashcards, deck, onBack }: { flashcards: Flashcard
         </Button>
       </div>
       
-      <div className={`w-full ${hasPdf ? 'grid grid-cols-1 lg:grid-cols-2 gap-8' : ''}`}>
-        {hasPdf && (
-          <div className="h-full min-h-[600px]">
-            <PdfViewer pdfUrl={deck.pdfUrl} title={deck.name || 'Documento Original'} />
-          </div>
-        )}
-        <div className={hasPdf ? 'flex justify-center items-start' : ''}>
-          <StudyPlayer
-            card={tarjetaActual}
-            progress={progreso}
-            total={total}
-            userAnswer={respuestaUsuario}
-            setUserAnswer={setRespuestaUsuario}
-            onSubmit={evaluarRespuesta}
-            isEvaluating={isEvaluating}
-            evaluation={feedbackIA}
-            onNext={siguienteTarjeta}
-            onRetry={reintentar}
-            reviewItems={reviewItems}
-            activeIndex={currentIndex}
-            onSelectCard={goToCard}
-          />
-        </div>
+      <div className="w-full">
+        <StudyPlayer
+          card={tarjetaActual}
+          progress={progreso}
+          total={total}
+          userAnswer={respuestaUsuario}
+          setUserAnswer={setRespuestaUsuario}
+          onSubmit={evaluarRespuesta}
+          isEvaluating={isEvaluating}
+          evaluation={feedbackIA}
+          onNext={siguienteTarjeta}
+          onRetry={reintentar}
+          reviewItems={reviewItems}
+          activeIndex={currentIndex}
+          onSelectCard={goToCard}
+        />
       </div>
     </div>
   );

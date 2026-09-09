@@ -20,20 +20,6 @@ type DeckLike = Deck & { title?: string; cardCount?: number }
 /** Book display name with legacy `title` fallback. */
 const deckTitle = (d: Deck): string => d.name || (d as DeckLike).title || ""
 
-/**
- * DEMO ONLY — study progress is not persisted by the backend yet.
- * Deterministic 0–100 per book so the progress affordance is visible.
- * TODO(backend): replace with the real deck.progressPercent once evaluations
- * expose a per-deck completion percentage (GET /decks).
- */
-const demoProgressFor = (name: string): number => {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return Math.abs(hash) % 101
-}
-
 const PANEL_META: Record<TopbarRoute, { title: string; description: string }> = {
   progress: { title: "Progreso", description: "Tu avance de estudio por libro." },
   settings: { title: "Ajustes", description: "Colores y fondo a tu gusto." },
@@ -182,7 +168,7 @@ export function DeckDashboardContainer({
                 deckId={deck.id}
                 name={deckTitle(deck)}
                 flashcardsCount={deck.flashcardsCount || (deck as DeckLike).cardCount || 0}
-                progressPercent={deck.progressPercent ?? demoProgressFor(deckTitle(deck))}
+                progressPercent={deck.progressPercent ?? null}
                 onSelect={() => onSelectDeck(deck.id)}
                 onDeleteSuccess={() => {
                   setDecks(prev => prev.filter(d => d.id !== deck.id))

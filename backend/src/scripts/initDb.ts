@@ -34,6 +34,8 @@ async function initDb() {
         folder_id UUID REFERENCES folders(id) ON DELETE SET NULL,
         shelf_index INT NOT NULL DEFAULT 0,
         position INT NOT NULL DEFAULT 0,
+        studied_count INT NOT NULL DEFAULT 0,
+        correct_count INT NOT NULL DEFAULT 0,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
@@ -48,6 +50,16 @@ async function initDb() {
       ALTER TABLE decks ADD COLUMN IF NOT EXISTS position INT NOT NULL DEFAULT 0;
     `;
     console.log("Ensured columns: decks.shelf_index, decks.position");
+
+    // Study-progress counters for databases created before this change.
+    // progress_percent is derived (round(100*correct/studied), null when 0).
+    await sql`
+      ALTER TABLE decks ADD COLUMN IF NOT EXISTS studied_count INT NOT NULL DEFAULT 0;
+    `;
+    await sql`
+      ALTER TABLE decks ADD COLUMN IF NOT EXISTS correct_count INT NOT NULL DEFAULT 0;
+    `;
+    console.log("Ensured columns: decks.studied_count, decks.correct_count");
 
     // Flashcards table
     await sql`

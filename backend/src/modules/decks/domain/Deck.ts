@@ -12,4 +12,10 @@ export interface Deck {
   shelfIndex?: number | null;
   /** 0-based order within the shelf (left to right). Null = legacy deck, keeps incoming order. */
   position?: number | null;
+  /** Cumulative evaluated answers for this deck. 0 = never studied. */
+  studiedCount?: number;
+  /** Cumulative correct answers for this deck. */
+  correctCount?: number;
+  /** round(100*correct/studied). Null when studiedCount is 0 (no data yet). */
+  progressPercent?: number | null;
 }

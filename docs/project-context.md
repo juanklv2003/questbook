@@ -73,7 +73,7 @@ frontend/src/
 - Dashboard: single-viewport layout centered on screen. No hero — the bookshelf starts right under the navbar. Removed the old "Mi Biblioteca" hero panel, stat chips (`HeroStat`) and `shelfTitles` category plates. The app shell is `flex h-screen flex-col` (App.tsx), the dashboard root is `flex-1 flex flex-col justify-center`, and the container is `mx-auto max-w-6xl` — so the bookshelf is centered both vertically and horizontally. Shelf containers are `h-[min(180px,calc((100vh-170px)/3))]` (180px on tall screens, auto-shrinks on short ones so it never overflows) + inter-shelf boards `h-3`. **Page scroll is disabled entirely**: `html, body { overflow: hidden; height: 100% }` and `<main>` uses `overflow-clip`. The template footer was removed.
 - `molecules/Bookshelf.tsx` — wooden furniture only (no category plates after user removal). Shelf containers are `h-[min(180px,calc((100vh-170px)/3))]` (fixed 180px on tall screens, shrinks on short ones to prevent overflow) + inter-shelf boards `h-3`. Dashboard default: no titles on baldas (removed per user request).
 - `molecules/BookCard.tsx` — **original clean look restored** (per user feedback "ponlos como estaban, eran feos"): solid-color spines, NO gradient overlay, NO gold tooling, NO raised bands. `h-28..h-44 × w-7..w-14` vertical spines (`text-[10px]` semibold vertical title), `h-8` horizontal variant (`text-[10px]`). Only addition kept from the brief: subtle `progressPercent` bar (3px vertical / 2px horizontal, white/35) at the spine base + HoverCard secondary "N flashcards · X% completo".
-- `Deck.progressPercent` (frontend type) is **DEMO ONLY today**: `DeckDashboardContainer.demoProgressFor` computes a deterministic 0–100 per book. The backend does not persist progress (no `progress` column in `decks`; evaluations are not stored per deck). TODO: replace with a real per-deck completion percentage once evaluations expose it.
+- `Deck.progressPercent` (frontend type) is **real persisted data**: `decks.studied_count` / `decks.correct_count` accumulate on every successful evaluation (`recordEvaluation`, atomic UPDATE); `progressPercent = round(100*correct/studied)`, null while studied = 0. `GET /decks` includes it; the dashboard passes it as-is (`?? null`, honest "sin datos").
 
 ## 4. Database Schema
 The system uses PostgreSQL.
@@ -90,6 +90,8 @@ The system uses PostgreSQL.
 - `user_id` (UUID, Foreign Key to `users.id`)
 - `name` (Text)
 - `folder_id` (UUID, Optional/Nullable)
+- `shelf_index` (INT, default 0), `position` (INT, default 0)
+- `studied_count` (INT, default 0), `correct_count` (INT, default 0) — cumulative study progress; `progressPercent = round(100*correct/studied)`, null when studied = 0
 - `created_at` (Timestamp)
 - `updated_at` (Timestamp)
 
@@ -114,13 +116,13 @@ The API is served at `/api/v1`.
 - `GET /me`: Returns the current user's info based on the HttpOnly cookie.
 
 ### Decks (`/api/v1/decks`)
-- `GET /`: Lists all decks, ordered by creation date descending. Returns an array of decks including a computed `flashcardsCount`.
+- `GET /`: Lists all decks, ordered by creation date descending. Returns an array of decks including a computed `flashcardsCount` and persisted `progressPercent` (null = no evaluations yet).
 - `POST /generate`: Uploads a PDF or text to generate a new deck. Expects `multipart/form-data` with `file` (optional) and `name` (required). If a `file` is provided, its text is extracted with `pdf-parse` (`PdfTextExtractor`) before being sent to Gemini AI to extract flashcards. To keep requests responsive, the text is truncated to the first 40,000 characters and the AI is limited to 15 flashcards per deck; the Gemini call has a 60s timeout. Returns the new deck info.
 - `GET /:deckId/flashcards`: Retrieves all flashcards associated with a specific `deckId`.
 - `DELETE /:id`: Deletes a specific deck. Uses DB cascades to remove associated flashcards and removes the source file from Cloudinary (via `ICloudStoragePort`).
 
 ### Evaluations (`/api/v1/evaluations`)
-- `POST /evaluate`: Evaluates a user's answer against a flashcard. Expects JSON `{ flashcardId, userAnswer }`. Uses Gemini AI to determine correctness. Returns `{ isCorrect, score, feedback }`.
+- `POST /evaluate`: Evaluates a user's answer against a flashcard. Expects JSON `{ flashcardId, userAnswer }`. Uses Gemini AI to determine correctness, then atomically accumulates the result on the owning deck (`studied_count`+1, `correct_count`+0/1). Returns `{ isCorrect, score, feedback, deckId, deckProgress }`.
 
 ## 6. App AI & UX Guidelines
 

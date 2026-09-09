@@ -13,10 +13,10 @@ export function EvaluationResult({ score, feedback, isCorrect }: EvaluationResul
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`p-6 rounded-xl border backdrop-blur-sm shadow-sm flex flex-col gap-4 ${
-        isCorrect 
-          ? "bg-emerald-500/5 border-emerald-500/20" 
-          : "bg-rose-500/5 border-rose-500/20"
+      className={`p-6 rounded-xl border bg-card text-card-foreground shadow-md flex flex-col gap-4 ${
+        isCorrect
+          ? "border-emerald-500/30"
+          : "border-destructive/30"
       }`}
     >
       <div className="flex items-center justify-between">
@@ -24,7 +24,7 @@ export function EvaluationResult({ score, feedback, isCorrect }: EvaluationResul
           {isCorrect ? (
             <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           ) : (
-            <XCircle className="w-6 h-6 text-rose-500" />
+            <XCircle className="w-6 h-6 text-destructive" />
           )}
           <span className="font-semibold text-lg">Puntuación: {score}%</span>
         </div>
@@ -33,7 +33,7 @@ export function EvaluationResult({ score, feedback, isCorrect }: EvaluationResul
           label={isCorrect ? "Correcto" : "Necesita Repaso"} 
         />
       </div>
-      <p className="text-muted-foreground leading-relaxed text-sm">
+      <p className="text-card-foreground/90 leading-relaxed text-sm">
         {feedback}
       </p>
     </motion.div>

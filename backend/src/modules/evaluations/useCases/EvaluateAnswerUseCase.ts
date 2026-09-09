@@ -1,5 +1,6 @@
 import { IEvaluatorPort } from '../domain/IEvaluatorPort';
 import { IFlashcardRepository } from '../../flashcards/domain/IFlashcardRepository';
+import { IDeckRepository } from '../../decks/domain/IDeckRepository';
 
 interface EvaluateAnswerDTO {
   flashcardId: string;
@@ -9,7 +10,8 @@ interface EvaluateAnswerDTO {
 export class EvaluateAnswerUseCase {
   constructor(
     private readonly evaluator: IEvaluatorPort,
-    private readonly flashcardRepo: IFlashcardRepository // Assuming we need to fetch the card first, wait we need to fetch by ID
+    private readonly flashcardRepo: IFlashcardRepository, // Assuming we need to fetch the card first, wait we need to fetch by ID
+    private readonly deckRepo: IDeckRepository
   ) {}
 
   // Actually we need findById in IFlashcardRepository. Let's assume we add it or just implement it.
@@ -28,6 +30,13 @@ export class EvaluateAnswerUseCase {
       dto.userAnswer
     );
 
-    return result;
+    // Persist cumulative per-deck progress (atomic studied+1 / correct+?1:0).
+    // Additive fields: deckId + deckProgress, existing clients keep working.
+    const { progressPercent } = await this.deckRepo.recordEvaluation(
+      flashcard.deckId,
+      result.isCorrect
+    );
+
+    return { ...result, deckId: flashcard.deckId, deckProgress: progressPercent };
   }
 }

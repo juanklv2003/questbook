@@ -23,6 +23,10 @@ export interface EvaluationResult {
   isCorrect: boolean;
   score: number;
   feedback: string;
+  /** Deck this evaluation counted towards (persisted progress). */
+  deckId?: string;
+  /** Recalculated deck progress (0–100) after this evaluation. Null = no data yet. */
+  deckProgress?: number | null;
 }
 
 export interface User {

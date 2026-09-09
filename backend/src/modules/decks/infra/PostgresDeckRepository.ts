@@ -5,8 +5,17 @@ import { IDeckRepository } from '../domain/IDeckRepository';
 export class PostgresDeckRepository implements IDeckRepository {
   constructor(private readonly db: Pool) {}
 
-  async create(deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deck> {
-    const shelfIndex = deck.shelfIndex ?? 0;
+  /**
+   * Study progress derived from cumulative counters. Null while the deck
+   * has zero evaluations (never divide by zero).
+   */
+  private static readonly PROGRESS_SELECT =
+    `CASE WHEN {alias}.studied_count = 0 THEN NULL ELSE ROUND(100.0 * {alias}.correct_count / {alias}.studied_count)::int END AS "progressPercent"`;
+
+  private static progressFor(alias: string): string {
+    return PostgresDeckRepository.PROGRESS_SELECT.split('{alias}').join(alias);
+  }
+  async create(deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deck> {    const shelfIndex = deck.shelfIndex ?? 0;
     const position = deck.position ?? 0;
     // New books land first (position 0): shift existing books on the target shelf down.
     await this.db.query(
@@ -27,7 +36,7 @@ export class PostgresDeckRepository implements IDeckRepository {
 
   async findById(id: string): Promise<Deck | null> {
     const query = `
-      SELECT id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", created_at AS "createdAt", updated_at AS "updatedAt"
+      SELECT id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", studied_count AS "studiedCount", correct_count AS "correctCount", ${PostgresDeckRepository.progressFor('decks')}, created_at AS "createdAt", updated_at AS "updatedAt"
       FROM decks
       WHERE id = $1
     `;
@@ -46,6 +55,9 @@ export class PostgresDeckRepository implements IDeckRepository {
         d.pdf_public_id AS "pdfPublicId",
         d.shelf_index AS "shelfIndex",
         d.position AS "position",
+        d.studied_count AS "studiedCount",
+        d.correct_count AS "correctCount",
+        ${PostgresDeckRepository.progressFor('d')},
         d.created_at AS "createdAt", 
         d.updated_at AS "updatedAt",
         (SELECT COUNT(*) FROM flashcards f WHERE f.deck_id = d.id)::int AS "flashcardsCount"
@@ -69,9 +81,26 @@ export class PostgresDeckRepository implements IDeckRepository {
       UPDATE decks
       SET shelf_index = $2, position = $3, updated_at = NOW()
       WHERE id = $1
-      RETURNING id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", created_at AS "createdAt", updated_at AS "updatedAt"
+      RETURNING id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", studied_count AS "studiedCount", correct_count AS "correctCount", ${PostgresDeckRepository.progressFor('decks')}, created_at AS "createdAt", updated_at AS "updatedAt"
     `;
     const result = await this.db.query<Deck>(query, [deckId, shelfIndex, position]);
     return result.rows[0] || null;
+  }
+
+  async recordEvaluation(deckId: string, isCorrect: boolean): Promise<{ deckId: string; progressPercent: number | null }> {
+    const query = `
+      UPDATE decks
+      SET studied_count = studied_count + 1,
+          correct_count = correct_count + CASE WHEN $2 THEN 1 ELSE 0 END,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING id AS "deckId", ${PostgresDeckRepository.progressFor('decks')}
+    `;
+    const result = await this.db.query<{ deckId: string; progressPercent: number | null }>(query, [deckId, isCorrect]);
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error('Deck not found');
+    }
+    return row;
   }
 }
