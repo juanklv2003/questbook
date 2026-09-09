@@ -49,7 +49,13 @@ const THEME_KEY = "andel-theme";
 export interface PersistedTheme {
   id: string;
   custom: string;
+  savedColors: string[];
+  /** Ids de presets ocultos con × (como Pomopopo). Ausente = []. */
+  hiddenThemes: string[];
 }
+
+/** Tope de guardados, como Pomopopo (no deja crecer localStorage sin cota). */
+export const MAX_SAVED_COLORS = 12;
 
 const isHexColor = (value: string): boolean =>
   /^#[0-9a-fA-F]{6}$/.test(value);
@@ -94,6 +100,8 @@ export function loadTheme(): PersistedTheme {
   const fallback: PersistedTheme = {
     id: DEFAULT_THEME_ID,
     custom: DEFAULT_CUSTOM_COLOR,
+    savedColors: [],
+    hiddenThemes: [],
   };
   try {
     const raw = localStorage.getItem(THEME_KEY);
@@ -101,12 +109,32 @@ export function loadTheme(): PersistedTheme {
     const parsed = JSON.parse(raw) as Partial<PersistedTheme>;
     const known =
       THEMES.some((t) => t.id === parsed.id) || parsed.id === CUSTOM_THEME_ID;
+    // Migra guardados viejos: si falta o es inválido, `[]`.
+    const savedColors = Array.isArray(parsed.savedColors)
+      ? parsed.savedColors
+          .filter((c): c is string => typeof c === "string" && isHexColor(c))
+          .slice(0, MAX_SAVED_COLORS)
+      : [];
+    const resolvedId =
+      typeof parsed.id === "string" && known ? parsed.id : fallback.id;
+    // Ocultos: solo ids de presets conocidos; el activo nunca queda oculto.
+    let hiddenThemes = Array.isArray(parsed.hiddenThemes)
+      ? parsed.hiddenThemes.filter(
+          (t): t is string =>
+            typeof t === "string" && THEMES.some((th) => th.id === t)
+        )
+      : [];
+    if (hiddenThemes.includes(resolvedId)) {
+      hiddenThemes = hiddenThemes.filter((t) => t !== resolvedId);
+    }
     return {
-      id: typeof parsed.id === "string" && known ? parsed.id : fallback.id,
+      id: resolvedId,
       custom:
         typeof parsed.custom === "string" && isHexColor(parsed.custom)
           ? parsed.custom
           : fallback.custom,
+      savedColors,
+      hiddenThemes,
     };
   } catch {
     return fallback;
@@ -127,6 +155,73 @@ export function initTheme(): PersistedTheme {
   const theme = getTheme(persisted.id, persisted.custom);
   applyTheme(theme.brand, theme.dark);
   return persisted;
+}
+
+/**
+ * Guarda un color en "Mis colores" (como Pomopopo): valida hex, ignora
+ * duplicados (insensible a mayúsculas) y respeta el tope de 12.
+ * Devuelve la lista actualizada para sincronizar el estado React.
+ */
+export function addSavedColor(hex: string): string[] {
+  const persisted = loadTheme();
+  const normalized = hex.toLowerCase();
+  if (!isHexColor(normalized)) return persisted.savedColors;
+  if (persisted.savedColors.some((c) => c.toLowerCase() === normalized)) {
+    return persisted.savedColors;
+  }
+  const next: PersistedTheme = {
+    ...persisted,
+    savedColors: [...persisted.savedColors, normalized].slice(
+      -MAX_SAVED_COLORS
+    ),
+  };
+  saveTheme(next);
+  return next.savedColors;
+}
+
+/**
+ * Oculta un preset de la lista (como el theme-del de Pomopopo). El activo
+ * no se puede quitar; para verlo hay que elegir otro primero. Devuelve la
+ * lista actualizada para sincronizar el estado React.
+ */
+export function hideTheme(id: string): string[] {
+  const persisted = loadTheme();
+  if (persisted.id === id) return persisted.hiddenThemes;
+  if (!THEMES.some((t) => t.id === id)) return persisted.hiddenThemes;
+  if (persisted.hiddenThemes.includes(id)) return persisted.hiddenThemes;
+  const next: PersistedTheme = {
+    ...persisted,
+    hiddenThemes: [...persisted.hiddenThemes, id],
+  };
+  saveTheme(next);
+  return next.hiddenThemes;
+}
+
+/** Restaura todos los presets ocultos. */
+export function restoreThemes(): string[] {
+  const persisted = loadTheme();
+  const next: PersistedTheme = { ...persisted, hiddenThemes: [] };
+  saveTheme(next);
+  return next.hiddenThemes;
+}
+
+/**
+ * Borra un color guardado. NOTA (igual que Pomopopo): si el color borrado
+ * era el activo, el color aplicado en memoria/DOM se mantiene hasta la
+ * próxima elección — solo se quita de la lista persistida.
+ * Devuelve la lista actualizada para sincronizar el estado React.
+ */
+export function removeSavedColor(hex: string): string[] {
+  const persisted = loadTheme();
+  const normalized = hex.toLowerCase();
+  const next: PersistedTheme = {
+    ...persisted,
+    savedColors: persisted.savedColors.filter(
+      (c) => c.toLowerCase() !== normalized
+    ),
+  };
+  saveTheme(next);
+  return next.savedColors;
 }
 
 // ---------------------------------------------------------------------------
@@ -189,4 +284,62 @@ export function saveBackground(mode: BackgroundMode): void {
 // Evita el flash del tema anterior sin tocar App ni main.tsx.
 if (typeof document !== "undefined") {
   initTheme();
+}
+
+// ---------------------------------------------------------------------------
+// Decoración de fondo con patrones (port de Pomopopo `bg-stars/circles/...`).
+// Clave `andel-pattern` (default `none`). El cambio se avisa por evento para
+// que App (que renderiza la capa) reaccione, igual que `andel-bg`.
+// ---------------------------------------------------------------------------
+
+export type PatternId =
+  | "none"
+  | "stars"
+  | "circles"
+  | "triangles"
+  | "flowers"
+  | "cups"
+  | "paws";
+
+const PATTERN_KEY = "andel-pattern";
+export const PATTERN_CHANGE_EVENT = "andel:pattern-change";
+
+const PATTERN_IDS: PatternId[] = [
+  "none",
+  "stars",
+  "circles",
+  "triangles",
+  "flowers",
+  "cups",
+  "paws",
+];
+
+export const PATTERN_OPTIONS: { id: PatternId; label: string }[] = [
+  { id: "none", label: "Ninguno" },
+  { id: "stars", label: "Estrellas" },
+  { id: "circles", label: "Círculos" },
+  { id: "triangles", label: "Triángulos" },
+  { id: "flowers", label: "Flores" },
+  { id: "cups", label: "Tazas" },
+  { id: "paws", label: "Patitas" },
+];
+
+export function loadPattern(): PatternId {
+  try {
+    const raw = localStorage.getItem(PATTERN_KEY);
+    return PATTERN_IDS.includes(raw as PatternId)
+      ? (raw as PatternId)
+      : "none";
+  } catch {
+    return "none";
+  }
+}
+
+export function savePattern(pattern: PatternId): void {
+  try {
+    localStorage.setItem(PATTERN_KEY, pattern);
+  } catch {
+    // Igual se avisa: la vista actual sí cambia aunque no persista.
+  }
+  window.dispatchEvent(new CustomEvent(PATTERN_CHANGE_EVENT));
 }

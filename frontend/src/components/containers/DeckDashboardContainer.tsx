@@ -267,10 +267,18 @@ export function DeckDashboardContainer({
           <SettingsPanel
             themeId={settings.themeId}
             customColor={settings.customColor}
+            savedColors={settings.savedColors}
             background={settings.background}
+            pattern={settings.pattern}
             onPickTheme={settings.pickTheme}
             onCustomColorChange={settings.changeCustomColor}
+            onAddSavedColor={settings.addColor}
+            onRemoveSavedColor={settings.removeColor}
+            hiddenThemes={settings.hiddenThemes}
+            onHidePreset={settings.hidePreset}
+            onRestorePresets={settings.restorePresets}
             onBackgroundChange={settings.changeBackground}
+            onPatternChange={settings.changePattern}
           />
         )}
       </CreateDeckDrawer>

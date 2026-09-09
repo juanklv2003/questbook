@@ -9,6 +9,7 @@ import { AuthContainer } from './components/containers/AuthContainer'
 import { MysticForestBackground } from './components/atoms/MysticForestBackground'
 import { AmbientGlow } from './components/atoms/AmbientGlow'
 import { BrandBackground } from './components/atoms/BrandBackground'
+import { PatternLayer } from './components/atoms/PatternLayer'
 import { useThemeSettings } from './hooks/useThemeSettings'
 
 function App() {
@@ -23,7 +24,7 @@ function App() {
   const { isAuthenticated, isLoading, logout, user } = useAuth();
   // Solo el fondo: el color se aplica directo al DOM en lib/theme.ts
   // (solo --brand/--brand-dark; los botones usan el primary original).
-  const { background } = useThemeSettings();
+  const { background, pattern } = useThemeSettings();
   const showForest = background === "bosque";
   const showGlow = background === "bosque" || background === "resplandor";
   const showBrand = background === "color";
@@ -66,6 +67,7 @@ function App() {
         {showForest && <MysticForestBackground />}
         {showGlow && <AmbientGlow />}
         {showBrand && <BrandBackground />}
+        <PatternLayer pattern={pattern} />
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
           <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
@@ -88,6 +90,7 @@ function App() {
       {showForest && <MysticForestBackground />}
       {showGlow && <AmbientGlow />}
       {showBrand && <BrandBackground />}
+      <PatternLayer pattern={pattern} />
       <Navbar
         userEmail={user?.email}
         onGoHome={goHome}
