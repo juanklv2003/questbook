@@ -3,7 +3,10 @@ import { LoginForm } from '../organisms/LoginForm';
 import { RegisterForm } from '../organisms/RegisterForm';
 import { useAuth } from '../../contexts/AuthContext';
 
+import { useLanguage } from '../../i18n/LanguageContext';
+
 export const AuthContainer: React.FC = () => {
+  const { t } = useLanguage();
   const [view, setView] = useState<'login' | 'register'>('login');
   const { isLoading } = useAuth();
 
@@ -15,26 +18,26 @@ export const AuthContainer: React.FC = () => {
         <div className="mt-6 text-center text-sm">
           {view === 'login' ? (
             <p className="text-muted-foreground">
-              ¿No tienes una cuenta?{' '}
+              {t("auth.noAccount")}{' '}
               <button
                 type="button"
                 onClick={() => setView('register')}
                 disabled={isLoading}
                 className="font-medium text-primary hover:underline focus:outline-none cursor-pointer"
               >
-                Regístrate
+                {t("auth.signUp")}
               </button>
             </p>
           ) : (
             <p className="text-muted-foreground">
-              ¿Ya tienes una cuenta?{' '}
+              {t("auth.haveAccount")}{' '}
               <button
                 type="button"
                 onClick={() => setView('login')}
                 disabled={isLoading}
                 className="font-medium text-primary hover:underline focus:outline-none cursor-pointer"
               >
-                Inicia sesión
+                {t("auth.signIn")}
               </button>
             </p>
           )}

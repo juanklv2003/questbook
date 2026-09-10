@@ -85,7 +85,7 @@ function StudySessionInner({ flashcards, onBack }: { flashcards: Flashcard[], on
   }));
 
   return (
-    <div className="w-full flex flex-col gap-4">
+    <div className="w-full flex flex-col gap-4 pt-4 sm:pt-6">
       <div className="w-full flex justify-start">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground">
           <ArrowLeft className="w-4 h-4 mr-2" /> Volver

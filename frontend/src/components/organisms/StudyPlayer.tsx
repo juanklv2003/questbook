@@ -116,7 +116,7 @@ export function StudyPlayer({
             {!evaluation ? (
               <div className="flex flex-col gap-4">
                 {quotaExceeded && onAcknowledgeQuota ? (
-                  <QuotaCountdownAlert quota={quotaExceeded} onAcknowledge={onAcknowledgeQuota} action="evaluar" />
+                  <QuotaCountdownAlert quota={quotaExceeded} onAcknowledge={onAcknowledgeQuota} actionKey="evaluate" />
                 ) : (
                   error && (
                     <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm font-medium text-destructive">

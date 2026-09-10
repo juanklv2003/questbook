@@ -18,6 +18,8 @@ import {
   type PatternId,
 } from "../../lib/theme";
 import { cn } from "../../lib/utils";
+import { LanguageSwitch } from "../atoms/LanguageSwitch";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 export interface SettingsPanelProps {
   themeId: string;
@@ -34,12 +36,12 @@ export interface SettingsPanelProps {
 }
 
 /**
- * Panel de Ajustes — puramente presentacional, sin fetch.
- * Sección Color (grid de swatches estilo Pomopopo: presets + personalizado;
- * los customs elegidos se guardan solos detrás; anillo + Check en el activo;
- * el color SOLO cambia el fondo de la web, nunca los botones) y sección
- * Decoración (patrones de glifos estilo Pomopopo).
- * Tono y espaciados iguales a ProgressPanel.
+ * Settings panel — purely presentational, no fetching.
+ * Language section (persisted ES|EN pill) + Color section (Pomopopo-style
+ * swatch grid: presets + custom; chosen customs self-save behind the scenes;
+ * ring + Check on the active one; color ONLY changes the website background,
+ * never buttons) + Decoration section (Pomopopo-style glyph patterns).
+ * Tone and spacing match ProgressPanel.
  */
 export function SettingsPanel({
   themeId,
@@ -54,6 +56,7 @@ export function SettingsPanel({
   onRestorePresets,
   onPatternChange,
 }: SettingsPanelProps) {
+  const { t } = useLanguage();
   const PATTERN_ICONS: Record<PatternId, typeof Star> = {
     none: Ban,
     stars: Star,
@@ -64,13 +67,28 @@ export function SettingsPanel({
     paws: PawPrint,
   };
 
-  // El check del picker cede ante el swatch guardado del mismo color:
-  // nunca hay dos checks lado a lado por el mismo color aplicado.
+  // The picker check yields to the saved swatch of the same color:
+  // never two side-by-side checks for the same applied color.
   const customActive =
     themeId === CUSTOM_THEME_ID &&
     !savedColors.some((c) => c.toLowerCase() === customColor.toLowerCase());
   return (
     <div className="flex flex-col gap-6">
+      <section aria-labelledby="settings-language-title">
+        <h3
+          id="settings-language-title"
+          className="text-sm font-semibold tracking-tight"
+        >
+          {t("settings.languageTitle")}
+        </h3>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {t("settings.languageDescription")}
+        </p>
+        <div className="mt-3">
+          <LanguageSwitch variant="full" />
+        </div>
+      </section>
+
       <section aria-labelledby="settings-color-title">
         <h3
           id="settings-color-title"
@@ -135,7 +153,7 @@ export function SettingsPanel({
             </button>
           )}
 
-          {/* Personalizados guardados solos: detrás de los presets, a la izquierda del picker (click aplica, × borra) */}
+          {/* Self-saved customs: behind presets, left of the picker (click applies, × removes) */}
           {savedColors.length > 0 && (
             <span className="contents" role="group" aria-label="Colores guardados">
               {savedColors.map((hex) => {
@@ -178,9 +196,9 @@ export function SettingsPanel({
             </span>
           )}
 
-          {/* Color personalizado: el label abre el picker nativo. Si el custom
-              actual ya está guardado, el check vive en su swatch guardado y
-              acá se muestra la paleta (evita el doble check de al lado). */}
+          {/* Custom color: the label opens the native picker. When the current
+              custom is already saved, the check lives on its saved swatch and
+              the palette shows here (avoids the side-by-side double check). */}
           <label
             title="Color personalizado"
             aria-label="Color personalizado"

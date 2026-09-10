@@ -3,12 +3,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../atoms/Input';
 import { PasswordField } from '../atoms/PasswordField';
 import { Button } from '../atoms/Button';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface LoginFormProps {
   onSuccess?: () => void;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+  const { t } = useLanguage();
   const { login, error: authError, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +22,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     setLocalError(null);
 
     if (!email || !password) {
-      setLocalError('El correo electrónico y la contraseña son requeridos');
+      setLocalError(t("auth.requiredLogin"));
       return;
     }
 
@@ -36,8 +38,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-md mx-auto p-6 bg-card rounded-xl border shadow-sm">
       <div className="space-y-2 text-center">
-        <h2 className="text-2xl font-bold tracking-tight">Bienvenido de nuevo</h2>
-        <p className="text-sm text-muted-foreground">Ingresa tus credenciales para acceder a tu cuenta</p>
+        <h2 className="text-2xl font-bold tracking-tight">{t("auth.loginTitle")}</h2>
+        <p className="text-sm text-muted-foreground">{t("auth.loginSubtitle")}</p>
       </div>
 
       {(localError || authError) && (
@@ -49,7 +51,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       <div className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Correo Electrónico
+            {t("auth.email")}
           </label>
           <Input
             id="email"
@@ -64,7 +66,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         
         <div className="space-y-2">
           <label htmlFor="password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Contraseña
+            {t("auth.password")}
           </label>
           <PasswordField
             id="password"
@@ -89,13 +91,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             htmlFor="rememberMe"
             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            Mantener sesión iniciada
+            {t("auth.rememberMe")}
           </label>
         </div>
       </div>
 
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+        {isLoading ? t("auth.loginLoading") : t("auth.loginCta")}
       </Button>
     </form>
   );

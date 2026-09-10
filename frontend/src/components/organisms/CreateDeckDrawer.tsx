@@ -2,6 +2,7 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { AnimatePresence, motion } from "framer-motion"
 import { X } from "lucide-react"
+import { useLanguage } from "../../i18n/LanguageContext"
 
 export interface CreateDeckDrawerProps {
   open: boolean;
@@ -16,10 +17,13 @@ export function CreateDeckDrawer({
   open,
   onClose,
   disableClose = false,
-  title = "Crear nuevo libro",
-  description = "Subí un PDF y generaremos tarjetas de estudio usando IA.",
+  title,
+  description,
   children,
 }: CreateDeckDrawerProps) {
+  const { t } = useLanguage();
+  const resolvedTitle = title ?? t("drawer.title");
+  const resolvedDescription = description ?? t("drawer.description");
   const panelRef = React.useRef<HTMLDivElement>(null);
 
   // Close on Escape (blocked while generating).
@@ -75,7 +79,7 @@ export function CreateDeckDrawer({
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label={title}
+            aria-label={resolvedTitle}
             initial={{ x: 48, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 48, opacity: 0 }}
@@ -84,16 +88,16 @@ export function CreateDeckDrawer({
           >
             <div className="flex items-start justify-between gap-4 border-b px-6 py-5">
               <div>
-                <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+                <h2 className="text-xl font-bold tracking-tight">{resolvedTitle}</h2>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  {description}
+                  {resolvedDescription}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 disabled={disableClose}
-                aria-label="Cerrar"
+                aria-label={t("drawer.close")}
                 className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50"
               >
                 <X className="h-5 w-5" aria-hidden="true" />

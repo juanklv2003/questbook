@@ -1,5 +1,6 @@
 import * as React from "react"
 import { UploadCloud, BrainCircuit, Loader2 } from "lucide-react"
+import { useLanguage } from "../../i18n/LanguageContext"
 import type { DeckGenerationOptions, Difficulty } from "../../types"
 
 export interface DeckUploaderProps {
@@ -11,27 +12,28 @@ export interface DeckUploaderProps {
 
 const CARD_COUNT_OPTIONS = [5, 10, 15, 20, 30];
 
-const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; description: string }[] = [
-  { value: 'easy', label: 'Fácil', description: 'Definiciones y conceptos básicos' },
-  { value: 'medium', label: 'Media', description: 'Mezcla de definiciones y relaciones' },
-  { value: 'hard', label: 'Difícil', description: 'Conceptos avanzados y relaciones complejas' },
-];
-
-const COLOR_OPTIONS: { value: string; label: string; swatch: string }[] = [
-  { value: 'primary', label: 'Azul', swatch: 'bg-primary' },
-  { value: 'violet', label: 'Violeta', swatch: 'bg-violet-600' },
-  { value: 'emerald', label: 'Verde', swatch: 'bg-emerald-600' },
-  { value: 'amber', label: 'Ámbar', swatch: 'bg-amber-600' },
-  { value: 'rose', label: 'Rosa', swatch: 'bg-rose-600' },
-];
-
 export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing = false }: DeckUploaderProps) {
+  const { t } = useLanguage();
   const [dragActive, setDragActive] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [deckName, setDeckName] = React.useState('');
   const [cardCount, setCardCount] = React.useState<number>(15);
   const [difficulty, setDifficulty] = React.useState<Difficulty>('medium');
   const [color, setColor] = React.useState<string>('primary');
+
+  const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; description: string }[] = [
+    { value: 'easy', label: t("up.easy"), description: t("up.easyDesc") },
+    { value: 'medium', label: t("up.medium"), description: t("up.mediumDesc") },
+    { value: 'hard', label: t("up.hard"), description: t("up.hardDesc") },
+  ];
+
+  const COLOR_OPTIONS: { value: string; label: string; swatch: string }[] = [
+    { value: 'primary', label: t("up.blue"), swatch: 'bg-primary' },
+    { value: 'violet', label: t("up.violet"), swatch: 'bg-violet-600' },
+    { value: 'emerald', label: t("up.green"), swatch: 'bg-emerald-600' },
+    { value: 'amber', label: t("up.amber"), swatch: 'bg-amber-600' },
+    { value: 'rose', label: t("up.rose"), swatch: 'bg-rose-600' },
+  ];
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -67,11 +69,11 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
     <div className="w-full max-w-xl mx-auto flex flex-col gap-6">
       {/* Generation options */}
       <div className="flex flex-col gap-4 p-4 rounded-xl border bg-card">
-        <h4 className="text-sm font-medium text-muted-foreground">Configuración de generación</h4>
+        <h4 className="text-sm font-medium text-muted-foreground">{t("up.config")}</h4>
 
         {/* Deck name */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="deck-name" className="text-sm font-medium">Nombre del libro</label>
+          <label htmlFor="deck-name" className="text-sm font-medium">{t("up.name")}</label>
           <input
             id="deck-name"
             data-autofocus
@@ -84,15 +86,15 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
                 inputRef.current?.click();
               }
             }}
-            placeholder="Ej: Biología Celular, Derecho Penal..."
+            placeholder={t("up.namePlaceholder")}
             className="w-full px-3 py-2 rounded-lg text-sm border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           />
-          <p className="text-xs text-muted-foreground">Si lo dejás vacío, se usará el nombre del archivo PDF.</p>
+          <p className="text-xs text-muted-foreground">{t("up.nameHint")}</p>
         </div>
 
         {/* Card count */}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Cantidad de tarjetas</label>
+          <label className="text-sm font-medium">{t("up.count")}</label>
           <div className="flex gap-2">
             {CARD_COUNT_OPTIONS.map(count => (
               <button
@@ -114,7 +116,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
 
         {/* Difficulty */}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Dificultad</label>
+          <label className="text-sm font-medium">{t("up.difficulty")}</label>
           <div className="flex gap-2">
             {DIFFICULTY_OPTIONS.map(option => (
               <button
@@ -141,7 +143,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
 
         {/* Color */}
         <div className="flex flex-col gap-2">
-          <span id="deck-color-label" className="text-sm font-medium">Color del libro</span>
+          <span id="deck-color-label" className="text-sm font-medium">{t("up.color")}</span>
           <div className="flex gap-2" role="group" aria-labelledby="deck-color-label">
             {COLOR_OPTIONS.map(option => {
               const selected = color === option.value;
@@ -152,7 +154,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
                   onClick={() => setColor(option.value)}
                   aria-pressed={selected}
                   title={option.label}
-                  aria-label={`Color ${option.label}`}
+                  aria-label={t("up.colorOption", { label: option.label })}
                   className={`flex h-10 flex-1 cursor-pointer items-center justify-center rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
                     selected
                       ? 'bg-secondary ring-2 ring-primary ring-offset-2 ring-offset-card'
@@ -171,7 +173,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
       <div
         role="button"
         tabIndex={isGenerating ? -1 : 0}
-        aria-label="Seleccionar archivo PDF para generar un libro"
+        aria-label={t("up.dropAria")}
         aria-disabled={isGenerating}
         className={`relative flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
           dragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 bg-card hover:bg-accent/50"
@@ -200,9 +202,9 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
             <UploadCloud className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold mb-2">Generar Libro desde PDF</h3>
+            <h3 className="text-xl font-semibold mb-2">{t("up.dropTitle")}</h3>
             <p className="text-sm text-muted-foreground max-w-[260px]">
-              Arrastra y suelta tu documento aquí, o haz clic para explorar. Deja que la IA haga el trabajo pesado.
+              {t("up.dropHint")}
             </p>
           </div>
         </div>
@@ -215,12 +217,12 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
               {isAiProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  La IA está generando tus tarjetas, puede tardar unos segundos...
+                  {t("up.aiGenerating")}
                 </>
               ) : (
                 <>
                   <BrainCircuit className="w-4 h-4 text-primary" />
-                  Subiendo y leyendo el PDF...
+                  {t("up.uploading")}
                 </>
               )}
             </span>
@@ -234,7 +236,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
           </div>
           {isAiProcessing && (
             <p className="text-xs text-muted-foreground text-center">
-              Los documentos muy extensos pueden tardar. No cierres ni recargues la página.
+              {t("up.slowNote")}
             </p>
           )}
         </div>

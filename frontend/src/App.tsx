@@ -2,32 +2,38 @@ import * as React from 'react'
 import { DeckDashboardContainer } from './components/containers/DeckDashboardContainer'
 import { StudySessionContainer } from './components/containers/StudySessionContainer'
 import { Navbar, type TopbarRoute } from './components/organisms/Navbar'
-import type { PanelSignal } from './components/containers/DeckDashboardContainer'
+import { CreateDeckDrawer } from './components/organisms/CreateDeckDrawer'
+import { ProgressPanel, type ProgressBook } from './components/organisms/ProgressPanel'
+import { SettingsPanel } from './components/organisms/SettingsPanel'
+import { useDecks } from './hooks/useDecks'
+import type { Deck } from './types'
 import { BrainCircuit } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { AuthContainer } from './components/containers/AuthContainer'
 import { BrandBackground } from './components/atoms/BrandBackground'
 import { PatternLayer } from './components/atoms/PatternLayer'
 import { useThemeSettings } from './hooks/useThemeSettings'
+import { useLanguage } from './i18n/LanguageContext'
 
 function App() {
+  const { t } = useLanguage();
   const [activeDeckId, setActiveDeckId] = React.useState<string | null>(null);
-  // Incrementada por el CTA de la topbar para abrir el drawer de subida
-  // (ver DeckDashboardContainer: createSignal).
+  // Bumped by the topbar CTA to open the upload drawer
+  // (see DeckDashboardContainer: createSignal).
   const [createSignal, setCreateSignal] = React.useState(0);
-  // Same deferred pattern for the topbar progress panel:
-  // the dashboard unmounts during a study session, so opening from there
-  // returns home first and defers one frame.
-  const [panelSignal, setPanelSignal] = React.useState<PanelSignal | null>(null);
+  // Global panel (Progress/Settings): renders as a drawer over the current
+  // view — library or study session — without unmounting what is underneath.
+  // Opening Settings from inside a book no longer kills the session.
+  const [panelRoute, setPanelRoute] = React.useState<TopbarRoute | null>(null);
   const { isAuthenticated, isLoading, logout, user } = useAuth();
   // Flat background only: color applied to DOM in lib/theme.ts
   // (only --brand/--brand-dark; buttons use the original primary).
   const { pattern } = useThemeSettings();
   const goHome = React.useCallback(() => setActiveDeckId(null), []);
-  // "+ Nuevo Libro / Subir PDF" desde cualquier vista: vuelve a la biblioteca y
-  // abre el drawer. Desde una sesión de estudio el dashboard se monta de nuevo y
-  // absorbe la señal actual, así que el incremento se difiere un frame — tiempo
-  // suficiente para que el ref de base del montaje nuevo quede detrás.
+  // "New Book / Upload PDF" from any view: back to the library, then
+  // open the drawer. From a study session the dashboard remounts and would
+  // absorb the current signal, so the increment is deferred one frame — just
+  // enough for the fresh mount baseline ref to fall behind.
   const openCreator = React.useCallback(() => {
     if (activeDeckId === null) {
       setCreateSignal((s) => s + 1);
@@ -37,33 +43,25 @@ function App() {
     window.setTimeout(() => setCreateSignal((s) => s + 1), 0);
   }, [activeDeckId]);
   const openPanel = React.useCallback((route: TopbarRoute) => {
-    if (activeDeckId === null) {
-      setPanelSignal((s) => ({ route, n: (s?.n ?? 0) + 1 }));
-      return;
-    }
-    setActiveDeckId(null);
-    window.setTimeout(
-      () => setPanelSignal((s) => ({ route, n: (s?.n ?? 0) + 1 })),
-      0
-    );
-  }, [activeDeckId]);
+    setPanelRoute((prev) => (prev === route ? null : route));
+  }, []);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground animate-pulse">Cargando...</p>
+        <p className="text-muted-foreground animate-pulse">{t("app.loading")}</p>
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    // Login: beige biblioteca original, siempre mate (bg-background = 36 39% 94%).
-    // No renderiza fondos temados (Brand/Mystic/Glow/Pattern) para ignorar
-    // andel-theme / var(--brand) guardado. La app autenticada debajo sí los usa.
+    // Login: original beige library, always matte (bg-background = 36 39% 94%).
+    // No themed backgrounds (Brand/Mystic/Glow/Pattern) so the saved
+    // andel-theme / var(--brand) is ignored. The authenticated app below uses them.
     return (
       <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 flex flex-col">
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
-          <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+          <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-start px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <BrainCircuit className="h-4 w-4" aria-hidden="true" />
@@ -103,14 +101,100 @@ function App() {
               <DeckDashboardContainer
                 onSelectDeck={setActiveDeckId}
                 createSignal={createSignal}
-                panelSignal={panelSignal}
               />
             )}
           </div>
         </main>
       </div>
+
+      {/* App-level Progress/Settings panels: opening them from a study
+          session no longer unmounts it (the dashboard used to remount and the
+          card in progress was lost). */}
+      <GlobalPanels route={panelRoute} onClose={() => setPanelRoute(null)} />
     </div>
   )
+}
+
+const PANEL_META: Record<TopbarRoute, { titleKey: "dash.panelProgressTitle" | "dash.panelSettingsTitle"; descKey: "dash.panelProgressDesc" | "dash.panelSettingsDesc" }> = {
+  progress: { titleKey: "dash.panelProgressTitle", descKey: "dash.panelProgressDesc" },
+  settings: { titleKey: "dash.panelSettingsTitle", descKey: "dash.panelSettingsDesc" },
+};
+
+/** Legacy payload aliases (title/cardCount) tolerated by the dashboard. */
+type DeckLike = Deck & { title?: string; cardCount?: number };
+
+/** Book display name with legacy `title` fallback. */
+const deckTitle = (d: Deck): string => d.name || (d as DeckLike).title || "";
+
+const cardCountOf = (d: Deck): number =>
+  d.flashcardsCount || (d as DeckLike).cardCount || 0;
+
+/**
+ * Global drawer with Progress and Settings. Lives in App (not the dashboard)
+ * so it opens from any screen — library or study session — without unmounting
+ * what is underneath: opening Settings inside a book no longer drops the
+ * session or loses the card in progress.
+ */
+function GlobalPanels({ route, onClose }: { route: TopbarRoute | null; onClose: () => void }) {
+  const { decks } = useDecks();
+  const settings = useThemeSettings();
+  const { t } = useLanguage();
+  const meta = route ? PANEL_META[route] : null;
+
+  const progressBooks = React.useMemo<ProgressBook[]>(
+    () =>
+      decks.map((d) => ({
+        id: d.id,
+        name: deckTitle(d),
+        cards: cardCountOf(d),
+        progress: d.progressPercent ?? null,
+      })),
+    [decks]
+  );
+  const totalCards = React.useMemo(
+    () => progressBooks.reduce((sum, b) => sum + b.cards, 0),
+    [progressBooks]
+  );
+  const averageProgress = React.useMemo(() => {
+    const tracked = progressBooks.filter(
+      (b): b is ProgressBook & { progress: number } => typeof b.progress === "number"
+    );
+    if (tracked.length === 0) return null;
+    return Math.round(tracked.reduce((sum, b) => sum + b.progress, 0) / tracked.length);
+  }, [progressBooks]);
+
+  return (
+    <CreateDeckDrawer
+      open={route !== null}
+      onClose={onClose}
+      title={meta ? t(meta.titleKey) : ""}
+      description={meta ? t(meta.descKey) : ""}
+    >
+      {route === "progress" && (
+        <ProgressPanel
+          totalBooks={decks.length}
+          totalCards={totalCards}
+          averageProgress={averageProgress}
+          books={progressBooks}
+        />
+      )}
+      {route === "settings" && (
+        <SettingsPanel
+          themeId={settings.themeId}
+          customColor={settings.customColor}
+          savedColors={settings.savedColors}
+          pattern={settings.pattern}
+          onPickTheme={settings.pickTheme}
+          onCustomColorChange={settings.changeCustomColor}
+          onRemoveSavedColor={settings.removeColor}
+          hiddenThemes={settings.hiddenThemes}
+          onHidePreset={settings.hidePreset}
+          onRestorePresets={settings.restorePresets}
+          onPatternChange={settings.changePattern}
+        />
+      )}
+    </CreateDeckDrawer>
+  );
 }
 
 export default App

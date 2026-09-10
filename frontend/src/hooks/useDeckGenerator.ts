@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
 import { parseQuotaExceeded } from '../lib/quota';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { DeckGenerationOptions, QuotaExceededInfo } from '../types';
 
 export function useDeckGenerator() {
+  const { t } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -64,11 +66,11 @@ export function useDeckGenerator() {
       const quota = parseQuotaExceeded(err);
       if (quota) {
         setQuotaExceeded(quota);
-        setError(err.response?.data?.error || 'Has alcanzado el límite gratuito de la IA.');
+        setError(err.response?.data?.error || t('gen.quota'));
       } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
-        setError('La IA está tardando demasiado. El documento es muy extenso; prueba con un PDF más corto o inténtalo de nuevo.');
+        setError(t('gen.timeout'));
       } else {
-        setError(err.response?.data?.error || err.message || 'Error generating deck');
+        setError(err.response?.data?.error || err.message || t('gen.generic'));
       }
       throw err;
     } finally {

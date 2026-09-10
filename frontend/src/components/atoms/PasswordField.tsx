@@ -1,11 +1,13 @@
 import * as React from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useLanguage } from "../../i18n/LanguageContext"
 
 export interface PasswordFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 
 export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldProps>(
   ({ className, ...props }, ref) => {
+    const { t } = useLanguage();
     const [showPassword, setShowPassword] = React.useState(false)
 
     const togglePasswordVisibility = () => {
@@ -35,7 +37,7 @@ export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldPro
             <Eye className="h-4 w-4" />
           )}
           <span className="sr-only">
-            {showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            {showPassword ? t("password.hide") : t("password.show")}
           </span>
         </button>
       </div>

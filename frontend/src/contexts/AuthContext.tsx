@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiClient from '../lib/axios';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { User, LoginCredentials, RegisterCredentials } from '../types';
 
 interface AuthContextType {
@@ -16,6 +17,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -29,10 +31,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(response.data);
       setIsAuthenticated(true);
     } catch (err: any) {
-      // Solo consideramos "sin sesión" cuando el servidor responde 401 (token inválido/caducado).
-      // Si es un error de red o el servidor no responde (500/timeout/ECONNREFUSED),
-      // NO deslogueamos al usuario: podría ser un fallo momentáneo y lo echaríamos
-      // de la página injustamente (ej: un PDF pesado aún procesándose).
+      // Only a 401 (invalid/expired token) counts as "no session".
+      // Network errors or unresponsive server (500/timeout/ECONNREFUSED)
+      // must NOT log the user out: it could be a momentary failure and we
+      // would kick them off the page unfairly (e.g. a heavy PDF still processing).
       const status = err?.response?.status;
       if (status === 401) {
         setUser(null);
@@ -46,8 +48,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     checkAuth();
 
-    // Si cualquier petición autenticada responde 401 (sesión inválida/caducada),
-    // limpiamos el estado de autenticación para volver al login automáticamente.
+    // Any authenticated request answering 401 (invalid/expired session)
+    // clears the auth state so the app returns to login automatically.
     const handleUnauthorized = () => {
       setUser(null);
       setIsAuthenticated(false);
@@ -63,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await apiClient.post('/auth/login', credentials);
       await checkAuth();
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Error al iniciar sesión');
+      setError(err.response?.data?.error || err.message || t('auth.loginError'));
       throw err;
     } finally {
       setIsLoading(false);
@@ -77,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await apiClient.post('/auth/register', credentials);
       await checkAuth();
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Error al registrarse');
+      setError(err.response?.data?.error || err.message || t('auth.registerError'));
       throw err;
     } finally {
       setIsLoading(false);
@@ -92,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setIsAuthenticated(false);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Error al cerrar sesión');
+      setError(err.response?.data?.error || err.message || t('auth.logoutError'));
       throw err;
     } finally {
       setIsLoading(false);

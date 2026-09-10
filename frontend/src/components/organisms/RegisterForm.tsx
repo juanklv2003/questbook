@@ -3,12 +3,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../atoms/Input';
 import { PasswordField } from '../atoms/PasswordField';
 import { Button } from '../atoms/Button';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
+  const { t } = useLanguage();
   const { register, error: authError, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,12 +22,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
     setLocalError(null);
 
     if (!email || !password || !confirmPassword) {
-      setLocalError('Todos los campos son requeridos');
+      setLocalError(t("auth.requiredRegister"));
       return;
     }
 
     if (password !== confirmPassword) {
-      setLocalError('Las contraseñas no coinciden');
+      setLocalError(t("auth.passwordMismatch"));
       return;
     }
 
@@ -40,8 +42,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-md mx-auto p-6 bg-card rounded-xl border shadow-sm">
       <div className="space-y-2 text-center">
-        <h2 className="text-2xl font-bold tracking-tight">Crear una cuenta</h2>
-        <p className="text-sm text-muted-foreground">Ingresa tus datos para comenzar</p>
+        <h2 className="text-2xl font-bold tracking-tight">{t("auth.registerTitle")}</h2>
+        <p className="text-sm text-muted-foreground">{t("auth.registerSubtitle")}</p>
       </div>
 
       {(localError || authError) && (
@@ -53,7 +55,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       <div className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="register-email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Correo Electrónico
+            {t("auth.email")}
           </label>
           <Input
             id="register-email"
@@ -68,7 +70,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         
         <div className="space-y-2">
           <label htmlFor="register-password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Contraseña
+            {t("auth.password")}
           </label>
           <PasswordField
             id="register-password"
@@ -82,7 +84,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
 
         <div className="space-y-2">
           <label htmlFor="confirm-password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Confirmar Contraseña
+            {t("auth.confirmPassword")}
           </label>
           <PasswordField
             id="confirm-password"
@@ -96,7 +98,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       </div>
 
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Creando cuenta...' : 'Registrarse'}
+        {isLoading ? t("auth.registerLoading") : t("auth.registerCta")}
       </Button>
     </form>
   );
