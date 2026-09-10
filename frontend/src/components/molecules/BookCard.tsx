@@ -157,8 +157,19 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
           </div>
 
           {/* Hover card for horizontal (first shelf opens downward, rest upward) */}
+          {/* Puente invisible: cubre el hueco entre el libro y el panel para que
+              el hover no se corte al cruzar el ratón. */}
+          <div
+            aria-hidden="true"
+            className={cn(
+              "absolute left-1/2 -translate-x-1/2 z-40 hidden group-hover:block",
+              isFirstShelf ? "top-full h-2" : "bottom-full h-2",
+              "w-52"
+            )}
+          />
           <div className={cn(
-            "absolute left-1/2 -translate-x-1/2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+            "absolute left-1/2 -translate-x-1/2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+            "[transition:opacity_150ms_ease,visibility_0s_linear_200ms]",
             isFirstShelf ? "top-full mt-2" : "bottom-full mb-2"
           )}>
             <HoverCard
@@ -239,8 +250,18 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
         </div>
 
         {/* Hover card (side-anchored; grows away from the nearest board) */}
+        {/* Puente invisible hover: cubre el hueco de ml-3 entre el libro y el
+            panel para que el hover no se corte al cruzar el ratón. */}
+        <div
+          aria-hidden="true"
+          className={cn(
+            "absolute z-40 hidden group-hover:block left-full w-3",
+            isLastShelf ? "bottom-0 h-44" : isFirstShelf ? "top-0 h-44" : "top-1/2 -translate-y-1/2 h-44"
+          )}
+        />
         <div className={cn(
-          "absolute left-full ml-3 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+          "absolute left-full ml-3 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+          "[transition:opacity_150ms_ease,visibility_0s_linear_200ms]",
           isLastShelf ? "bottom-0" : isFirstShelf ? "top-0" : "top-1/2 -translate-y-1/2"
         )}>
           <HoverCard
