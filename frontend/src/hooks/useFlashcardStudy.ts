@@ -9,8 +9,8 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
   // Resultado por tarjeta (keyed by id: sobrevive a reordenados y evita
   // sincronizar longitudes si cambia el mazo). null/ausente = pendiente.
   const [resultsById, setResultsById] = useState<Record<string, boolean>>({});
-  
-  const { evaluateAnswer, isEvaluating } = useEvaluator();
+
+  const { evaluateAnswer, isEvaluating, error: evaluationError, quotaExceeded, clearError } = useEvaluator();
 
   const tarjetaActual = tarjetas[currentIndex];
   const progreso = currentIndex + 1;
@@ -18,17 +18,23 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
 
   const evaluar = async () => {
     if (!tarjetaActual || !respuestaUsuario.trim()) return;
-    
-    const result = await evaluateAnswer(
-      tarjetaActual.id,
-      respuestaUsuario
-    );
-    
-    setResultsById(prev => ({ ...prev, [tarjetaActual.id]: result.isCorrect }));
-    setFeedbackIA(result);
+
+    try {
+      const result = await evaluateAnswer(
+        tarjetaActual.id,
+        respuestaUsuario
+      );
+
+      setResultsById(prev => ({ ...prev, [tarjetaActual.id]: result.isCorrect }));
+      setFeedbackIA(result);
+    } catch {
+      // El error (IA sin responder, formato inválido, cuota...) ya quedó
+      // expuesto vía `evaluationError` y se muestra en StudyPlayer.
+    }
   };
 
   const siguienteTarjeta = () => {
+    clearError();
     setCurrentIndex(prev => prev + 1);
     setRespuestaUsuario('');
     setFeedbackIA(null);
@@ -37,12 +43,14 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
   /** Salto directo a una tarjeta (lista de repaso). No altera resultados. */
   const goToCard = (index: number) => {
     if (index < 0 || index >= tarjetas.length) return;
+    clearError();
     setCurrentIndex(index);
     setRespuestaUsuario('');
     setFeedbackIA(null);
   };
 
   const reintentar = () => {
+    clearError();
     setRespuestaUsuario('');
     setFeedbackIA(null);
   };
@@ -58,6 +66,9 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
     evaluarRespuesta: evaluar,
     isEvaluating,
     feedbackIA,
+    evaluationError,
+    quotaExceeded,
+    clearEvaluationError: clearError,
     siguienteTarjeta,
     reintentar,
     resultsById,

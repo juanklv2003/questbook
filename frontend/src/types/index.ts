@@ -8,6 +8,8 @@ export interface Deck {
   position?: number | null;
   /** 0–100 study progress. Absent/null = not tracked yet (progress UI hidden). */
   progressPercent?: number | null;
+  /** Spine accent chosen at creation. Null/undefined = legacy deck, falls back to name hash. */
+  color?: string | null;
   /** Snake_case aliases as returned by legacy payloads. Prefer camelCase. */
   shelf_index?: number | null;
 }
@@ -47,8 +49,16 @@ export interface RegisterCredentials {
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
+/** Gemini free-tier quota hint returned by the API on HTTP 429. */
+export interface QuotaExceededInfo {
+  retryAfterSeconds: number;
+  /** ISO timestamp when generation can be retried. */
+  resetAt: string;
+}
+
 export interface DeckGenerationOptions {
   name: string;
   cardCount: number;
   difficulty: Difficulty;
+  color?: string;
 }

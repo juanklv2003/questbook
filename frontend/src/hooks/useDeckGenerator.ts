@@ -1,19 +1,29 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
-import type { DeckGenerationOptions } from '../types';
+import { parseQuotaExceeded } from '../lib/quota';
+import type { DeckGenerationOptions, QuotaExceededInfo } from '../types';
 
 export function useDeckGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  // true = el archivo ya subió y la IA está generando las tarjetas
+  // Structured quota state (null = no quota block). Kept alongside the
+  // legacy string error so existing callers keep working.
+  const [quotaExceeded, setQuotaExceeded] = useState<QuotaExceededInfo | null>(null);
+  // true = upload finished and the AI is generating the cards
   const [isAiProcessing, setIsAiProcessing] = useState(false);
+
+  const clearError = () => {
+    setError(null);
+    setQuotaExceeded(null);
+  };
 
   const generateDeckFromPdf = async (file: File, options: DeckGenerationOptions) => {
     setIsGenerating(true);
     setIsAiProcessing(false);
     setProgress(0);
     setError(null);
+    setQuotaExceeded(null);
 
     try {
       const formData = new FormData();
@@ -21,6 +31,7 @@ export function useDeckGenerator() {
       formData.append('name', options.name);
       formData.append('cardCount', String(options.cardCount));
       formData.append('difficulty', options.difficulty);
+      formData.append('color', options.color ?? 'primary');
       // New books land on the first shelf; the backend stores it on create.
       formData.append('shelf_index', '0');
 
@@ -30,16 +41,16 @@ export function useDeckGenerator() {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        // La IA puede tardar en responder: damos un margen amplio (90s) para no
-        // colgar el request indefinidamente y mostrar un error claro si excede.
+        // The AI can be slow to respond: allow a wide margin (90s) instead
+        // of hanging forever, and show a clear error when exceeded.
         timeout: 90000,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 100));
-          // El envío del archivo representa 20→50 de la barra.
+          // File upload covers 20 -> 50 of the bar.
           setProgress(20 + percentCompleted * 0.3); // up to 50
           if (percentCompleted >= 100) {
             setIsAiProcessing(true);
-            setProgress(60); // subida terminada, ahora crea las tarjetas con IA
+            setProgress(60); // upload done, now the AI creates the cards
           }
         }
       });
@@ -50,8 +61,11 @@ export function useDeckGenerator() {
       return response.data;
     } catch (err: any) {
       setIsAiProcessing(false);
-      // Si el servidor se queda sin responder (timeout) mostramos un mensaje útil.
-      if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+      const quota = parseQuotaExceeded(err);
+      if (quota) {
+        setQuotaExceeded(quota);
+        setError(err.response?.data?.error || 'Has alcanzado el límite gratuito de la IA.');
+      } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
         setError('La IA está tardando demasiado. El documento es muy extenso; prueba con un PDF más corto o inténtalo de nuevo.');
       } else {
         setError(err.response?.data?.error || err.message || 'Error generating deck');
@@ -62,5 +76,5 @@ export function useDeckGenerator() {
     }
   };
 
-  return { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error };
+  return { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error, quotaExceeded, clearError };
 }

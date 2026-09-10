@@ -13,7 +13,13 @@ import { DeckController } from './DeckController';
 import { db } from '../../../config/db';
 import { authMiddleware } from '../../auth/http/AuthRouter';
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Límite de subida: suficiente para PDFs de estudio típicos y evita cargar
+// buffers enormes en memoria. Multer responde LIMIT_FILE_SIZE al excederlo.
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_BYTES },
+});
 
 // 1. Instantiate Adapters
 const deckRepo = new PostgresDeckRepository(db);

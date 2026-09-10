@@ -36,6 +36,7 @@ async function initDb() {
         position INT NOT NULL DEFAULT 0,
         studied_count INT NOT NULL DEFAULT 0,
         correct_count INT NOT NULL DEFAULT 0,
+        color VARCHAR(20),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
@@ -60,6 +61,12 @@ async function initDb() {
       ALTER TABLE decks ADD COLUMN IF NOT EXISTS correct_count INT NOT NULL DEFAULT 0;
     `;
     console.log("Ensured columns: decks.studied_count, decks.correct_count");
+
+    // Spine accent chosen at creation. NULL = legacy deck, falls back to name hash.
+    await sql`
+      ALTER TABLE decks ADD COLUMN IF NOT EXISTS color VARCHAR(20);
+    `;
+    console.log("Ensured columns: decks.color");
 
     // Flashcards table
     await sql`

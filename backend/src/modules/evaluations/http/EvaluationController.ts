@@ -11,13 +11,19 @@ export class EvaluationController {
   async evaluate(req: Request, res: Response) {
     const { flashcardId, userAnswer } = req.body;
 
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(401, 'Unauthorized');
+    }
+
     if (!flashcardId || !userAnswer) {
       throw new AppError(400, 'flashcardId and userAnswer are required');
     }
 
     const result = await this.evaluateAnswerUseCase.execute({
       flashcardId,
-      userAnswer
+      userAnswer,
+      userId,
     });
 
     res.status(200).json(result);

@@ -24,7 +24,7 @@ export class DeckController {
   }
 
   async generate(req: Request, res: Response) {
-    const { name, folderId, content: reqContent, cardCount, difficulty, shelf_index, shelfIndex } = req.body;
+    const { name, folderId, content: reqContent, cardCount, difficulty, shelf_index, shelfIndex, color } = req.body;
     let content = reqContent;
     
     const userId = req.user?.userId;
@@ -69,6 +69,7 @@ export class DeckController {
       cardCount: parsedCardCount,
       difficulty: parsedDifficulty as 'easy' | 'medium' | 'hard' | undefined,
       shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),
+      color: parseDeckColor(color),
     });
 
     res.status(201).json(result);
@@ -80,9 +81,12 @@ export class DeckController {
       throw new AppError(400, 'Deck ID is required');
     }
 
-    // Optional: Validate if the user owns the deck
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(401, 'Unauthorized');
+    }
 
-    const result = await this.getDeckFlashcardsUseCase.execute(deckId as string);
+    const result = await this.getDeckFlashcardsUseCase.execute(deckId as string, userId);
     res.status(200).json(result);
   }
 
@@ -148,4 +152,12 @@ function parseShelfIndex(raw: unknown): number | undefined {
     throw new AppError(400, 'shelf_index must be an integer between 0 and 2');
   }
   return parsed;
+}
+
+const VALID_DECK_COLORS = ['primary', 'violet', 'emerald', 'amber', 'rose'] as const;
+
+function parseDeckColor(raw: unknown): string {
+  if (typeof raw !== 'string') return 'primary';
+  const normalized = raw.trim().toLowerCase();
+  return (VALID_DECK_COLORS as readonly string[]).includes(normalized) ? normalized : 'primary';
 }

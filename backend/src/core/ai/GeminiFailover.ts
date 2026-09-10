@@ -1,5 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env } from '../../config/env';
+import { QuotaExceededError } from '../errors/QuotaExceededError';
+
+/** Fallback wait when Gemini does not report a retry delay. */
+const FALLBACK_RETRY_AFTER_SECONDS = 60;
 
 /**
  * Determina si un error de Gemini corresponde a que la clave agotó su cuota/uso
@@ -21,12 +25,96 @@ export function isQuotaExhausted(error: any): boolean {
 }
 
 /**
- * Gestor de claves de Gemini con failover automático.
+ * Extract the retry delay (seconds) from a Gemini quota error.
+ * Lookup order: RetryInfo.retryDelay in errorDetails/details, then "retry in Ns"
+ * patterns in the message, then the 60s fallback. Never logs API keys.
+ */
+export function parseRetryDelay(error: any): number {
+  const detailArrays: unknown[] = [
+    error?.errorDetails,
+    error?.details,
+    error?.error?.details,
+    error?.error?.errorDetails,
+    (error as { cause?: unknown })?.cause,
+  ];
+
+  const retryDelayFromDetails = (details: unknown): number | null => {
+    if (!Array.isArray(details)) return null;
+    for (const entry of details) {
+      if (!entry || typeof entry !== 'object') continue;
+      const record = entry as Record<string, unknown>;
+      const type = String(record['@type'] ?? record['type'] ?? '');
+      if (!type.toLowerCase().includes('retryinfo')) continue;
+      const raw = String(record['retryDelay'] ?? '');
+      const parsed = parseDurationSeconds(raw);
+      if (parsed !== null) return parsed;
+    }
+    return null;
+  };
+
+  for (const candidate of detailArrays) {
+    // `cause` may wrap the SDK error one level deep.
+    const nested =
+      candidate && typeof candidate === 'object' && !Array.isArray(candidate)
+        ? [
+            (candidate as Record<string, unknown>)['errorDetails'],
+            (candidate as Record<string, unknown>)['details'],
+          ]
+        : [candidate];
+    for (const arr of nested) {
+      const found = retryDelayFromDetails(arr);
+      if (found !== null) return found;
+    }
+  }
+
+  const haystack = [
+    error?.message,
+    error?.details,
+    error?.statusText,
+    safeJson(error?.errorDetails),
+    safeJson(error?.details),
+  ]
+    .filter((part): part is string => typeof part === 'string' && part.length > 0)
+    .join(' ');
+
+  const patterns = [
+    /retry\s+in\s+(\d+(?:\.\d+)?)\s*s/i,
+    /try\s+again\s+in\s+(\d+(?:\.\d+)?)\s*s/i,
+    /retrydelay"?\s*[:=]\s*"?(\d+(?:\.\d+)?)s/i,
+  ];
+  for (const pattern of patterns) {
+    const match = haystack.match(pattern);
+    if (match) {
+      const seconds = Math.ceil(Number(match[1]));
+      if (Number.isFinite(seconds) && seconds > 0) return seconds;
+    }
+  }
+
+  return FALLBACK_RETRY_AFTER_SECONDS;
+}
+
+/** Parse a "Ns" duration (e.g. "32s", "32.5s") into ceiled seconds. */
+function parseDurationSeconds(raw: string): number | null {
+  const match = raw.trim().match(/^(\d+(?:\.\d+)?)s$/i);
+  if (!match) return null;
+  const seconds = Math.ceil(Number(match[1]));
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
+
+/** JSON helper that never throws (used only for message scanning). */
+function safeJson(value: unknown): string {
+  try {
+    return typeof value === 'string' ? value : JSON.stringify(value ?? '');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Key manager with automatic failover.
  *
- * Si la clave actual devuelve un error de cuota (429 / RESOURCE_EXHAUSTED),
- * rota a la siguiente clave de la lista e intenta de nuevo. Los errores que
- * NO sean de cuota (p.ej. clave inválida, timeout, error de formato) NO
- * provocan cambio de clave y se propagan directamente.
+ * When the current key hits a quota error (429 / RESOURCE_EXHAUSTED), it
+ * rotates to the next key. Non-quota errors propagate without rotating.
  */
 export class GeminiFailover {
   private readonly keys: string[];
@@ -40,27 +128,29 @@ export class GeminiFailover {
   }
 
   /**
-   * Ejecuta `fn` con la clave actual; si falla por cuota, reintenta con las
-   * siguientes claves. `fn` recibe el cliente GoogleGenerativeAI de la clave.
+   * Run `fn` with the current key; on quota errors retry with the next keys.
+   * When every key is exhausted, throw QuotaExceededError with the longest
+   * observed retry delay (fallback 60s). Never exposes key values.
    */
   async withFailover<T>(fn: (client: GoogleGenerativeAI) => Promise<T>): Promise<T> {
     const attempts = this.keys.length;
-    let lastError: any = null;
+    let maxRetryAfter = 0;
 
     for (let i = 0; i < attempts; i++) {
       const idx = (this.currentIndex + i) % this.keys.length;
       try {
         const client = new GoogleGenerativeAI(this.keys[idx]);
         const result = await fn(client);
-        // Recordar la clave que funcionó para la siguiente llamada.
+        // Remember the working key for the next call.
         this.currentIndex = idx;
         return result;
       } catch (error: any) {
-        lastError = error;
+        if (error instanceof QuotaExceededError) throw error;
         if (isQuotaExhausted(error)) {
+          maxRetryAfter = Math.max(maxRetryAfter, parseRetryDelay(error));
           console.warn(
-            `[Gemini] La clave ${idx + 1} de ${this.keys.length} agotó su uso ` +
-            `(${error?.message || error?.status || 'quota'}). Cambiando a la siguiente...`
+            `[Gemini] Key ${idx + 1} of ${this.keys.length} exhausted ` +
+            `(${error?.message || error?.status || 'quota'}). Trying next...`
           );
           continue;
         }
@@ -68,9 +158,12 @@ export class GeminiFailover {
       }
     }
 
-    // Todas las claves agotadas: lanzamos un error claro y en español para el usuario.
-    throw new Error(
-      'Todas las claves de Gemini han agotado su uso. Revisa tu cuota en https://aistudio.google.com/apikey'
+    // All keys exhausted: report 429 with retry hint instead of a generic 500.
+    const retryAfterSeconds =
+      maxRetryAfter > 0 ? maxRetryAfter : FALLBACK_RETRY_AFTER_SECONDS;
+    throw new QuotaExceededError(
+      retryAfterSeconds,
+      new Date(Date.now() + retryAfterSeconds * 1000).toISOString()
     );
   }
 }

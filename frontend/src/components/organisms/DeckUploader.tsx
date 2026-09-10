@@ -17,12 +17,21 @@ const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; description: strin
   { value: 'hard', label: 'Difícil', description: 'Conceptos avanzados y relaciones complejas' },
 ];
 
+const COLOR_OPTIONS: { value: string; label: string; swatch: string }[] = [
+  { value: 'primary', label: 'Azul', swatch: 'bg-primary' },
+  { value: 'violet', label: 'Violeta', swatch: 'bg-violet-600' },
+  { value: 'emerald', label: 'Verde', swatch: 'bg-emerald-600' },
+  { value: 'amber', label: 'Ámbar', swatch: 'bg-amber-600' },
+  { value: 'rose', label: 'Rosa', swatch: 'bg-rose-600' },
+];
+
 export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing = false }: DeckUploaderProps) {
   const [dragActive, setDragActive] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [deckName, setDeckName] = React.useState('');
   const [cardCount, setCardCount] = React.useState<number>(15);
   const [difficulty, setDifficulty] = React.useState<Difficulty>('medium');
+  const [color, setColor] = React.useState<string>('primary');
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -41,7 +50,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       const name = deckName.trim() || file.name.replace('.pdf', '');
-      onUpload(file, { name, cardCount, difficulty });
+      onUpload(file, { name, cardCount, difficulty, color });
     }
   };
 
@@ -50,7 +59,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const name = deckName.trim() || file.name.replace('.pdf', '');
-      onUpload(file, { name, cardCount, difficulty });
+      onUpload(file, { name, cardCount, difficulty, color });
     }
   };
 
@@ -127,6 +136,33 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
                 </span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Color */}
+        <div className="flex flex-col gap-2">
+          <span id="deck-color-label" className="text-sm font-medium">Color del libro</span>
+          <div className="flex gap-2" role="group" aria-labelledby="deck-color-label">
+            {COLOR_OPTIONS.map(option => {
+              const selected = color === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setColor(option.value)}
+                  aria-pressed={selected}
+                  title={option.label}
+                  aria-label={`Color ${option.label}`}
+                  className={`flex h-10 flex-1 cursor-pointer items-center justify-center rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
+                    selected
+                      ? 'bg-secondary ring-2 ring-primary ring-offset-2 ring-offset-card'
+                      : 'bg-secondary hover:bg-secondary/80'
+                  }`}
+                >
+                  <span aria-hidden="true" className={`h-6 w-6 rounded-full ${option.swatch}`} />
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -10,6 +10,7 @@ import { useThemeSettings } from "../../hooks/useThemeSettings"
 import type { TopbarRoute } from "../organisms/Navbar"
 import { BookCard } from "../molecules/BookCard"
 import { Bookshelf } from "../molecules/Bookshelf"
+import { QuotaCountdownAlert } from "../molecules/QuotaCountdownAlert"
 import { Button } from "../atoms/Button"
 import { Plus, BookOpen } from "lucide-react"
 import type { Deck, DeckGenerationOptions } from "../../types"
@@ -19,6 +20,15 @@ type DeckLike = Deck & { title?: string; cardCount?: number }
 
 /** Book display name with legacy `title` fallback. */
 const deckTitle = (d: Deck): string => d.name || (d as DeckLike).title || ""
+
+type DeckAccent = "primary" | "violet" | "emerald" | "amber" | "rose";
+
+const isDeckAccent = (value: unknown): value is DeckAccent =>
+  value === "primary" || value === "violet" || value === "emerald" || value === "amber" || value === "rose";
+
+/** Persisted accent only: NULL/legacy keeps the name-hash fallback inside BookCard. */
+const deckAccent = (d: Deck): DeckAccent | undefined =>
+  isDeckAccent(d.color) ? d.color : undefined;
 
 const PANEL_META: Record<TopbarRoute, { title: string; description: string }> = {
   progress: { title: "Progreso", description: "Tu avance de estudio por libro." },
@@ -42,7 +52,7 @@ export function DeckDashboardContainer({
   panelSignal?: PanelSignal | null;
 }) {
   const { decks, isLoading, setDecks } = useDecks();
-  const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error } = useDeckGenerator();
+  const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error, quotaExceeded, clearError } = useDeckGenerator();
   const {
     shelves,
     shelfCount,
@@ -91,6 +101,7 @@ export function DeckDashboardContainer({
         id: result.deckId,
         name: result.name,
         flashcardsCount: result.flashcardsCount,
+        color: options.color ?? result.color ?? 'primary',
         shelfIndex: 0,
         position: 0,
       } as Deck, ...prev]);
@@ -169,6 +180,7 @@ export function DeckDashboardContainer({
                 name={deckTitle(deck)}
                 flashcardsCount={deck.flashcardsCount || (deck as DeckLike).cardCount || 0}
                 progressPercent={deck.progressPercent ?? null}
+                accentColor={deckAccent(deck)}
                 onSelect={() => onSelectDeck(deck.id)}
                 onDeleteSuccess={() => {
                   setDecks(prev => prev.filter(d => d.id !== deck.id))
@@ -230,7 +242,11 @@ export function DeckDashboardContainer({
             progress={progress}
             isAiProcessing={isAiProcessing}
           />
-          {error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>}
+          {quotaExceeded ? (
+            <QuotaCountdownAlert quota={quotaExceeded} onAcknowledge={clearError} />
+          ) : (
+            error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>
+          )}
         </div>
       </CreateDeckDrawer>
 

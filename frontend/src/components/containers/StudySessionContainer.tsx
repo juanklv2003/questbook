@@ -43,6 +43,9 @@ function StudySessionInner({ flashcards, onBack }: { flashcards: Flashcard[], on
     evaluarRespuesta,
     isEvaluating,
     feedbackIA,
+    evaluationError,
+    quotaExceeded,
+    clearEvaluationError,
     siguienteTarjeta,
     reintentar,
     resultsById,
@@ -101,6 +104,9 @@ function StudySessionInner({ flashcards, onBack }: { flashcards: Flashcard[], on
           evaluation={feedbackIA}
           onNext={siguienteTarjeta}
           onRetry={reintentar}
+          error={evaluationError}
+          quotaExceeded={quotaExceeded}
+          onAcknowledgeQuota={clearEvaluationError}
           reviewItems={reviewItems}
           activeIndex={currentIndex}
           onSelectCard={goToCard}

@@ -18,4 +18,6 @@ export interface Deck {
   correctCount?: number;
   /** round(100*correct/studied). Null when studiedCount is 0 (no data yet). */
   progressPercent?: number | null;
+  /** Spine accent chosen at creation (primary|violet|emerald|amber|rose). Null = legacy deck, falls back to name hash. */
+  color?: string | null;
 }

@@ -1,5 +1,13 @@
 import { IFlashcardGeneratorPort, GenerateOptions } from '../domain/IFlashcardGeneratorPort';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
+import { AppError } from '../../../core/errors/AppError';
+import { z } from 'zod';
+
+/** Cada tarjeta debe traer pregunta y respuesta no vacías; el resto se descarta. */
+const responseCardSchema = z.object({
+  question: z.string().trim().min(1),
+  answer: z.string().trim().min(1),
+});
 
 export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
   private readonly gemini: GeminiFailover;
@@ -95,10 +103,30 @@ ${promptText}${truncationNotice}
       if (!Array.isArray(parsed)) {
         throw new Error('Gemini response is not a JSON array.');
       }
-      return parsed;
+
+      // Validamos cada tarjeta y descartamos las que no tengan question/answer
+      // (evita insertar `undefined` en columnas NOT NULL). Además acotamos la
+      // respuesta al máximo pedido por si el modelo se excede.
+      const cards = parsed
+        .map((item) => responseCardSchema.safeParse(item))
+        .filter((r): r is { success: true; data: { question: string; answer: string } } => r.success)
+        .map((r) => ({ question: r.data.question, answer: r.data.answer }))
+        .slice(0, maxCards);
+
+      if (cards.length === 0) {
+        throw new AppError(
+          422,
+          'La IA no pudo generar tarjetas válidas de este documento. Probá con otro archivo o intentá de nuevo.'
+        );
+      }
+      return cards;
     } catch (err) {
+      if (err instanceof AppError) throw err;
       console.error('Failed to parse Gemini output:', jsonStr);
-      throw new Error('Failed to generate flashcards from text. Invalid format.');
+      throw new AppError(
+        422,
+        'La IA no pudo generar tarjetas de este documento. Probá de nuevo en unos segundos.'
+      );
     }
   }
 }

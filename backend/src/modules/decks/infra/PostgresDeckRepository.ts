@@ -1,6 +1,7 @@
 import { Pool } from '@neondatabase/serverless';
 import { Deck } from '../domain/Deck';
 import { IDeckRepository } from '../domain/IDeckRepository';
+import { AppError } from '../../../core/errors/AppError';
 
 export class PostgresDeckRepository implements IDeckRepository {
   constructor(private readonly db: Pool) {}
@@ -24,11 +25,11 @@ export class PostgresDeckRepository implements IDeckRepository {
       [deck.userId, shelfIndex]
     );
     const query = `
-      INSERT INTO decks (name, user_id, folder_id, pdf_url, pdf_public_id, shelf_index, position)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", created_at AS "createdAt", updated_at AS "updatedAt"
+      INSERT INTO decks (name, user_id, folder_id, pdf_url, pdf_public_id, shelf_index, position, color)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", color, created_at AS "createdAt", updated_at AS "updatedAt"
     `;
-    const values = [deck.name, deck.userId, deck.folderId || null, deck.pdfUrl || null, deck.pdfPublicId || null, shelfIndex, position];
+    const values = [deck.name, deck.userId, deck.folderId || null, deck.pdfUrl || null, deck.pdfPublicId || null, shelfIndex, position, deck.color ?? 'primary'];
 
     const result = await this.db.query<Deck>(query, values);
     return result.rows[0];
@@ -36,7 +37,7 @@ export class PostgresDeckRepository implements IDeckRepository {
 
   async findById(id: string): Promise<Deck | null> {
     const query = `
-      SELECT id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", studied_count AS "studiedCount", correct_count AS "correctCount", ${PostgresDeckRepository.progressFor('decks')}, created_at AS "createdAt", updated_at AS "updatedAt"
+      SELECT id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", color, studied_count AS "studiedCount", correct_count AS "correctCount", ${PostgresDeckRepository.progressFor('decks')}, created_at AS "createdAt", updated_at AS "updatedAt"
       FROM decks
       WHERE id = $1
     `;
@@ -55,6 +56,7 @@ export class PostgresDeckRepository implements IDeckRepository {
         d.pdf_public_id AS "pdfPublicId",
         d.shelf_index AS "shelfIndex",
         d.position AS "position",
+        d.color,
         d.studied_count AS "studiedCount",
         d.correct_count AS "correctCount",
         ${PostgresDeckRepository.progressFor('d')},
@@ -81,7 +83,7 @@ export class PostgresDeckRepository implements IDeckRepository {
       UPDATE decks
       SET shelf_index = $2, position = $3, updated_at = NOW()
       WHERE id = $1
-      RETURNING id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", studied_count AS "studiedCount", correct_count AS "correctCount", ${PostgresDeckRepository.progressFor('decks')}, created_at AS "createdAt", updated_at AS "updatedAt"
+      RETURNING id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", color, studied_count AS "studiedCount", correct_count AS "correctCount", ${PostgresDeckRepository.progressFor('decks')}, created_at AS "createdAt", updated_at AS "updatedAt"
     `;
     const result = await this.db.query<Deck>(query, [deckId, shelfIndex, position]);
     return result.rows[0] || null;
@@ -99,7 +101,7 @@ export class PostgresDeckRepository implements IDeckRepository {
     const result = await this.db.query<{ deckId: string; progressPercent: number | null }>(query, [deckId, isCorrect]);
     const row = result.rows[0];
     if (!row) {
-      throw new Error('Deck not found');
+      throw new AppError(404, 'Deck not found');
     }
     return row;
   }
