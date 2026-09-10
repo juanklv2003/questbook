@@ -5,6 +5,10 @@ import { GetDeckFlashcardsUseCase } from '../useCases/GetDeckFlashcardsUseCase';
 import { ListDecksUseCase } from '../useCases/ListDecksUseCase';
 import { DeleteDeckUseCase } from '../useCases/DeleteDeckUseCase';
 import { UpdateDeckShelfUseCase } from '../useCases/UpdateDeckShelfUseCase';
+import { GetStudySessionUseCase } from '../useCases/GetStudySessionUseCase';
+import { SaveStudySessionUseCase } from '../useCases/SaveStudySessionUseCase';
+import { DeleteStudySessionUseCase } from '../useCases/DeleteStudySessionUseCase';
+import { PostgresStudySessionRepository } from '../infra/PostgresStudySessionRepository';
 import { PostgresDeckRepository } from '../infra/PostgresDeckRepository';
 import { GeminiFlashcardGenerator } from '../infra/GeminiFlashcardGenerator';
 import { PostgresFlashcardRepository } from '../../flashcards/infra/PostgresFlashcardRepository';
@@ -33,6 +37,10 @@ const getDeckFlashcardsUseCase = new GetDeckFlashcardsUseCase(flashcardRepo, dec
 const listDecksUseCase = new ListDecksUseCase(deckRepo);
 const deleteDeckUseCase = new DeleteDeckUseCase(deckRepo, cloudStorage);
 const updateDeckShelfUseCase = new UpdateDeckShelfUseCase(deckRepo);
+const sessionRepo = new PostgresStudySessionRepository(db);
+const getStudySessionUseCase = new GetStudySessionUseCase(deckRepo, sessionRepo);
+const saveStudySessionUseCase = new SaveStudySessionUseCase(deckRepo, sessionRepo);
+const deleteStudySessionUseCase = new DeleteStudySessionUseCase(deckRepo, sessionRepo);
 
 // 3. Inject into Controller
 const deckController = new DeckController(
@@ -40,7 +48,10 @@ const deckController = new DeckController(
   getDeckFlashcardsUseCase,
   listDecksUseCase,
   deleteDeckUseCase,
-  updateDeckShelfUseCase
+  updateDeckShelfUseCase,
+  getStudySessionUseCase,
+  saveStudySessionUseCase,
+  deleteStudySessionUseCase
 );
 
 // 4. Wire Router
@@ -50,6 +61,9 @@ deckRouter.post('/generate', authMiddleware.requireAuth, upload.single('file'), 
 deckRouter.get('/:deckId/flashcards', authMiddleware.requireAuth, deckController.getFlashcards);
 deckRouter.get('/', authMiddleware.requireAuth, deckController.listDecks);
 deckRouter.patch('/:id/shelf', authMiddleware.requireAuth, deckController.updateShelf);
+deckRouter.get('/:id/session', authMiddleware.requireAuth, deckController.getSession);
+deckRouter.patch('/:id/session', authMiddleware.requireAuth, deckController.saveSession);
+deckRouter.delete('/:id/session', authMiddleware.requireAuth, deckController.deleteSession);
 deckRouter.delete('/:id', authMiddleware.requireAuth, deckController.deleteDeck);
 
 export { deckRouter };

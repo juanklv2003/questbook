@@ -81,6 +81,23 @@ async function initDb() {
     `;
     console.log("Created table: flashcards");
 
+    // Study sessions: resumable per-user progress. Never auto-deleted —
+    // only an explicit DELETE /decks/:id/session removes the row.
+    await sql`
+      CREATE TABLE IF NOT EXISTS study_sessions (
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        deck_id UUID NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+        current_index INT NOT NULL DEFAULT 0,
+        results JSONB NOT NULL DEFAULT '{}'::jsonb,
+        flashcards_hash TEXT,
+        finished BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, deck_id)
+      );
+    `;
+    console.log("Created table: study_sessions");
+
     console.log("Database schema initialized successfully.");
   } catch (error) {
     console.error("Error initializing database schema:", error);

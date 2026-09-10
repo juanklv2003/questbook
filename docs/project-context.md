@@ -103,6 +103,15 @@ The system uses PostgreSQL.
 - `created_at` (Timestamp)
 - `updated_at` (Timestamp)
 
+### Table: `study_sessions`
+- `user_id` (UUID, FK to `users.id` ON DELETE CASCADE) + `deck_id` (UUID, FK to `decks.id` ON DELETE CASCADE) — composite PK `(user_id, deck_id)`
+- `current_index` (INT, default 0)
+- `results` (JSONB, default `'{}'` — `{flashcardId: bool}`)
+- `flashcards_hash` (TEXT, nullable — detects regenerated decks; stale hashes are ignored, never auto-deleted)
+- `finished` (BOOLEAN, default false — finishing never deletes the row)
+- `created_at` / `updated_at` (Timestamp)
+- Rule: NO TTL, NO auto-clear on finish. Only an explicit `DELETE /decks/:id/session` removes the row. Decks themselves are only deleted via explicit `DELETE /decks/:id` (modal).
+
 *(Note: Schema migrations are handled manually or through an external script not tracked in `.sql` files within the repo currently. Use the Repository pattern `infra` classes as the source of truth for queries).*
 
 ## 5. API Endpoints
@@ -120,6 +129,9 @@ The API is served at `/api/v1`.
 - `POST /generate`: Uploads a PDF or text to generate a new deck. Expects `multipart/form-data` with `file` (optional) and `name` (required). If a `file` is provided, its text is extracted with `pdf-parse` (`PdfTextExtractor`) before being sent to Gemini AI to extract flashcards. To keep requests responsive, the text is truncated to the first 40,000 characters and the AI is limited to 15 flashcards per deck; the Gemini call has a 60s timeout. Returns the new deck info.
 - `GET /:deckId/flashcards`: Retrieves all flashcards associated with a specific `deckId`.
 - `DELETE /:id`: Deletes a specific deck. Uses DB cascades to remove associated flashcards and removes the source file from Cloudinary (via `ICloudStoragePort`).
+- `GET /:id/session`: Returns the resumable study session `{ session: { userId, deckId, currentIndex, results, flashcardsHash, finished, createdAt, updatedAt } }`. 404 = deck not found OR no session yet. 403 = not the owner.
+- `PATCH /:id/session`: Upserts study progress. Body `{ currentIndex: int>=0, results: {id: bool}, flashcardsHash?: string|null, finished?: bool }`. Finishing (`finished: true`) preserves the row for review. 403/404 on ownership.
+- `DELETE /:id/session`: Explicit user action only — deletes the session row (204, idempotent). The ONLY way progress is removed.
 
 ### Evaluations (`/api/v1/evaluations`)
 - `POST /evaluate`: Evaluates a user's answer against a flashcard. Expects JSON `{ flashcardId, userAnswer }`. Uses Gemini AI to determine correctness, then atomically accumulates the result on the owning deck (`studied_count`+1, `correct_count`+0/1). Returns `{ isCorrect, score, feedback, deckId, deckProgress }`.
