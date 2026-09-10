@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom"
 import { useFlashcardStudy } from "../../hooks/useFlashcardStudy"
 import { useDeckFlashcards } from "../../hooks/useDeckFlashcards"
 import { StudyPlayer } from "../organisms/StudyPlayer"
@@ -115,12 +116,12 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
 
   return (
     <div className="relative w-full flex flex-col gap-4 pt-4 sm:pt-6">
-      {(isOffline || sessionError) && !pendingResume && (
+      {(isOffline || sessionError) && !pendingResume && createPortal(
         <div
           role="status"
-          className="pointer-events-none fixed left-1/2 top-4 z-50 -translate-x-1/2"
+          className="pointer-events-none fixed left-1/2 top-20 z-[45] w-[calc(100%-2rem)] max-w-md -translate-x-1/2"
         >
-          <p className="flex items-center gap-2 rounded-full border bg-card/95 px-4 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur">
+          <p className="flex items-center justify-center gap-2 rounded-full border bg-card/95 px-4 py-2 text-center text-xs text-muted-foreground shadow-lg backdrop-blur">
             {isOffline ? (
               <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             ) : (
@@ -128,7 +129,8 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
             )}
             {isOffline ? t("study.sessionOffline") : t("study.sessionError")}
           </p>
-        </div>
+        </div>,
+        document.body
       )}
       <div className="w-full flex justify-start">
         <Button variant="ghost" size="sm" onClick={handleBack} disabled={isEvaluating} className="text-muted-foreground">
@@ -136,20 +138,31 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
         </Button>
       </div>
 
-      {pendingResume && (
-        <div role="alert" className="w-full rounded-xl border bg-card p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3">
-          <p className="text-sm text-muted-foreground flex-1">
-            {t("study.resumePrompt", { current: pendingResume.current, total: pendingResume.total })}
-          </p>
-          <div className="flex gap-2 shrink-0">
-            <Button size="sm" onClick={resumeProgress}>
-              {t("study.resumeYes", { current: pendingResume.current, total: pendingResume.total })}
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleRestart}>
-              {t("study.restart")}
-            </Button>
+      {/* Floating resume toast: portalled to document.body so it escapes the
+          content wrapper's stacking context (relative z-10) and paints above
+          the navbar (z-40); top-20 clears the floating navbar (top-3 + h-14).
+          z-[45] stays below drawers (z-50) and modals (z-[60]). Fixed overlay,
+          reserves no layout height (same pattern as offline pill). */}
+      {pendingResume && createPortal(
+        <div
+          role="alert"
+          className="pointer-events-none fixed left-1/2 top-20 z-[45] w-[calc(100%-2rem)] max-w-md -translate-x-1/2"
+        >
+          <div className="pointer-events-auto flex flex-col gap-3 rounded-xl border bg-card/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center">
+            <p className="flex-1 text-sm text-muted-foreground">
+              {t("study.resumePrompt", { current: pendingResume.current, total: pendingResume.total })}
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <Button size="sm" onClick={resumeProgress} className="pointer-events-auto">
+                {t("study.resumeYes", { current: pendingResume.current, total: pendingResume.total })}
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleRestart} className="pointer-events-auto">
+                {t("study.restart")}
+              </Button>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="w-full">
