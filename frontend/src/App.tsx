@@ -62,12 +62,11 @@ function App() {
   }
 
   if (!isAuthenticated) {
+    // Login: beige biblioteca original, siempre mate (bg-background = 36 39% 94%).
+    // No renderiza fondos temados (Brand/Mystic/Glow/Pattern) para ignorar
+    // andel-theme / var(--brand) guardado. La app autenticada debajo sí los usa.
     return (
-      <div className="min-h-screen bg-transparent text-foreground font-sans selection:bg-primary/20 flex flex-col">
-        {showForest && <MysticForestBackground />}
-        {showGlow && <AmbientGlow />}
-        {showBrand && <BrandBackground />}
-        <PatternLayer pattern={pattern} />
+      <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 flex flex-col">
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
           <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
