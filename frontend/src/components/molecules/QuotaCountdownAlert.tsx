@@ -5,11 +5,16 @@ import type { QuotaExceededInfo } from "../../types";
 
 export type QuotaAction = "generate" | "evaluate";
 
+/** "quota" = 429 limit, "overloaded" = 503 model saturation. */
+export type QuotaVariant = "quota" | "overloaded";
+
 export interface QuotaCountdownAlertProps {
   quota: QuotaExceededInfo;
   onAcknowledge: () => void;
   /** Which verb to render in the countdown sentence. Defaults to "generate". */
   actionKey?: QuotaAction;
+  /** Visual + copy variant. Defaults to "quota" for backwards compatibility. */
+  variant?: QuotaVariant;
   /**
    * @deprecated Verbatim verb override (kept for callers not yet on actionKey).
    * Prefer actionKey so the verb follows the active locale.
@@ -21,7 +26,7 @@ export interface QuotaCountdownAlertProps {
  * Quota notice with a live mm:ss countdown until resetAt.
  * The action button stays disabled until the wait is over.
  */
-export function QuotaCountdownAlert({ quota, onAcknowledge, actionKey = "generate", action }: QuotaCountdownAlertProps) {
+export function QuotaCountdownAlert({ quota, onAcknowledge, actionKey = "generate", action, variant = "quota" }: QuotaCountdownAlertProps) {
   const { t } = useLanguage();
   const [remaining, setRemaining] = React.useState(() => getRemainingSeconds(quota.resetAt));
 
@@ -37,14 +42,19 @@ export function QuotaCountdownAlert({ quota, onAcknowledge, actionKey = "generat
   const ready = remaining <= 0;
   const verb = action ?? t(actionKey === "evaluate" ? "quota.evaluate" : "quota.generate");
   const countdown = formatCountdown(remaining);
+  const messageKey = variant === "overloaded" ? "overloaded.message" : "quota.message";
+  const frameClass =
+    variant === "overloaded"
+      ? "border-sky-500/30 bg-sky-500/10"
+      : "border-amber-500/30 bg-amber-500/10";
 
   return (
     <div
       role="alert"
-      className="flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm"
+      className={`flex flex-col gap-3 rounded-lg border px-4 py-3 text-sm ${frameClass}`}
     >
       <p className="font-medium text-foreground">
-        {t("quota.message", { action: verb, countdown })}
+        {t(messageKey, { action: verb, countdown })}
       </p>
       <button
         type="button"

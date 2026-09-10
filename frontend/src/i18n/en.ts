@@ -87,6 +87,8 @@ export const en: { [K in keyof typeof es]: string } = {
   "quota.generate": "generate",
   "quota.evaluate": "evaluate",
 
+  "overloaded.message": "The AI model is overloaded. You will be able to {action} again in {countdown}.",
+
   "delete.aria": "Delete book",
   "delete.title": "Delete book",
   "delete.description": "Are you sure you want to delete this book? This action cannot be undone.",
@@ -99,6 +101,11 @@ export const en: { [K in keyof typeof es]: string } = {
   "settings.languageDescription": "Choose the interface language. It is saved on this device.",
 
   "gen.quota": "You have reached the free AI limit.",
+  "gen.overloaded": "The AI model is overloaded. Try again in a few seconds.",
   "gen.timeout": "AI is taking too long. The document is very large; try a shorter PDF or try again.",
   "gen.generic": "Failed to generate the book",
+
+  "eval.quota": "You have reached the free AI limit.",
+  "eval.overloaded": "The AI model is overloaded. Try again in a few seconds.",
+  "eval.generic": "Failed to evaluate answer",
 };

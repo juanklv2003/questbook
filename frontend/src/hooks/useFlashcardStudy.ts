@@ -10,7 +10,7 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
   // sincronizar longitudes si cambia el mazo). null/ausente = pendiente.
   const [resultsById, setResultsById] = useState<Record<string, boolean>>({});
 
-  const { evaluateAnswer, isEvaluating, error: evaluationError, quotaExceeded, clearError } = useEvaluator();
+  const { evaluateAnswer, isEvaluating, error: evaluationError, quotaExceeded, overloaded, clearError } = useEvaluator();
 
   const tarjetaActual = tarjetas[currentIndex];
   const progreso = currentIndex + 1;
@@ -68,6 +68,7 @@ export function useFlashcardStudy(tarjetas: Flashcard[]) {
     feedbackIA,
     evaluationError,
     quotaExceeded,
+    overloaded,
     clearEvaluationError: clearError,
     siguienteTarjeta,
     reintentar,

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/AppError';
 import { QuotaExceededError } from '../errors/QuotaExceededError';
+import { ModelOverloadedError } from '../errors/ModelOverloadedError';
 
 export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
   // Gemini free-tier quota: serialize retry hints, never raw dumps or keys.
@@ -8,6 +9,17 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     return res.status(429).json({
       error: err.message,
       code: 'QUOTA_EXCEEDED',
+      retryAfterSeconds: err.retryAfterSeconds,
+      resetAt: err.resetAt,
+    });
+  }
+
+  // Gemini model saturation (503): clear message + countdown hints, no raw dumps.
+  if (err instanceof ModelOverloadedError) {
+    return res.status(503).json({
+      error: err.message,
+      code: 'MODEL_OVERLOADED',
+      provider: err.provider,
       retryAfterSeconds: err.retryAfterSeconds,
       resetAt: err.resetAt,
     });

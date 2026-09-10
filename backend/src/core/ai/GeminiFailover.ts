@@ -1,9 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env } from '../../config/env';
 import { QuotaExceededError } from '../errors/QuotaExceededError';
+import { ModelOverloadedError } from '../errors/ModelOverloadedError';
 
 /** Fallback wait when Gemini does not report a retry delay. */
 const FALLBACK_RETRY_AFTER_SECONDS = 60;
+/** Short fallback for model saturation (503): the model usually recovers fast. */
+const FALLBACK_OVERLOADED_RETRY_AFTER_SECONDS = 25;
 
 /**
  * Determina si un error de Gemini corresponde a que la clave agotó su cuota/uso
@@ -25,11 +28,32 @@ export function isQuotaExhausted(error: any): boolean {
 }
 
 /**
+ * True when a Gemini error means the model itself is saturated (HTTP 503
+ * overloaded / high demand / service unavailable), not a per-key quota issue.
+ * Saturation must not rotate keys: every key hits the same saturated model.
+ */
+export function isModelOverloaded(error: any): boolean {
+  if (!error) return false;
+  const status = error?.status ?? error?.statusCode ?? error?.response?.status;
+  if (status === 503) return true;
+  const message = String(error?.message || '') + ' ' + String(error?.details || '');
+  const lowered = message.toLowerCase();
+  return (
+    lowered.includes('overloaded') ||
+    lowered.includes('high demand') ||
+    lowered.includes('service unavailable') ||
+    lowered.includes('try again later') ||
+    lowered.includes('model is overloaded') ||
+    (lowered.includes('503') && lowered.includes('unavailable'))
+  );
+}
+
+/**
  * Extract the retry delay (seconds) from a Gemini quota error.
  * Lookup order: RetryInfo.retryDelay in errorDetails/details, then "retry in Ns"
- * patterns in the message, then the 60s fallback. Never logs API keys.
+ * patterns in the message, then the given fallback. Never logs API keys.
  */
-export function parseRetryDelay(error: any): number {
+export function parseRetryDelay(error: any, fallbackSeconds = FALLBACK_RETRY_AFTER_SECONDS): number {
   const detailArrays: unknown[] = [
     error?.errorDetails,
     error?.details,
@@ -90,7 +114,7 @@ export function parseRetryDelay(error: any): number {
     }
   }
 
-  return FALLBACK_RETRY_AFTER_SECONDS;
+  return fallbackSeconds;
 }
 
 /** Parse a "Ns" duration (e.g. "32s", "32.5s") into ceiled seconds. */
@@ -146,6 +170,17 @@ export class GeminiFailover {
         return result;
       } catch (error: any) {
         if (error instanceof QuotaExceededError) throw error;
+        if (error instanceof ModelOverloadedError) throw error;
+        if (isModelOverloaded(error)) {
+          const retryAfterSeconds = parseRetryDelay(
+            error,
+            FALLBACK_OVERLOADED_RETRY_AFTER_SECONDS
+          );
+          throw new ModelOverloadedError(
+            retryAfterSeconds,
+            new Date(Date.now() + retryAfterSeconds * 1000).toISOString()
+          );
+        }
         if (isQuotaExhausted(error)) {
           maxRetryAfter = Math.max(maxRetryAfter, parseRetryDelay(error));
           console.warn(

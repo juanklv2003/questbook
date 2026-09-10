@@ -37,7 +37,10 @@ export function DeckDashboardContainer({
 }) {
   const { t } = useLanguage();
   const { decks, isLoading, setDecks } = useDecks();
-  const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error, quotaExceeded, clearError } = useDeckGenerator();
+  const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error, quotaExceeded, overloaded, clearError } = useDeckGenerator();
+  // Quota (429) wins when both are set; otherwise show the saturation (503) notice.
+  const activeNotice = quotaExceeded ?? overloaded;
+  const activeVariant = quotaExceeded ? "quota" as const : "overloaded" as const;
   const {
     shelves,
     shelfCount,
@@ -188,8 +191,8 @@ export function DeckDashboardContainer({
             progress={progress}
             isAiProcessing={isAiProcessing}
           />
-          {quotaExceeded ? (
-            <QuotaCountdownAlert quota={quotaExceeded} onAcknowledge={clearError} actionKey="generate" />
+          {activeNotice ? (
+            <QuotaCountdownAlert quota={activeNotice} onAcknowledge={clearError} actionKey="generate" variant={activeVariant} />
           ) : (
             error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>
           )}

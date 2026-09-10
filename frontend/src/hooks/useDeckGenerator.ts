@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
-import { parseQuotaExceeded } from '../lib/quota';
+import { parseOverloaded, parseQuotaExceeded } from '../lib/quota';
 import { useLanguage } from '../i18n/LanguageContext';
-import type { DeckGenerationOptions, QuotaExceededInfo } from '../types';
+import type { DeckGenerationOptions, ModelOverloadedInfo, QuotaExceededInfo } from '../types';
 
 export function useDeckGenerator() {
   const { t } = useLanguage();
@@ -12,12 +12,15 @@ export function useDeckGenerator() {
   // Structured quota state (null = no quota block). Kept alongside the
   // legacy string error so existing callers keep working.
   const [quotaExceeded, setQuotaExceeded] = useState<QuotaExceededInfo | null>(null);
+  // Structured saturation state (503). Same countdown shape as the quota block.
+  const [overloaded, setOverloaded] = useState<ModelOverloadedInfo | null>(null);
   // true = upload finished and the AI is generating the cards
   const [isAiProcessing, setIsAiProcessing] = useState(false);
 
   const clearError = () => {
     setError(null);
     setQuotaExceeded(null);
+    setOverloaded(null);
   };
 
   const generateDeckFromPdf = async (file: File, options: DeckGenerationOptions) => {
@@ -26,6 +29,7 @@ export function useDeckGenerator() {
     setProgress(0);
     setError(null);
     setQuotaExceeded(null);
+    setOverloaded(null);
 
     try {
       const formData = new FormData();
@@ -67,6 +71,12 @@ export function useDeckGenerator() {
       if (quota) {
         setQuotaExceeded(quota);
         setError(err.response?.data?.error || t('gen.quota'));
+      } else if (parseOverloaded(err)) {
+        const saturation = parseOverloaded(err);
+        if (saturation) {
+          setOverloaded(saturation);
+          setError(err.response?.data?.error || t('gen.overloaded'));
+        }
       } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
         setError(t('gen.timeout'));
       } else {
@@ -78,5 +88,5 @@ export function useDeckGenerator() {
     }
   };
 
-  return { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error, quotaExceeded, clearError };
+  return { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error, quotaExceeded, overloaded, clearError };
 }

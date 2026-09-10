@@ -85,6 +85,8 @@ export const es = {
   "quota.generate": "generar",
   "quota.evaluate": "evaluar",
 
+  "overloaded.message": "El modelo de IA está saturado. Podrás {action} de nuevo en {countdown}.",
+
   "delete.aria": "Eliminar libro",
   "delete.title": "Eliminar libro",
   "delete.description": "¿Estás seguro de que deseas eliminar este libro? Esta acción no se puede deshacer.",
@@ -97,6 +99,11 @@ export const es = {
   "settings.languageDescription": "Elegí el idioma de la interfaz. Se guarda en este dispositivo.",
 
   "gen.quota": "Has alcanzado el límite gratuito de la IA.",
+  "gen.overloaded": "El modelo de IA está saturado. Inténtalo de nuevo en unos segundos.",
   "gen.timeout": "La IA está tardando demasiado. El documento es muy extenso; prueba con un PDF más corto o inténtalo de nuevo.",
   "gen.generic": "Error al generar el libro",
+
+  "eval.quota": "Has alcanzado el límite gratuito de la IA.",
+  "eval.overloaded": "El modelo de IA está saturado. Inténtalo de nuevo en unos segundos.",
+  "eval.generic": "Error al evaluar respuesta",
 } as const;

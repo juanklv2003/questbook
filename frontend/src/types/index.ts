@@ -56,6 +56,13 @@ export interface QuotaExceededInfo {
   resetAt: string;
 }
 
+/**
+ * Gemini model saturation hint returned by the API on HTTP 503.
+ * Same countdown shape as the quota notice; kept as an alias so both
+ * flows share the mm:ss alert without duplicating logic.
+ */
+export type ModelOverloadedInfo = QuotaExceededInfo;
+
 export interface DeckGenerationOptions {
   name: string;
   cardCount: number;

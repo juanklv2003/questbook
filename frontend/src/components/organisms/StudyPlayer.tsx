@@ -1,5 +1,5 @@
 import * as React from "react"
-import type { Flashcard as FlashcardType, EvaluationResult as EvaluationResultType, QuotaExceededInfo } from '../../types'
+import type { Flashcard as FlashcardType, EvaluationResult as EvaluationResultType, ModelOverloadedInfo, QuotaExceededInfo } from '../../types'
 import { Flashcard, type FlashcardStatus } from "../molecules/Flashcard"
 import { StudyReviewList, type ReviewListItem } from "../molecules/StudyReviewList"
 import { EvaluationResult } from "../molecules/EvaluationResult"
@@ -23,6 +23,8 @@ export interface StudyPlayerProps {
   error?: string | null;
   /** Structured quota block (429). Renders the countdown instead of the plain error. */
   quotaExceeded?: QuotaExceededInfo | null;
+  /** Structured saturation block (503). Same countdown UI with overloaded copy. */
+  overloaded?: ModelOverloadedInfo | null;
   /** Clears the quota/error notice (wired to the alert button). */
   onAcknowledgeQuota?: () => void;
   /** Lista de repaso (panel izquierdo). Vacía = se oculta el panel. */
@@ -46,6 +48,7 @@ export function StudyPlayer({
   onRetry,
   error = null,
   quotaExceeded = null,
+  overloaded = null,
   onAcknowledgeQuota,
   reviewItems = [],
   activeIndex = 0,
@@ -115,8 +118,13 @@ export function StudyPlayer({
           <div className="w-full max-w-2xl flex flex-col gap-6">
             {!evaluation ? (
               <div className="flex flex-col gap-4">
-                {quotaExceeded && onAcknowledgeQuota ? (
-                  <QuotaCountdownAlert quota={quotaExceeded} onAcknowledge={onAcknowledgeQuota} actionKey="evaluate" />
+                {((quotaExceeded ?? overloaded) && onAcknowledgeQuota) ? (
+                  <QuotaCountdownAlert
+                    quota={(quotaExceeded ?? overloaded)!}
+                    onAcknowledge={onAcknowledgeQuota}
+                    actionKey="evaluate"
+                    variant={quotaExceeded ? "quota" : "overloaded"}
+                  />
                 ) : (
                   error && (
                     <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm font-medium text-destructive">
