@@ -4,22 +4,17 @@ import {
   Circle,
   Coffee,
   Flower2,
-  PaintBucket,
   Palette,
   PawPrint,
   RotateCcw,
-  Sparkles,
   Star,
-  TreePine,
   Triangle,
   X,
 } from "lucide-react";
 import {
-  BACKGROUND_OPTIONS,
   CUSTOM_THEME_ID,
   PATTERN_OPTIONS,
   THEMES,
-  type BackgroundMode,
   type PatternId,
 } from "../../lib/theme";
 import { cn } from "../../lib/utils";
@@ -29,56 +24,46 @@ export interface SettingsPanelProps {
   customColor: string;
   savedColors: string[];
   hiddenThemes: string[];
-  background: BackgroundMode;
   pattern: PatternId;
   onPickTheme: (id: string) => void;
   onCustomColorChange: (color: string) => void;
   onRemoveSavedColor: (color: string) => void;
   onHidePreset: (id: string) => void;
   onRestorePresets: () => void;
-  onBackgroundChange: (mode: BackgroundMode) => void;
   onPatternChange: (pattern: PatternId) => void;
 }
-
-const BG_ICONS: Record<BackgroundMode, typeof TreePine> = {
-  bosque: TreePine,
-  resplandor: Sparkles,
-  color: PaintBucket,
-};
-
-const PATTERN_ICONS: Record<PatternId, typeof Star> = {
-  none: Ban,
-  stars: Star,
-  circles: Circle,
-  triangles: Triangle,
-  flowers: Flower2,
-  cups: Coffee,
-  paws: PawPrint,
-};
 
 /**
  * Panel de Ajustes — puramente presentacional, sin fetch.
  * Sección Color (grid de swatches estilo Pomopopo: presets + personalizado;
  * los customs elegidos se guardan solos detrás; anillo + Check en el activo;
- * el color SOLO cambia el fondo de la web, nunca los botones), sección Fondo
- * y persistidas: bosque / resplandor / color) y sección Decoración (patrones
- * de glifos estilo Pomopopo). Tono y espaciados iguales a ProgressPanel.
+ * el color SOLO cambia el fondo de la web, nunca los botones) y sección
+ * Decoración (patrones de glifos estilo Pomopopo).
+ * Tono y espaciados iguales a ProgressPanel.
  */
 export function SettingsPanel({
   themeId,
   customColor,
   savedColors,
   hiddenThemes,
-  background,
   pattern,
   onPickTheme,
   onCustomColorChange,
   onRemoveSavedColor,
   onHidePreset,
   onRestorePresets,
-  onBackgroundChange,
   onPatternChange,
 }: SettingsPanelProps) {
+  const PATTERN_ICONS: Record<PatternId, typeof Star> = {
+    none: Ban,
+    stars: Star,
+    circles: Circle,
+    triangles: Triangle,
+    flowers: Flower2,
+    cups: Coffee,
+    paws: PawPrint,
+  };
+
   // El check del picker cede ante el swatch guardado del mismo color:
   // nunca hay dos checks lado a lado por el mismo color aplicado.
   const customActive =
@@ -229,62 +214,6 @@ export function SettingsPanel({
           </label>
         </div>
 
-      </section>
-
-      <section aria-labelledby="settings-bg-title">
-        <h3
-          id="settings-bg-title"
-          className="text-sm font-semibold tracking-tight"
-        >
-          Fondo
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Elegí cómo se ve el fondo de tu biblioteca.
-        </p>
-        <ul className="mt-3 flex flex-col gap-3" aria-label="Opciones de fondo">
-          {BACKGROUND_OPTIONS.map((option) => {
-            const Icon = BG_ICONS[option.id];
-            const active = background === option.id;
-            return (
-              <li key={option.id}>
-                <button
-                  type="button"
-                  onClick={() => onBackgroundChange(option.id)}
-                  aria-pressed={active}
-                  className={cn(
-                    "flex w-full cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors duration-200 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                    active && "border-primary/60 bg-primary/5"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold tracking-tight">
-                      {option.label}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {option.description}
-                    </span>
-                  </span>
-                  {active && (
-                    <Check
-                      className="h-4 w-4 shrink-0 text-primary"
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
       </section>
 
       <section aria-labelledby="settings-pattern-title">

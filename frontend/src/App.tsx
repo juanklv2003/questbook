@@ -6,8 +6,6 @@ import type { PanelSignal } from './components/containers/DeckDashboardContainer
 import { BrainCircuit } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { AuthContainer } from './components/containers/AuthContainer'
-import { MysticForestBackground } from './components/atoms/MysticForestBackground'
-import { AmbientGlow } from './components/atoms/AmbientGlow'
 import { BrandBackground } from './components/atoms/BrandBackground'
 import { PatternLayer } from './components/atoms/PatternLayer'
 import { useThemeSettings } from './hooks/useThemeSettings'
@@ -22,12 +20,9 @@ function App() {
   // returns home first and defers one frame.
   const [panelSignal, setPanelSignal] = React.useState<PanelSignal | null>(null);
   const { isAuthenticated, isLoading, logout, user } = useAuth();
-  // Solo el fondo: el color se aplica directo al DOM en lib/theme.ts
-  // (solo --brand/--brand-dark; los botones usan el primary original).
-  const { background, pattern } = useThemeSettings();
-  const showForest = background === "bosque";
-  const showGlow = background === "bosque" || background === "resplandor";
-  const showBrand = background === "color";
+  // Flat background only: color applied to DOM in lib/theme.ts
+  // (only --brand/--brand-dark; buttons use the original primary).
+  const { pattern } = useThemeSettings();
   const goHome = React.useCallback(() => setActiveDeckId(null), []);
   // "+ Nuevo Libro / Subir PDF" desde cualquier vista: vuelve a la biblioteca y
   // abre el drawer. Desde una sesión de estudio el dashboard se monta de nuevo y
@@ -86,9 +81,7 @@ function App() {
 
   return (
     <div className="flex h-screen flex-col bg-transparent text-foreground font-sans selection:bg-primary/20">
-      {showForest && <MysticForestBackground />}
-      {showGlow && <AmbientGlow />}
-      {showBrand && <BrandBackground />}
+      <BrandBackground />
       <PatternLayer pattern={pattern} />
       <Navbar
         userEmail={user?.email}

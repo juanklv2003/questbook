@@ -1,11 +1,9 @@
 /**
- * BrandBackground — fondo "Color": PLANO mate, sin brillos.
+ * BrandBackground — flat matte "Color" background, no glows.
  *
- * El color elegido (vía `var(--brand)`, cambiable en Ajustes) ES el fondo,
- * en plano: sin radial-gradients ni resplandores. Capa `fixed inset-0 z-0
- * pointer-events-none` para no pelear con el layout; el contenido vive
- * en z-10. (Los resplandores viven solo en los modos "bosque"/"resplandor"
- * vía AmbientGlow.)
+ * The chosen color (via `var(--brand)`, changeable in Settings) IS the
+ * background, flat: no radial-gradients. Layer `fixed inset-0 z-0
+ * pointer-events-none` so it never fights layout; content lives in z-10.
  */
 export function BrandBackground() {
   return (

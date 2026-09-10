@@ -22,7 +22,7 @@ const deckTitle = (d: Deck): string => d.name || (d as DeckLike).title || ""
 
 const PANEL_META: Record<TopbarRoute, { title: string; description: string }> = {
   progress: { title: "Progreso", description: "Tu avance de estudio por libro." },
-  settings: { title: "Ajustes", description: "Colores y fondo a tu gusto." },
+  settings: { title: "Ajustes", description: "Colores y decoración a tu gusto." },
 };
 
 export interface PanelSignal {
@@ -253,7 +253,6 @@ export function DeckDashboardContainer({
             themeId={settings.themeId}
             customColor={settings.customColor}
             savedColors={settings.savedColors}
-            background={settings.background}
             pattern={settings.pattern}
             onPickTheme={settings.pickTheme}
             onCustomColorChange={settings.changeCustomColor}
@@ -261,7 +260,6 @@ export function DeckDashboardContainer({
             hiddenThemes={settings.hiddenThemes}
             onHidePreset={settings.hidePreset}
             onRestorePresets={settings.restorePresets}
-            onBackgroundChange={settings.changeBackground}
             onPatternChange={settings.changePattern}
           />
         )}

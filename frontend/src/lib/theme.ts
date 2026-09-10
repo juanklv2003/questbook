@@ -225,13 +225,12 @@ export function removeSavedColor(hex: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Fondo: "bosque" (glows + MysticForestBackground) vs "resplandor" (solo
-// glows) vs "color" (fondo PLANO mate del color elegido, sin brillos).
-// Clave `andel-bg`. El cambio se avisa por evento para que App
-// (que renderiza el fondo) reaccione sin compartir estado con el drawer.
+// Background: flat "color" only (plain matte var(--brand) via BrandBackground).
+// Key `andel-bg`. Legacy values ("bosque"/"resplandor") migrate to "color".
+// Changes broadcast via event so App re-renders without shared drawer state.
 // ---------------------------------------------------------------------------
 
-export type BackgroundMode = "bosque" | "resplandor" | "color";
+export type BackgroundMode = "color";
 
 const BG_KEY = "andel-bg";
 export const BG_CHANGE_EVENT = "andel:bg-change";
@@ -246,29 +245,11 @@ export const BACKGROUND_OPTIONS: {
     label: "Color",
     description: "Fondo plano del color elegido, estilo Pomopopo.",
   },
-  {
-    id: "bosque",
-    label: "Bosque místico",
-    description: "Resplandores de color sobre el bosque de fondo.",
-  },
-  {
-    id: "resplandor",
-    label: "Resplandor",
-    description: "Solo resplandores de color, sin el bosque.",
-  },
 ];
 
 export function loadBackground(): BackgroundMode {
-  try {
-    const raw = localStorage.getItem(BG_KEY);
-    // Las elecciones explícitas no-default se respetan; "bosque" era el
-    // default anterior así que migra al plano nuevo; ausente/inválido cae
-    // al plano "color" por defecto (fondo cambiable a gusto en Ajustes).
-    if (raw === "resplandor" || raw === "color") return raw;
-    return "color";
-  } catch {
-    return "color";
-  }
+  // Flat-only mode: legacy stored values ("bosque"/"resplandor") resolve to "color".
+  return "color";
 }
 
 export function saveBackground(mode: BackgroundMode): void {
