@@ -28,8 +28,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       const response = await apiClient.get('/auth/me');
-      setUser(response.data);
-      setIsAuthenticated(true);
+      // Backend respond `GET /auth/me` with `{ user: {...} }`; unwrap it so
+      // `user.email` (navbar avatar) is not `undefined`.
+      const user = response.data?.user as User | undefined;
+      if (user) {
+        setUser(user);
+        setIsAuthenticated(true);
+      }
     } catch (err: any) {
       // Only a 401 (invalid/expired token) counts as "no session".
       // Network errors or unresponsive server (500/timeout/ECONNREFUSED)

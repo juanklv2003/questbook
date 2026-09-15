@@ -1,6 +1,7 @@
 import { IUserRepository } from '../domain/IUserRepository';
 import { IPasswordHasherPort } from '../domain/IPasswordHasherPort';
 import { ITokenServicePort } from '../domain/ITokenServicePort';
+import { AppError } from '../../../core/errors/AppError';
 
 export class LoginUseCase {
   constructor(
@@ -11,17 +12,17 @@ export class LoginUseCase {
 
   async execute(email: string, passwordRaw: string, rememberMe: boolean = false) {
     if (!email || !passwordRaw) {
-      throw new Error('Email and password are required');
+      throw new AppError(400, 'Email and password are required');
     }
 
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new AppError(401, 'Invalid credentials');
     }
 
     const isMatch = await this.passwordHasher.compare(passwordRaw, user.passwordHash);
     if (!isMatch) {
-      throw new Error('Invalid credentials');
+      throw new AppError(401, 'Invalid credentials');
     }
 
     const expiresIn = rememberMe ? '30d' : '1d';

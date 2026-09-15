@@ -15,7 +15,9 @@ const authRouter = Router();
 // DI Setup
 const userRepository = new PostgresUserRepository(env.DATABASE_URL);
 const passwordHasher = new BcryptPasswordHasher();
-const tokenService = new JwtTokenService(env.JWT_SECRET || 'super_secret_fallback');
+// env.JWT_SECRET is validated as required by config/env.ts — never fall back
+// to a hardcoded secret: a predictable JWT secret would let anyone forge tokens.
+const tokenService = new JwtTokenService(env.JWT_SECRET);
 
 const registerUseCase = new RegisterUseCase(userRepository, passwordHasher, tokenService);
 const loginUseCase = new LoginUseCase(userRepository, passwordHasher, tokenService);

@@ -2,11 +2,7 @@ import { IUserRepository } from '../domain/IUserRepository';
 import { IPasswordHasherPort } from '../domain/IPasswordHasherPort';
 import { ITokenServicePort } from '../domain/ITokenServicePort';
 import { User } from '../domain/User';
-
-export interface RegisterDTO {
-  email: string;
-  passwordHash: string; // The raw password is sent to the use case as "password", wait
-}
+import { AppError } from '../../../core/errors/AppError';
 
 export class RegisterUseCase {
   constructor(
@@ -17,12 +13,12 @@ export class RegisterUseCase {
 
   async execute(email: string, passwordRaw: string) {
     if (!email || !passwordRaw) {
-      throw new Error('Email and password are required');
+      throw new AppError(400, 'Email and password are required');
     }
 
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
-      throw new Error('User already exists');
+      throw new AppError(409, 'User already exists');
     }
 
     const hashedPassword = await this.passwordHasher.hash(passwordRaw);
@@ -35,7 +31,18 @@ export class RegisterUseCase {
       updatedAt: new Date(),
     };
 
-    const savedUser = await this.userRepository.save(newUser);
+    let savedUser: User;
+    try {
+      savedUser = await this.userRepository.save(newUser);
+    } catch (error: any) {
+      // Race condition: another request created the same email between the
+      // findByEmail check above and this INSERT. Postgres unique violation is
+      // code 23505 — map it to a real 409/Conflict, rethrow anything else.
+      if (error?.code === '23505') {
+        throw new AppError(409, 'User already exists');
+      }
+      throw error;
+    }
 
     const token = this.tokenService.generateToken(
       { userId: savedUser.id, email: savedUser.email },
