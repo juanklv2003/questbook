@@ -21,21 +21,25 @@
  */
 
 /** Paleta brand (resplandor) + dark (acento con contraste). */
+import type { TranslationKey } from "../i18n/LanguageContext";
+
 export interface Theme {
   id: string;
   label: string;
+  /** i18n key for the translated swatch name (label stays as ES fallback for non-React use). */
+  labelKey: TranslationKey;
   brand: string;
   dark: string;
 }
 
 export const THEMES: Theme[] = [
-  { id: "arena", label: "Arena", brand: "#D9C6A5", dark: "#8D806B" },
-  { id: "red", label: "Rojo", brand: "#e44747", dark: "#a83535" },
-  { id: "blue", label: "Azul", brand: "#3a7c9e", dark: "#2c5f7a" },
-  { id: "green", label: "Verde", brand: "#3f8a5c", dark: "#2f6b46" },
-  { id: "purple", label: "Violeta", brand: "#7056a6", dark: "#573f8f" },
-  { id: "yellow", label: "Ámbar", brand: "#d09a3e", dark: "#a5772b" },
-  { id: "pink", label: "Rosa", brand: "#d05072", dark: "#a83d5c" },
+  { id: "arena", label: "Arena", labelKey: "theme.arena", brand: "#D9C6A5", dark: "#8D806B" },
+  { id: "red", label: "Rojo", labelKey: "theme.red", brand: "#e44747", dark: "#a83535" },
+  { id: "blue", label: "Azul", labelKey: "theme.blue", brand: "#3a7c9e", dark: "#2c5f7a" },
+  { id: "green", label: "Verde", labelKey: "theme.green", brand: "#3f8a5c", dark: "#2f6b46" },
+  { id: "purple", label: "Violeta", labelKey: "theme.purple", brand: "#7056a6", dark: "#573f8f" },
+  { id: "yellow", label: "Ámbar", labelKey: "theme.yellow", brand: "#d09a3e", dark: "#a5772b" },
+  { id: "pink", label: "Rosa", labelKey: "theme.pink", brand: "#d05072", dark: "#a83d5c" },
 ];
 
 export const CUSTOM_THEME_ID = "custom";
@@ -65,6 +69,7 @@ export function getTheme(id: string, customColor?: string): Theme {
     return {
       id: CUSTOM_THEME_ID,
       label: CUSTOM_LABEL,
+      labelKey: "theme.custom",
       brand: customColor,
       dark: darkenColor(customColor),
     };
@@ -81,7 +86,7 @@ export function darkenColor(hex: string): string {
       .map((c) => c + c)
       .join("");
   }
-  if (!/^[0-9a-fA-F]{6}$/.test(h)) return "#2f6b46";
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return "#000000";
   const r = Math.max(0, Math.floor(parseInt(h.substring(0, 2), 16) * 0.65));
   const g = Math.max(0, Math.floor(parseInt(h.substring(2, 4), 16) * 0.65));
   const b = Math.max(0, Math.floor(parseInt(h.substring(4, 6), 16) * 0.65));
@@ -295,14 +300,14 @@ const PATTERN_IDS: PatternId[] = [
   "paws",
 ];
 
-export const PATTERN_OPTIONS: { id: PatternId; label: string }[] = [
-  { id: "none", label: "Ninguno" },
-  { id: "stars", label: "Estrellas" },
-  { id: "circles", label: "Círculos" },
-  { id: "triangles", label: "Triángulos" },
-  { id: "flowers", label: "Flores" },
-  { id: "cups", label: "Tazas" },
-  { id: "paws", label: "Patitas" },
+export const PATTERN_OPTIONS: { id: PatternId; label: string; labelKey: TranslationKey }[] = [
+  { id: "none", label: "Ninguno", labelKey: "pattern.none" },
+  { id: "stars", label: "Estrellas", labelKey: "pattern.stars" },
+  { id: "circles", label: "Círculos", labelKey: "pattern.circles" },
+  { id: "triangles", label: "Triángulos", labelKey: "pattern.triangles" },
+  { id: "flowers", label: "Flores", labelKey: "pattern.flowers" },
+  { id: "cups", label: "Tazas", labelKey: "pattern.cups" },
+  { id: "paws", label: "Patitas", labelKey: "pattern.paws" },
 ];
 
 export function loadPattern(): PatternId {
