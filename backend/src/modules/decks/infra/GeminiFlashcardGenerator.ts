@@ -119,7 +119,6 @@ Do NOT include markdown blocks, greetings, or any other text. ONLY the JSON arra
     };
 
     const texts = promptTexts[isSpanish ? 'es' : 'en'];
-    const languageName = isSpanish ? 'Español' : 'English';
 
     const truncationNotice = truncated
       ? isSpanish
