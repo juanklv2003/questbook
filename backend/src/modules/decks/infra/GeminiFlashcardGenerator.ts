@@ -34,6 +34,60 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
       truncated = true;
     }
 
+    // Determine language for prompt text
+    const isSpanish = options?.language === 'es';
+    const languageName = isSpanish ? 'Español' : 'English';
+
+    // Language-specific difficulty instructions
+    const difficultyInstructions: Record<string, Record<string, string>> = {
+      es: {
+        easy: `NIVEL FÁCIL — Genera tarjetas enfocadas en:
+- Definiciones simples y directas de conceptos clave
+- Términos básicos y su significado
+- Ideas principales del texto, sin detalles complejos
+- Preguntas que requieran recordar o reconocer información
+- Respuestas cortas y claras (1-2 oraciones máximo)`,
+
+        medium: `NIVEL MEDIO — Genera tarjetas con dificultad equilibrada:
+- Mezcla de definiciones y relaciones entre conceptos
+- Preguntas que conecten ideas del texto
+- Algunas preguntas de comprensión (no solo memorización)
+- Respuestas de extensión media (2-3 oraciones)
+- Incluye ejemplos cuando el texto los tenga`,
+
+        hard: `NIVEL DIFÍCIL — Genera tarjetas avanzadas y desafiantes:
+- Relaciones complejas entre múltiples conceptos
+- Preguntas que requieran análisis, comparación o síntesis
+- Detalles específicos, matices y excepciones
+- Preguntas de razonamiento (¿por qué?, ¿cómo se relaciona con...?)
+- Respuestas detalladas que demuestren comprensión profunda
+- Incluye preguntas tipo "¿cuál es la diferencia entre X e Y?"`,
+      },
+      en: {
+        easy: `EASY LEVEL — Generate flashcards focused on:
+- Simple and direct definitions of key concepts
+- Basic terms and their meanings
+- Main ideas from the text, without complex details
+- Questions that require recalling or recognizing information
+- Short and clear answers (1-2 sentences maximum)`,
+
+        medium: `MEDIUM LEVEL — Generate flashcards with balanced difficulty:
+- Mix of definitions and relationships between concepts
+- Questions that connect ideas from the text
+- Some comprehension questions (not just memorization)
+- Medium-length answers (2-3 sentences)
+- Include examples when the text has them`,
+
+        hard: `HARD LEVEL — Generate advanced and challenging flashcards:
+- Complex relationships between multiple concepts
+- Questions requiring analysis, comparison, or synthesis
+- Specific details, nuances, and exceptions
+- Reasoning questions (why?, how does it relate to...?)
+- Detailed answers demonstrating deep understanding
+- Include questions like "what is the difference between X and Y?"`,
+      },
+    };
+
     // Language-specific prompt texts
     const promptTexts: Record<string, Record<string, string>> = {
       es: {
