@@ -144,13 +144,23 @@ ${texts.textToAnalyze}
 ${promptText}${truncationNotice}
     `;
 
-    const result = await this.gemini.withFailover((client) =>
-      client
-        .getGenerativeModel({ model: 'gemini-2.5-flash' })
-        .generateContent(prompt, { timeout: this.TIMEOUT_MS })
-    );
-    const responseText = result.response.text();
-    
+    // Attempt to generate content and parse JSON safely
+    let responseText = '';
+    try {
+      const result = await this.gemini.withFailover((client) =>
+        client
+          .getGenerativeModel({ model: 'gemini-2.5-flash' })
+          .generateContent(prompt, { timeout: this.TIMEOUT_MS })
+      );
+      responseText = result.response.text();
+    } catch (apiErr) {
+      console.error('Gemini API call failed:', apiErr);
+      throw new AppError(
+        500,
+        'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.'
+      );
+    }
+
     // Attempt to parse JSON safely, sometimes AI still wraps in markdown
     let jsonStr = responseText.trim();
     if (jsonStr.startsWith('```json')) {
