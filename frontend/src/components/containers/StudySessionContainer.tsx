@@ -153,7 +153,7 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
         document.body
       )}
       <div className="w-full flex justify-start">
-        <Button variant="ghost" size="sm" onClick={handleBack} disabled={isEvaluating} className="text-muted-foreground">
+        <Button variant="ghost" size="sm" onClick={handleBack} disabled={isEvaluating} className="text-foreground">
           <ArrowLeft className="w-4 h-4 mr-2" /> {t("study.back")}
         </Button>
       </div>
