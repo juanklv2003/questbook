@@ -1,0 +1,93 @@
+- generic [ref=f10e1]:
+  - generic [ref=f10e3]:
+    - generic [aria-hidden]:
+      - generic:
+        - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+        - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+        - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+        - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+        - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+        - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+        - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+      - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+    - banner [ref=f10e72]:
+      - navigation "Navegación principal" [ref=f10e74]:
+        - button "Andel — ir a mi biblioteca" [ref=f10e75] [cursor=pointer]:
+          - generic [ref=f10e89]: Andel
+        - generic [ref=f10e90]:
+          - button "Progreso" [ref=f10e91] [cursor=pointer]
+          - button "Ajustes" [ref=f10e95] [cursor=pointer]
+          - button "Nuevo Libro / Subir PDF" [ref=f10e99] [cursor=pointer]
+          - button "Cerrar sesión" [ref=f10e102] [cursor=pointer]
+    - main [ref=f10e107]:
+      - generic [ref=f10e110]:
+        - generic [ref=f10e124]:
+          - generic "Balda 1" [ref=f10e126]
+          - generic "Balda 2" [ref=f10e141]
+          - generic "Balda 3" [ref=f10e156]
+        - generic [ref=f10e173]:
+          - heading "Tu biblioteca está vacía" [level=3] [ref=f10e177]
+          - paragraph [ref=f10e178]: Creá tu primer libro subiendo un documento PDF y la IA generará tarjetas de estudio por vos.
+          - button "Crear Primer Libro" [ref=f10e179] [cursor=pointer]
+  - dialog "Ajustes" [ref=f10e183]:
+    - generic [ref=f10e184]:
+      - generic [ref=f10e185]:
+        - heading "Ajustes" [level=2] [ref=f10e186]
+        - paragraph [ref=f10e187]: Colores y decoración a tu gusto.
+      - button "Cerrar" [active] [ref=f10e188] [cursor=pointer]
+    - generic [ref=f10e193]:
+      - region [ref=f10e194]:
+        - heading "Idioma" [level=3] [ref=f10e195]
+        - paragraph [ref=f10e196]: Elegí el idioma de la interfaz. Se guarda en este dispositivo.
+        - group "Idioma" [ref=f10e198]:
+          - button "Español" [pressed] [ref=f10e203] [cursor=pointer]: ES
+          - button "English" [ref=f10e204] [cursor=pointer]: EN
+      - region [ref=f10e205]:
+        - heading "Color" [level=3] [ref=f10e206]
+        - paragraph [ref=f10e207]: El color se aplica al fondo de la web. Los personalizados se guardan solos al final de la fila.
+        - group "Elegir color de acento" [ref=f10e208]:
+          - generic [ref=f10e209]:
+            - button "Color Arena" [ref=f10e210] [cursor=pointer]
+            - button "Quitar color Arena de la lista" [ref=f10e211] [cursor=pointer]
+          - generic [ref=f10e215]:
+            - button "Color Rojo" [ref=f10e216] [cursor=pointer]
+            - button "Quitar color Rojo de la lista" [ref=f10e217] [cursor=pointer]
+          - generic [ref=f10e221]:
+            - button "Color Azul" [ref=f10e222] [cursor=pointer]
+            - button "Quitar color Azul de la lista" [ref=f10e223] [cursor=pointer]
+          - generic [ref=f10e227]:
+            - button "Color Verde" [ref=f10e228] [cursor=pointer]
+            - button "Quitar color Verde de la lista" [ref=f10e229] [cursor=pointer]
+          - generic [ref=f10e233]:
+            - button "Color Violeta" [ref=f10e234] [cursor=pointer]
+            - button "Quitar color Violeta de la lista" [ref=f10e235] [cursor=pointer]
+          - generic [ref=f10e239]:
+            - button "Color Ámbar" [ref=f10e240] [cursor=pointer]
+            - button "Quitar color Ámbar de la lista" [ref=f10e241] [cursor=pointer]
+          - generic [ref=f10e245]:
+            - button "Color Rosa" [ref=f10e246] [cursor=pointer]
+            - button "Quitar color Rosa de la lista" [ref=f10e247] [cursor=pointer]
+          - group "Colores guardados" [ref=f10e251]:
+            - generic [ref=f10e252]:
+              - 'button "Aplicar color #e44747" [ref=f10e253] [cursor=pointer]'
+              - 'button "Borrar color #e44747" [ref=f10e254] [cursor=pointer]'
+            - generic [ref=f10e258]:
+              - 'button "Aplicar color #3a7c9e" [ref=f10e259] [cursor=pointer]'
+              - 'button "Borrar color #3a7c9e" [ref=f10e260] [cursor=pointer]'
+            - generic [ref=f10e264]:
+              - 'button "Aplicar color #123456" [pressed] [ref=f10e265] [cursor=pointer]'
+              - 'button "Borrar color #123456" [ref=f10e268] [cursor=pointer]'
+          - generic "Color personalizado" [ref=f10e272] [cursor=pointer]:
+            - generic [ref=f10e273]: Elegir color personalizado
+            - textbox "Elegir color personalizado" [ref=f10e274]: "#123456"
+      - region [ref=f10e275]:
+        - heading "Decoración" [level=3] [ref=f10e276]
+        - paragraph [ref=f10e277]: Sumá un patrón sutil al fondo, estilo Pomopopo.
+        - group "Elegir decoración del fondo" [ref=f10e278]:
+          - button "Ninguno" [ref=f10e279] [cursor=pointer]
+          - button "Estrellas" [pressed] [ref=f10e283] [cursor=pointer]
+          - button "Círculos" [ref=f10e288] [cursor=pointer]
+          - button "Triángulos" [ref=f10e291] [cursor=pointer]
+          - button "Flores" [ref=f10e294] [cursor=pointer]
+          - button "Tazas" [ref=f10e300] [cursor=pointer]
+          - button "Patitas" [ref=f10e303] [cursor=pointer]

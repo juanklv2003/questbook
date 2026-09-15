@@ -2,6 +2,7 @@ import type { KeyboardEvent } from "react"
 import { motion } from "framer-motion"
 import { BookOpen, CheckCircle2, Lightbulb, MousePointerClick, XCircle } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useLanguage, type TranslationKey } from "../../i18n/LanguageContext"
 import { Badge } from "../atoms/Badge"
 
 export type FlashcardStatus = "pending" | "correct" | "incorrect";
@@ -15,28 +16,29 @@ export interface FlashcardProps {
   status?: FlashcardStatus;
 }
 
-const STATUS_STYLES: Record<FlashcardStatus, { frame: string; strip: string; badgeColor: "default" | "success" | "danger"; badgeLabel: string }> = {
+const STATUS_STYLES: Record<FlashcardStatus, { frame: string; strip: string; badgeColor: "default" | "success" | "danger"; badgeKey: TranslationKey }> = {
   pending: {
     frame: "border-border",
     strip: "bg-border",
     badgeColor: "default",
-    badgeLabel: "Pendiente",
+    badgeKey: "card.pending",
   },
   correct: {
     frame: "border-emerald-500/40",
     strip: "bg-emerald-500",
     badgeColor: "success",
-    badgeLabel: "Acertada",
+    badgeKey: "card.correct",
   },
   incorrect: {
     frame: "border-destructive/40",
     strip: "bg-destructive",
     badgeColor: "danger",
-    badgeLabel: "Fallada",
+    badgeKey: "card.incorrect",
   },
 };
 
 export function Flashcard({ question, answer, isFlipped, onFlip, status = "pending" }: FlashcardProps) {
+  const { t } = useLanguage();
   const styles = STATUS_STYLES[status];
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,7 +57,7 @@ export function Flashcard({ question, answer, isFlipped, onFlip, status = "pendi
       role="button"
       tabIndex={0}
       aria-pressed={isFlipped}
-      aria-label={`Tarjeta de estudio. Pregunta: ${question}. Pulsa Intro para voltear.`}
+      aria-label={t("card.ariaLabel", { question })}
       onClick={onFlip}
       onKeyDown={handleKeyDown}
       className="w-full max-w-2xl min-h-[260px] sm:aspect-[3/2] sm:min-h-0 perspective-1000 cursor-pointer select-none rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -71,9 +73,9 @@ export function Flashcard({ question, answer, isFlipped, onFlip, status = "pendi
           <div className="flex items-center justify-between gap-3 px-5 pt-4 sm:px-8 sm:pt-5">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
-              Pregunta
+              {t("card.question")}
             </p>
-            <Badge color={styles.badgeColor} label={styles.badgeLabel} />
+            <Badge color={styles.badgeColor} label={t(styles.badgeKey)} />
           </div>
           <div className="flex flex-1 items-center justify-center px-5 py-4 sm:px-8">
             <h3 className="text-center text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
@@ -82,7 +84,7 @@ export function Flashcard({ question, answer, isFlipped, onFlip, status = "pendi
           </div>
           <p className="flex items-center justify-center gap-1.5 px-5 pb-4 text-xs text-muted-foreground sm:px-8 sm:pb-5">
             <MousePointerClick className="h-3.5 w-3.5" aria-hidden="true" />
-            Haz clic para voltear
+            {t("card.flipToAnswer")}
           </p>
         </div>
 
@@ -95,28 +97,28 @@ export function Flashcard({ question, answer, isFlipped, onFlip, status = "pendi
           <div className="flex items-center justify-between gap-3 px-5 pt-4 sm:px-8 sm:pt-5">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
-              Respuesta
+              {t("card.answer")}
             </p>
             {status === "correct" ? (
               <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                Acertada
+                {t("card.correct")}
               </span>
             ) : status === "incorrect" ? (
               <span className="flex items-center gap-1 text-xs font-semibold text-destructive">
                 <XCircle className="h-4 w-4" aria-hidden="true" />
-                Fallada
+                {t("card.incorrect")}
               </span>
             ) : null}
           </div>
           <div className="flex flex-1 items-center justify-center overflow-y-auto px-5 py-4 sm:px-8">
             <p className="w-full text-center text-base leading-relaxed text-card-foreground sm:text-xl">
-              {answer || "Respuesta no disponible"}
+              {answer || t("card.noAnswer")}
             </p>
           </div>
           <p className="flex items-center justify-center gap-1.5 px-5 pb-4 text-xs text-muted-foreground sm:px-8 sm:pb-5">
             <MousePointerClick className="h-3.5 w-3.5" aria-hidden="true" />
-            Haz clic para volver a la pregunta
+            {t("card.backToQuestion")}
           </p>
         </div>
       </motion.div>

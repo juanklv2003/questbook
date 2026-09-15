@@ -1,0 +1,29 @@
+- generic [ref=f9e3]:
+  - banner [ref=f9e4]:
+    - generic [ref=f9e5]: Andel
+  - generic [ref=f9e23]:
+    - generic [ref=f9e46]:
+      - generic [ref=f9e47]:
+        - heading "Crear una cuenta" [level=2] [ref=f9e48]
+        - paragraph [ref=f9e49]: Ingresa tus datos para comenzar
+      - generic [ref=f9e50]:
+        - generic [ref=f9e51]:
+          - text: Correo Electrónico
+          - textbox "Correo Electrónico" [ref=f9e52]:
+            - /placeholder: m@example.com
+        - generic [ref=f9e53]:
+          - text: Contraseña
+          - generic [ref=f9e54]:
+            - textbox "Contraseña" [ref=f9e55]:
+              - /placeholder: ••••••••
+            - button "Mostrar contraseña" [ref=f9e56] [cursor=pointer]
+        - generic [ref=f9e61]:
+          - text: Confirmar Contraseña
+          - generic [ref=f9e62]:
+            - textbox "Confirmar Contraseña" [ref=f9e63]:
+              - /placeholder: ••••••••
+            - button "Mostrar contraseña" [ref=f9e64] [cursor=pointer]
+      - button "Registrarse" [ref=f9e69] [cursor=pointer]
+    - paragraph [ref=f9e44]:
+      - text: ¿Ya tienes una cuenta?
+      - button "Inicia sesión" [active] [ref=f9e70] [cursor=pointer]

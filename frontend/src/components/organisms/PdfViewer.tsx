@@ -1,4 +1,5 @@
 import { FileText } from "lucide-react"
+import { useLanguage } from "../../i18n/LanguageContext"
 
 export interface PdfViewerProps {
   pdfUrl: string
@@ -27,7 +28,9 @@ function toEmbedUrl(pdfUrl: string): string {
   return pdfUrl;
 }
 
-export function PdfViewer({ pdfUrl, title, fallbackText = "Este documento no se puede previsualizar en el navegador, pero podés estudiar con tus tarjetas sin problema." }: PdfViewerProps) {
+export function PdfViewer({ pdfUrl, title, fallbackText }: PdfViewerProps) {
+  const { t } = useLanguage();
+  const resolvedFallback = fallbackText ?? t("pdf.fallback");
   if (!isInlineViewablePdfUrl(pdfUrl)) {
     return (
       <div className="w-full h-full min-h-[600px] flex flex-col border rounded-lg overflow-hidden bg-muted/10">
@@ -40,8 +43,8 @@ export function PdfViewer({ pdfUrl, title, fallbackText = "Este documento no se 
           <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10">
             <FileText className="w-7 h-7 text-primary/40" />
           </div>
-          <p className="text-sm font-medium">Vista previa no disponible</p>
-          <p className="text-sm text-muted-foreground max-w-sm">{fallbackText}</p>
+          <p className="text-sm font-medium">{t("pdf.unavailable")}</p>
+          <p className="text-sm text-muted-foreground max-w-sm">{resolvedFallback}</p>
         </div>
       </div>
     );
@@ -57,9 +60,9 @@ export function PdfViewer({ pdfUrl, title, fallbackText = "Este documento no se 
       <iframe
         src={toEmbedUrl(pdfUrl)}
         className="flex-1 w-full border-none"
-        title={title || "PDF Viewer"}
+        title={title || t("pdf.viewerTitle")}
       >
-        <p>{fallbackText}</p>
+        <p>{resolvedFallback}</p>
       </iframe>
     </div>
   )

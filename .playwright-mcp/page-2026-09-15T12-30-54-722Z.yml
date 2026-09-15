@@ -1,0 +1,26 @@
+- generic [ref=f5e3]:
+  - banner [ref=f5e461]:
+    - generic [ref=f5e462]: Andel
+  - generic [ref=f5e480]:
+    - generic [ref=f5e481]:
+      - generic [ref=f5e482]:
+        - heading "Bienvenido de nuevo" [level=2] [ref=f5e483]
+        - paragraph [ref=f5e484]: Ingresa tus credenciales para acceder a tu cuenta
+      - generic [ref=f5e485]:
+        - generic [ref=f5e486]:
+          - text: Correo Electrónico
+          - textbox "Correo Electrónico" [ref=f5e487]:
+            - /placeholder: m@example.com
+        - generic [ref=f5e488]:
+          - text: Contraseña
+          - generic [ref=f5e489]:
+            - textbox "Contraseña" [ref=f5e490]:
+              - /placeholder: ••••••••
+            - button "Mostrar contraseña" [ref=f5e491] [cursor=pointer]
+        - generic [ref=f5e496]:
+          - checkbox "Mantener sesión iniciada" [ref=f5e497]
+          - generic [ref=f5e498]: Mantener sesión iniciada
+      - button "Iniciar Sesión" [ref=f5e499] [cursor=pointer]
+    - paragraph [ref=f5e501]:
+      - text: ¿No tienes una cuenta?
+      - button "Regístrate" [ref=f5e502] [cursor=pointer]

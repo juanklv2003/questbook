@@ -84,13 +84,12 @@ export function StudyPlayer({
       <div className="flex flex-col gap-3 px-1 sm:px-2">
         <div className="w-full flex justify-between items-center">
           <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
-            Sesión de Estudio
+            {t("study.sessionTitle")}
           </span>
           <span className="flex items-center gap-1">
             <span className="text-sm font-medium tabular-nums bg-secondary text-secondary-foreground px-3 py-1 rounded-full">
               {progress} / {total}
-            </span>
-            {onRestart && (
+            </span>            {onRestart && (
               <Button
                 type="button"
                 variant="ghost"
@@ -111,7 +110,7 @@ export function StudyPlayer({
           aria-valuenow={percent}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`Progreso de la sesión: ${progress} de ${total}`}
+          aria-label={t("study.sessionProgressAria", { progress, total })}
         >
           <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${percent}%` }} />
         </div>
@@ -154,11 +153,11 @@ export function StudyPlayer({
                   )
                 )}
                 <label htmlFor="study-answer" className="text-sm font-medium">
-                  Tu respuesta
+                  {t("study.answerLabel")}
                 </label>
                 <TextArea
                   id="study-answer"
-                  placeholder="Escribe tu respuesta aquí..."
+                  placeholder={t("study.answerPlaceholder")}
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   onKeyDown={(e) => {
@@ -179,7 +178,7 @@ export function StudyPlayer({
                   className="w-full h-12 text-base"
                 >
                   {!isEvaluating && <Send className="w-4 h-4 mr-2" aria-hidden="true" />}
-                  Enviar Respuesta
+                  {t("study.submitAnswer")}
                 </Button>
               </div>
             ) : (
@@ -192,10 +191,10 @@ export function StudyPlayer({
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button variant="outline" onClick={onRetry} className="flex-1 h-12">
                     <RotateCcw className="w-4 h-4 mr-2" aria-hidden="true" />
-                    Reintentar
+                    {t("study.retry")}
                   </Button>
                   <Button onClick={onNext} className="flex-1 h-12">
-                    Siguiente Tarjeta
+                    {t("study.nextCard")}
                     <ArrowRight className="w-4 h-4 ml-2" aria-hidden="true" />
                   </Button>
                 </div>

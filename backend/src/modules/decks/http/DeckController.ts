@@ -50,9 +50,9 @@ export class DeckController {
   }
 
   async generate(req: Request, res: Response) {
-    const { name, folderId, content: reqContent, cardCount, difficulty, shelf_index, shelfIndex, color } = req.body;
+    const { name, folderId, content: reqContent, cardCount, difficulty, shelf_index, shelfIndex, color, language } = req.body;
     let content = reqContent;
-    
+
     const userId = req.user?.userId;
     if (!userId) {
       throw new AppError(401, 'Unauthorized');
@@ -85,6 +85,12 @@ export class DeckController {
       throw new AppError(400, 'difficulty must be easy, medium, or hard');
     }
 
+    // Validate language (optional, default to 'en')
+    const parsedLanguage = language || 'en';
+    if (parsedLanguage !== 'en' && parsedLanguage !== 'es') {
+      throw new AppError(400, 'language must be either "en" or "es"');
+    }
+
     const result = await this.generateDeckUseCase.execute({
       name,
       userId,
@@ -96,6 +102,7 @@ export class DeckController {
       difficulty: parsedDifficulty as 'easy' | 'medium' | 'hard' | undefined,
       shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),
       color: parseDeckColor(color),
+      language: parsedLanguage,
     });
 
     res.status(201).json(result);

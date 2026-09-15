@@ -1,5 +1,6 @@
 import { cn } from "../../lib/utils"
 import { Children, useRef, useState } from "react"
+import { useLanguage } from "../../i18n/LanguageContext"
 
 export interface BookshelfProps {
   children: React.ReactNode;
@@ -42,6 +43,7 @@ interface DropTarget {
  * with button fallbacks on each book for keyboard/touch users.
  */
 export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, onMoveBook }: BookshelfProps) {
+  const { t } = useLanguage();
   const childrenArray = Children.toArray(children);
   const dndEnabled = typeof onMoveBook === "function" && typeof bookIds === "function";
 
@@ -271,7 +273,7 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
                   )}
                   onDragOver={dndEnabled ? (e) => handleShelfDragOver(e, shelfIndex) : undefined}
                   onDrop={dndEnabled ? (e) => handleShelfDrop(e, shelfIndex) : undefined}
-                  aria-label={dndEnabled ? `Balda ${shelfIndex + 1}: suelta aquí para mover el libro` : `Balda ${shelfIndex + 1}`}
+                  aria-label={dndEnabled ? t("shelf.ariaWithDrop", { n: shelfIndex + 1 }) : t("shelf.aria", { n: shelfIndex + 1 })}
                 >
                   {/* Back panel subtle texture */}
                   <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -309,7 +311,7 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
                           onDragEnd={book.draggable ? handleBookDragEnd : undefined}
                           onDragOver={book.draggable ? (e) => handleBookDragOver(e, shelfIndex, book.id) : undefined}
                           onDrop={book.draggable ? (e) => handleBookDrop(e, shelfIndex) : undefined}
-                          title={book.draggable ? "Arrastra para mover de balda o reordenar" : undefined}
+                          title={book.draggable ? t("shelf.dragTitle") : undefined}
                           aria-grabbed={book.draggable && draggedId === book.id ? true : undefined}
                           className={cn(
                             // Relative + lifted on hover/focus so the book's hover
@@ -356,12 +358,12 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
                     {/* Empty space fills the rest */}
                     {shelfBooks.length === 0 && !isOverShelf && (
                       <div className="text-[#8B6B4A]/30 text-sm italic">
-                        Estantería vacía...
+                        {t("shelf.empty")}
                       </div>
                     )}
                     {shelfBooks.length === 0 && isOverShelf && (
                       <div className="text-background/70 text-sm italic">
-                        Suelta aquí para mover a la balda {shelfIndex + 1}
+                        {t("shelf.dropHere", { n: shelfIndex + 1 })}
                       </div>
                     )}
                   </div>

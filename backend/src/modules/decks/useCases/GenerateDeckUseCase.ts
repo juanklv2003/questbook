@@ -15,6 +15,7 @@ interface GenerateDeckDTO {
   difficulty?: Difficulty;
   shelfIndex?: number;
   color?: string;
+  language?: string;
 }
 
 export class GenerateDeckUseCase {
@@ -30,6 +31,7 @@ export class GenerateDeckUseCase {
     const generatedCards = await this.aiGenerator.generateFromText(dto.content, {
       cardCount: dto.cardCount,
       difficulty: dto.difficulty,
+      language: dto.language,
     });
 
     if (!generatedCards || generatedCards.length === 0) {

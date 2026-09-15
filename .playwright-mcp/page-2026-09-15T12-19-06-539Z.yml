@@ -1,0 +1,23 @@
+- generic [ref=f4e3]:
+  - generic [aria-hidden]:
+    - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+  - banner [ref=f4e46]:
+    - navigation "Navegación principal" [ref=f4e48]:
+      - button "Andel — ir a mi biblioteca" [ref=f4e49] [cursor=pointer]:
+        - generic [ref=f4e63]: Andel
+      - generic [ref=f4e64]:
+        - button "Progreso" [ref=f4e65] [cursor=pointer]
+        - button "Ajustes" [ref=f4e69] [cursor=pointer]
+        - button "Nuevo Libro / Subir PDF" [ref=f4e73] [cursor=pointer]
+        - generic [aria-hidden] [ref=f4e76]: W
+        - button "Cerrar sesión" [ref=f4e77] [cursor=pointer]
+  - main [ref=f4e82]:
+    - generic [ref=f4e85]:
+      - generic [ref=f4e99]:
+        - generic "Balda 1" [ref=f4e101]
+        - generic "Balda 2" [ref=f4e116]
+        - generic "Balda 3" [ref=f4e131]
+      - generic [ref=f4e148]:
+        - heading "Tu biblioteca está vacía" [level=3] [ref=f4e152]
+        - paragraph [ref=f4e153]: Creá tu primer libro subiendo un documento PDF y la IA generará tarjetas de estudio por vos.
+        - button "Crear Primer Libro" [ref=f4e154] [cursor=pointer]

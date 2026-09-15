@@ -20,6 +20,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
   const [cardCount, setCardCount] = React.useState<number>(15);
   const [difficulty, setDifficulty] = React.useState<Difficulty>('medium');
   const [color, setColor] = React.useState<string>('primary');
+  const [language, setLanguage] = React.useState<'en' | 'es'>('en');
 
   const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; description: string }[] = [
     { value: 'easy', label: t("up.easy"), description: t("up.easyDesc") },
@@ -52,7 +53,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       const name = deckName.trim() || file.name.replace('.pdf', '');
-      onUpload(file, { name, cardCount, difficulty, color });
+      onUpload(file, { name, cardCount, difficulty, color, language });
     }
   };
 
@@ -61,7 +62,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const name = deckName.trim() || file.name.replace('.pdf', '');
-      onUpload(file, { name, cardCount, difficulty, color });
+      onUpload(file, { name, cardCount, difficulty, color, language });
     }
   };
 
@@ -165,6 +166,28 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
                 </button>
               );
             })}
+          </div>
+        </div>
+
+      {/* Language */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium">{t("lang.switchLabel")}</label>
+          <div className="flex gap-2">
+            {[ { value: 'en', label: t("lang.english") }, { value: 'es', label: t("lang.spanish") } ].map(option => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setLanguage(option.value)}
+                aria-pressed={language === option.value}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
+                  language === option.value
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                }`}
+              >
+                <span className="block">{option.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

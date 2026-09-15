@@ -1,0 +1,21 @@
+- generic [ref=f5e3]:
+  - generic [aria-hidden]:
+    - generic: ✦ ★ ✧ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ★ ✧ ✦ ★ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦ ✧ ★ ✦
+  - banner [ref=f5e46]:
+    - navigation "Navegación principal" [ref=f5e48]:
+      - button "Andel — ir a mi biblioteca" [ref=f5e49] [cursor=pointer]:
+        - generic [ref=f5e63]: Andel
+      - generic [ref=f5e64]:
+        - button "Progreso" [ref=f5e65] [cursor=pointer]
+        - button "Ajustes" [ref=f5e69] [cursor=pointer]
+        - button "Nuevo Libro / Subir PDF" [ref=f5e73] [cursor=pointer]
+        - generic [aria-hidden] [ref=f5e76]: S
+        - button "Cerrar sesión" [ref=f5e77] [cursor=pointer]
+  - main [ref=f5e82]:
+    - generic [ref=f5e174]:
+      - 'generic "Balda 1: suelta aquí para mover el libro" [ref=f5e176]':
+        - generic "Arrastra para mover de balda o reordenar" [ref=f5e179]:
+          - button "Abrir libro Study Exit Probe Deck" [ref=f5e181] [cursor=pointer]:
+            - generic [ref=f5e185]: Study Exit P…
+      - 'generic "Balda 2: suelta aquí para mover el libro" [ref=f5e203]': Estantería vacía...
+      - 'generic "Balda 3: suelta aquí para mover el libro" [ref=f5e216]': Estantería vacía...

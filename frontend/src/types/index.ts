@@ -68,4 +68,5 @@ export interface DeckGenerationOptions {
   cardCount: number;
   difficulty: Difficulty;
   color?: string;
+  language?: 'en' | 'es';
 }

@@ -1,5 +1,6 @@
 import { CheckCircle2, Circle, ListChecks, XCircle } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useLanguage, type TranslationKey } from "../../i18n/LanguageContext"
 import type { FlashcardStatus } from "./Flashcard"
 
 export interface ReviewListItem {
@@ -14,10 +15,10 @@ export interface StudyReviewListProps {
   onSelect: (index: number) => void;
 }
 
-const STATUS_META: Record<FlashcardStatus, { label: string }> = {
-  correct: { label: "Acertada" },
-  incorrect: { label: "Fallada" },
-  pending: { label: "Pendiente" },
+const STATUS_META: Record<FlashcardStatus, { labelKey: TranslationKey }> = {
+  correct: { labelKey: "card.correct" },
+  incorrect: { labelKey: "card.incorrect" },
+  pending: { labelKey: "card.pending" },
 };
 
 function StatusIcon({ status }: { status: FlashcardStatus }) {
@@ -35,32 +36,34 @@ function StatusIcon({ status }: { status: FlashcardStatus }) {
  * Cada pregunta es un botón real que salta a esa tarjeta.
  */
 export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewListProps) {
+  const { t } = useLanguage();
   const doneCount = items.filter((i) => i.status !== "pending").length;
 
   return (
-    <nav aria-label="Repasar" className="flex min-h-0 flex-col gap-3">
+    <nav aria-label={t("review.title")} className="flex min-h-0 flex-col gap-3">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
           <ListChecks className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          Repasar
+          {t("review.title")}
         </h2>
         <p className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground" aria-live="polite">
           {doneCount}/{items.length}
         </p>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Todavía no hay preguntas en esta sesión.</p>
+        <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
       ) : (
         <ol className="flex min-h-0 gap-2 overflow-x-auto pb-1 lg:max-h-[52vh] lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:pb-0 lg:pr-1">
           {items.map((item, index) => {
             const isActive = index === activeIndex;
             const meta = STATUS_META[item.status];
+            const statusLabel = t(meta.labelKey);
             return (
               <li key={item.id} className="shrink-0 basis-52 sm:basis-60 lg:basis-auto lg:shrink">
                 <button
                   type="button"
                   onClick={() => onSelect(index)}
-                  aria-label={`Ir a la pregunta ${index + 1}: ${meta.label}`}
+                  aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
                   aria-current={isActive ? "true" : undefined}
                   className={cn(
                     "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
@@ -75,7 +78,7 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Pregunta {index + 1} · {meta.label}
+                      {t("review.questionLabel", { n: index + 1, label: statusLabel })}
                     </span>
                     <span className="mt-0.5 line-clamp-2 block text-sm leading-snug text-foreground">
                       {item.question}

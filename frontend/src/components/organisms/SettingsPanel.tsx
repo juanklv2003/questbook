@@ -94,27 +94,27 @@ export function SettingsPanel({
           id="settings-color-title"
           className="text-sm font-semibold tracking-tight"
         >
-          Color
+          {t("settings.colorTitle")}
         </h3>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          El color se aplica al fondo de la web. Los personalizados se
-          guardan solos al final de la fila.
+          {t("settings.colorDesc")}
         </p>
         <div
           className="mt-3 flex flex-wrap gap-3"
           role="group"
-          aria-label="Elegir color de acento"
+          aria-label={t("settings.chooseAccent")}
         >
           {THEMES.filter((t) => !hiddenThemes.includes(t.id)).map((theme) => {
             const active = themeId === theme.id;
+            const themeLabel = t(theme.labelKey);
             return (
               <span key={theme.id} className="relative inline-flex">
                 <button
                   type="button"
                   onClick={() => onPickTheme(theme.id)}
                   aria-pressed={active}
-                  aria-label={`Color ${theme.label}`}
-                  title={theme.label}
+                  aria-label={t("up.colorOption", { label: themeLabel })}
+                  title={themeLabel}
                   style={{ backgroundColor: theme.brand }}
                   className={cn(
                     "flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
@@ -132,8 +132,8 @@ export function SettingsPanel({
                   <button
                     type="button"
                     onClick={() => onHidePreset(theme.id)}
-                    aria-label={`Quitar color ${theme.label} de la lista`}
-                    title="Quitar de la lista"
+                    aria-label={t("settings.removeColor", { label: themeLabel })}
+                    title={t("settings.removeFromList")}
                     className="absolute -right-1 -top-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                   >
                     <X className="h-3 w-3" aria-hidden="true" />
@@ -149,13 +149,13 @@ export function SettingsPanel({
               className="inline-flex cursor-pointer items-center gap-1.5 self-center rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-              Mostrar todos ({hiddenThemes.length} ocultos)
+              {t("settings.showAll", { count: hiddenThemes.length })}
             </button>
           )}
 
           {/* Self-saved customs: behind presets, left of the picker (click applies, × removes) */}
           {savedColors.length > 0 && (
-            <span className="contents" role="group" aria-label="Colores guardados">
+            <span className="contents" role="group" aria-label={t("settings.savedColors")}>
               {savedColors.map((hex) => {
                 const active =
                   themeId === CUSTOM_THEME_ID &&
@@ -166,7 +166,7 @@ export function SettingsPanel({
                       type="button"
                       onClick={() => onCustomColorChange(hex)}
                       aria-pressed={active}
-                      aria-label={`Aplicar color ${hex}`}
+                      aria-label={t("settings.applyColor", { hex })}
                       title={hex}
                       style={{ backgroundColor: hex }}
                       className={cn(
@@ -184,8 +184,8 @@ export function SettingsPanel({
                     <button
                       type="button"
                       onClick={() => onRemoveSavedColor(hex)}
-                      aria-label={`Borrar color ${hex}`}
-                      title="Borrar"
+                      aria-label={t("settings.deleteColor", { hex })}
+                      title={t("settings.delete")}
                       className="absolute -right-1 -top-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                     >
                       <X className="h-3 w-3" aria-hidden="true" />
@@ -200,8 +200,8 @@ export function SettingsPanel({
               custom is already saved, the check lives on its saved swatch and
               the palette shows here (avoids the side-by-side double check). */}
           <label
-            title="Color personalizado"
-            aria-label="Color personalizado"
+            title={t("settings.customColor")}
+            aria-label={t("settings.customColor")}
             className={cn(
               "relative flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full transition-transform duration-200 hover:scale-105 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-card",
               customActive &&
@@ -209,11 +209,11 @@ export function SettingsPanel({
             )}
             style={{ backgroundColor: customColor }}
           >
-            <span className="sr-only">Elegir color personalizado</span>
+            <span className="sr-only">{t("settings.chooseCustom")}</span>
             <input
               type="color"
               value={customColor}
-              aria-label="Elegir color personalizado"
+              aria-label={t("settings.chooseCustom")}
               aria-pressed={customActive}
               onChange={(e) => onCustomColorChange(e.target.value)}
               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
@@ -239,34 +239,35 @@ export function SettingsPanel({
           id="settings-pattern-title"
           className="text-sm font-semibold tracking-tight"
         >
-          Decoración
+          {t("settings.decorationTitle")}
         </h3>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Sumá un patrón sutil al fondo, estilo Pomopopo.
+          {t("settings.decorationDesc")}
         </p>
         <div
           className="mt-3 flex flex-wrap gap-2"
           role="group"
-          aria-label="Elegir decoración del fondo"
+          aria-label={t("settings.chooseDecoration")}
         >
           {PATTERN_OPTIONS.map((option) => {
             const Icon = PATTERN_ICONS[option.id];
             const active = pattern === option.id;
+            const optionLabel = t(option.labelKey);
             return (
               <button
                 key={option.id}
                 type="button"
                 onClick={() => onPatternChange(option.id)}
                 aria-pressed={active}
-                aria-label={option.label}
-                title={option.label}
+                aria-label={optionLabel}
+                title={optionLabel}
                 className={cn(
                   "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                   active && "border-primary/60 bg-primary/5 text-primary"
                 )}
               >
                 <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                {option.label}
+                {optionLabel}
                 {active && (
                   <Check className="h-3.5 w-3.5" aria-hidden="true" />
                 )}

@@ -1,4 +1,5 @@
 import { BookOpen, ChartColumn, Layers } from "lucide-react"
+import { useLanguage } from "../../i18n/LanguageContext"
 
 export interface ProgressBook {
   id: string;
@@ -21,35 +22,36 @@ export interface ProgressPanelProps {
  * Totals + average + per-book bars. Honest nulls: "sin datos".
  */
 export function ProgressPanel({ totalBooks, totalCards, averageProgress, books }: ProgressPanelProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col gap-6">
       <dl className="grid grid-cols-3 gap-3">
         <div className="flex flex-col gap-1 rounded-xl border bg-muted/40 px-3 py-3">
           <dt className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
-            Libros
+            {t("progress.books")}
           </dt>
-          <dd className="text-xl font-bold tracking-tight" aria-label={`${totalBooks} libros`}>
+          <dd className="text-xl font-bold tracking-tight" aria-label={totalBooks === 1 ? t("progress.booksOne", { count: totalBooks }) : t("progress.booksOther", { count: totalBooks })}>
             {totalBooks}
           </dd>
         </div>
         <div className="flex flex-col gap-1 rounded-xl border bg-muted/40 px-3 py-3">
           <dt className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Layers className="h-3.5 w-3.5" aria-hidden="true" />
-            Tarjetas
+            {t("progress.cards")}
           </dt>
-          <dd className="text-xl font-bold tracking-tight" aria-label={`${totalCards} tarjetas`}>
+          <dd className="text-xl font-bold tracking-tight" aria-label={totalCards === 1 ? t("book.cardsOne", { count: totalCards }) : t("book.cardsOther", { count: totalCards })}>
             {totalCards}
           </dd>
         </div>
         <div className="flex flex-col gap-1 rounded-xl border bg-muted/40 px-3 py-3">
           <dt className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <ChartColumn className="h-3.5 w-3.5" aria-hidden="true" />
-            Promedio
+            {t("progress.average")}
           </dt>
           <dd
             className="text-xl font-bold tracking-tight"
-            aria-label={averageProgress !== null ? `Promedio ${averageProgress} por ciento` : "Promedio sin datos"}
+            aria-label={averageProgress !== null ? t("progress.averageAria", { value: averageProgress }) : t("progress.averageEmpty")}
           >
             {averageProgress !== null ? `${averageProgress}%` : "—"}
           </dd>
@@ -61,13 +63,13 @@ export function ProgressPanel({ totalBooks, totalCards, averageProgress, books }
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <ChartColumn className="h-6 w-6" aria-hidden="true" />
           </span>
-          <p className="text-sm font-semibold tracking-tight">Todavía no hay datos de progreso</p>
+          <p className="text-sm font-semibold tracking-tight">{t("progress.emptyTitle")}</p>
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-            Todavía no hay datos. Creá tu primer libro y empezá a estudiar para ver tu avance acá.
+            {t("progress.emptyDesc")}
           </p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3" aria-label="Progreso por libro">
+        <ul className="flex flex-col gap-3" aria-label={t("progress.listAria")}>
           {books.map((book) => {
             const clamped =
               typeof book.progress === "number" ? Math.min(100, Math.max(0, Math.round(book.progress))) : null
@@ -75,10 +77,10 @@ export function ProgressPanel({ totalBooks, totalCards, averageProgress, books }
               <li key={book.id} className="rounded-xl border px-4 py-3">
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="min-w-0 truncate text-sm font-semibold tracking-tight" title={book.name}>
-                    {book.name || "Libro sin título"}
+                    {book.name || t("progress.untitled")}
                   </p>
-                  <p className="shrink-0 text-xs font-medium text-muted-foreground" aria-label={`${book.cards} tarjetas`}>
-                    {book.cards} tarjetas
+                  <p className="shrink-0 text-xs font-medium text-muted-foreground" aria-label={book.cards === 1 ? t("book.cardsOne", { count: book.cards }) : t("book.cardsOther", { count: book.cards })}>
+                    {book.cards === 1 ? t("book.cardsOne", { count: book.cards }) : t("book.cardsOther", { count: book.cards })}
                   </p>
                 </div>
                 {clamped !== null ? (
@@ -90,7 +92,7 @@ export function ProgressPanel({ totalBooks, totalCards, averageProgress, books }
                         aria-valuenow={clamped}
                         aria-valuemin={0}
                         aria-valuemax={100}
-                        aria-label={`Progreso de ${book.name}: ${clamped} por ciento`}
+                        aria-label={t("progress.bookProgressAria", { name: book.name, value: clamped })}
                       >
                         <div className="h-full rounded-full bg-primary" style={{ width: `${clamped}%` }} />
                       </div>
@@ -98,7 +100,7 @@ export function ProgressPanel({ totalBooks, totalCards, averageProgress, books }
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-2 text-xs text-muted-foreground">Sin datos de progreso todavía.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{t("progress.noData")}</p>
                 )}
               </li>
             )

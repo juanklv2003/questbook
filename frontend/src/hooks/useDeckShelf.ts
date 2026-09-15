@@ -2,6 +2,7 @@ import * as React from "react";
 import apiClient from "../lib/axios";
 import type { Deck } from "../types";
 import { SHELF_COUNT, computeMove, groupDecksByShelf } from "../lib/shelfUtils";
+import { useLanguage } from "../i18n/LanguageContext";
 
 /**
  * Shelf state + persistence for the bookshelf.
@@ -15,6 +16,7 @@ export function useDeckShelf(
   const [isPersisting, setIsPersisting] = React.useState(false);
   const [shelfError, setShelfError] = React.useState<string | null>(null);
   const persistSeq = React.useRef(0);
+  const { t } = useLanguage();
 
   const shelves = React.useMemo(() => groupDecksByShelf(decks, SHELF_COUNT), [decks]);
 
@@ -38,13 +40,13 @@ export function useDeckShelf(
         setDecks(snapshot);
         const message =
           (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-          "No se pudo guardar el orden. Inténtalo de nuevo.";
+          t("shelf.persistError");
         setShelfError(message);
       } finally {
         if (persistSeq.current === seq) setIsPersisting(false);
       }
     },
-    [setDecks]
+    [setDecks, t]
   );
 
   const moveDeck = React.useCallback(

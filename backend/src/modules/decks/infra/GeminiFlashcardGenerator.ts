@@ -63,10 +63,12 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
 - Incluye preguntas tipo "¿cuál es la diferencia entre X e Y?"`,
     };
 
+    const languageName = options?.language === 'es' ? 'Español' : 'English';
+
     const prompt = `
 You are an expert educator. Your task is to analyze the provided text and generate high-quality flashcards for studying. Focus on key concepts, definitions, and relationships.
 
-GENERA TODAS LAS PREGUNTAS Y RESPUESTAS ESTRICTAMENTE EN ESPAÑOL.
+GENERA TODAS LAS PREGUNTAS Y RESPUESTAS ESTRICTAMENTE EN ${languageName}.
 NO INVENTES INFORMACIÓN (0% alucinación).
 BASATE ÚNICAMENTE EN EL TEXTO PROPORCIONADO.
 EXTRAE CONCEPTOS REALES, COHERENTES Y LEGIBLES.

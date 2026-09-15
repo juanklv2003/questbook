@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from "react"
 import { cn } from "../../lib/utils"
 import { BookOpen, Play, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
+import { useLanguage } from "../../i18n/LanguageContext"
 import { DeckDeleteButton } from "../atoms/DeckDeleteButton"
 
 export interface BookCardProps {
@@ -92,6 +93,7 @@ function getWidthForCards(count: number): string {
 }
 
 export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal, shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight }: BookCardProps) {
+  const { t } = useLanguage();
   const accent = accentColor ?? getAccentForDeck(name);
   const styles = ACCENT_STYLES[accent];
   const height = getHeightForDeck(name);
@@ -123,7 +125,7 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
           onKeyDown={handleKeyDown}
           tabIndex={0}
           role="button"
-          aria-label={`Abrir libro ${name}`}
+          aria-label={t("book.openAria", { name })}
           className={cn(
             "relative cursor-pointer select-none",
             "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
@@ -194,9 +196,9 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
       <div
         onClick={(e) => { e.preventDefault(); onSelect(); }}
         onKeyDown={handleKeyDown}
-        tabIndex={0}
-          role="button"
-          aria-label={`Abrir libro ${name}`}
+          tabIndex={0}
+            role="button"
+            aria-label={t("book.openAria", { name })}
           className={cn(
             "relative cursor-pointer select-none",
             "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
@@ -314,6 +316,7 @@ function HoverCard({
   canMoveLeft?: boolean;
   canMoveRight?: boolean;
 }) {
+  const { t } = useLanguage();
   const showMoveControls = onMoveLeft !== undefined || onMoveToShelf !== undefined;
   const progress =
     typeof progressPercent === "number" ? Math.min(100, Math.max(0, Math.round(progressPercent))) : null;
@@ -321,6 +324,10 @@ function HoverCard({
     shelfCount !== undefined && shelfCount > 0
       ? Array.from({ length: shelfCount }, (_, i) => i)
       : [];
+  const cardsLabel =
+    flashcardsCount === 1
+      ? t("book.cardsOne", { count: flashcardsCount })
+      : t("book.cardsOther", { count: flashcardsCount });
   return (
     <div className="bg-card rounded-xl border shadow-xl p-4 animate-in fade-in zoom-in-95 duration-200">
       {/* Header */}
@@ -328,21 +335,21 @@ function HoverCard({
         <h4 className="font-semibold text-sm leading-tight text-foreground line-clamp-2">{name}</h4>
         <div className={cn("inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium", badgeStyle)}>
           <BookOpen className="w-3 h-3" />
-          {flashcardsCount} flashcards
+          {cardsLabel}
         </div>
       </div>
 
       {/* Secondary text: flashcards + completed % (brief). Fallback description. */}
       {progress !== null ? (
         <div className="mt-2.5">
-          <p className="text-[11px] font-medium text-muted-foreground">{progress}% completo</p>
+          <p className="text-[11px] font-medium text-muted-foreground">{t("book.progressComplete", { progress })}</p>
           <div className="mt-1 h-1.5 rounded-full bg-secondary/60 overflow-hidden">
             <div className="h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
           </div>
         </div>
       ) : (
         <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-          Libro de estudio con {flashcardsCount} preguntas y respuestas.
+          {t("book.description", { count: flashcardsCount })}
         </p>
       )}
 
@@ -357,11 +364,11 @@ function HoverCard({
           )}
         >
           <Play className="w-3 h-3" />
-          Repetir
+          {t("book.study")}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-          aria-label="Editar libro"
+          aria-label={t("book.edit")}
           className={cn(
             "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg",
             "bg-secondary text-secondary-foreground text-xs font-medium",
@@ -380,7 +387,7 @@ function HoverCard({
       {showMoveControls && (
         <div className="mt-3 pt-2.5 border-t">
           <p className="text-[11px] font-medium text-muted-foreground mb-1.5">
-            Mover en la biblioteca
+            {t("book.moveTitle")}
           </p>
           <div className="flex items-center gap-1.5">
             {onMoveLeft && (
@@ -388,7 +395,7 @@ function HoverCard({
                 <button
                   onClick={(e) => { e.stopPropagation(); onMoveLeft(); }}
                   disabled={!canMoveLeft}
-                  aria-label="Mover a la izquierda"
+                  aria-label={t("book.moveLeft")}
                   className={cn(
                     "flex items-center justify-center w-7 h-7 rounded-lg",
                     "bg-secondary text-secondary-foreground",
@@ -402,7 +409,7 @@ function HoverCard({
                   <button
                     onClick={(e) => { e.stopPropagation(); onMoveRight(); }}
                     disabled={!canMoveRight}
-                    aria-label="Mover a la derecha"
+                    aria-label={t("book.moveRight")}
                     className={cn(
                       "flex items-center justify-center w-7 h-7 rounded-lg",
                       "bg-secondary text-secondary-foreground",
@@ -419,7 +426,7 @@ function HoverCard({
               <div className="w-px self-stretch bg-border mx-0.5" aria-hidden="true" />
             )}
             {onMoveToShelf && shelfOptions.length > 0 && (
-              <div className="flex items-center gap-1" role="group" aria-label="Mover a balda">
+              <div className="flex items-center gap-1" role="group" aria-label={t("book.moveGroup")}>
                 {shelfOptions.map((shelf) => {
                   const isCurrent = shelf === shelfIndex;
                   return (
@@ -427,9 +434,9 @@ function HoverCard({
                       key={shelf}
                       onClick={(e) => { e.stopPropagation(); onMoveToShelf(shelf); }}
                       disabled={isCurrent}
-                      aria-label={`Mover a balda ${shelf + 1}`}
+                      aria-label={t("book.moveToShelf", { n: shelf + 1 })}
                       aria-pressed={isCurrent}
-                      title={isCurrent ? `Ya está en la balda ${shelf + 1}` : `Mover a balda ${shelf + 1}`}
+                      title={isCurrent ? t("book.alreadyOnShelf", { n: shelf + 1 }) : t("book.moveToShelf", { n: shelf + 1 })}
                       className={cn(
                         "min-w-7 h-7 px-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
                         isCurrent

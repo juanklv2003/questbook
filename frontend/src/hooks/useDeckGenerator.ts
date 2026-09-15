@@ -38,6 +38,7 @@ export function useDeckGenerator() {
       formData.append('cardCount', String(options.cardCount));
       formData.append('difficulty', options.difficulty);
       formData.append('color', options.color ?? 'primary');
+      formData.append('language', options.language ?? 'en');
       // New books land on the first shelf; the backend stores it on create.
       formData.append('shelf_index', '0');
 
@@ -102,14 +103,13 @@ export function useDeckGenerator() {
           setError(message);
         }
       } else if (
-        err instanceof Object &&
-        err !== null &&
-        'code' in err &&
-        err.code === 'ECONNABORTED'
-      ) || (
-        err instanceof Error &&
-        err.message !== undefined &&
-        err.message.includes('timeout')
+        (err instanceof Object &&
+          err !== null &&
+          'code' in err &&
+          err.code === 'ECONNABORTED') ||
+        (err instanceof Error &&
+          err.message !== undefined &&
+          err.message.includes('timeout'))
       ) {
         setError(t('gen.timeout'));
       } else {
