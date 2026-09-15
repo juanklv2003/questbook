@@ -15,7 +15,7 @@ interface GenerateDeckDTO {
   difficulty?: Difficulty;
   shelfIndex?: number;
   color?: string;
-  language?: string;
+  language?: 'en' | 'es';
 }
 
 export class GenerateDeckUseCase {
