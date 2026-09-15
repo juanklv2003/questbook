@@ -11,5 +11,6 @@ db.on('connect', () => {
 
 db.on('error', (err: Error) => {
   console.error('❌ Unexpected error on idle client', err);
-  process.exit(-1);
+  // Don't exit the process on database errors - let individual requests handle them
+  // The Neon driver should handle reconnection automatically
 });
