@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../lib/axios';
-import type { Flashcard } from '../types';
+import type { Flashcard, Deck } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 
 export function useDeckFlashcards(deckId: string | null) {
+  const { t } = useLanguage();
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [deck, setDeck] = useState<any | null>(null);
+  const [deck, setDeck] = useState<Deck | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,14 +22,24 @@ export function useDeckFlashcards(deckId: string | null) {
         const response = await apiClient.get(`/decks/${deckId}/flashcards`);
         setFlashcards(response.data.flashcards);
         setDeck(response.data.deck);
-      } catch (err: any) {
-        setError(err.response?.data?.error || err.message || 'Error loading flashcards');
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+            ? err
+            : 'An unknown error occurred';
+        setError(errorMessage || t('deck.flashError'));
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchFlashcards();
+    // NOTE: `t` intentionally excluded — refetching on locale toggle would
+    // flash the study loading state (and new array identity could reset the
+    // session hook). The fallback is translated at fetch time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckId]);
 
   return { flashcards, deck, isLoading, error, setFlashcards };
