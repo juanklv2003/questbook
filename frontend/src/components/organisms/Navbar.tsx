@@ -20,10 +20,9 @@ export interface NavbarProps {
  * the primary CTA (new book / upload PDF) and avatar/logout on the right.
  * Labels collapse to icons below `sm`; the CTA keeps a compact short label.
  */
-export function Navbar({ userEmail, onGoHome, onLogout, onOpenCreator, onNavigate }: NavbarProps) {
+export function Navbar({ onGoHome, onLogout, onOpenCreator, onNavigate }: NavbarProps) {
   const { t } = useLanguage();
   const navigate = onNavigate ?? (() => {})
-  const userInitial = userEmail?.trim().charAt(0).toUpperCase() ?? "?"
 
   const LINKS: { route: TopbarRoute; label: string; icon: typeof User }[] = [
     { route: "progress", label: t("nav.progress"), icon: TrendingUp },
@@ -77,16 +76,6 @@ export function Navbar({ userEmail, onGoHome, onLogout, onOpenCreator, onNavigat
             <span className="sm:hidden">{t("nav.newShort")}</span>
             <span className="hidden sm:inline">{t("nav.newFull")}</span>
           </Button>
-
-          {userEmail && (
-            <span
-              aria-hidden="true"
-              title={userEmail}
-              className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground ring-1 ring-border/60"
-            >
-              {userInitial}
-            </span>
-          )}
 
           <Button
             type="button"

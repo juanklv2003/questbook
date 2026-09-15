@@ -35,17 +35,54 @@ export function PatternLayer({ pattern }: { pattern: PatternId }) {
   }
   const glyph = GLYPH_PATTERNS[pattern];
   if (!glyph) return null;
+  // Glyph modes used to render a single finite block (~2-3 lines at the top),
+  // leaving the bottom viewport bare. Repeat the row down the full height so
+  // the pattern reaches the bottom on any screen; overflow-hidden clips the
+  // excess. Staggered twinkle delays keep it calm, not blinky.
+  // The flex column uses justify-between, so the last row lands wherever the
+  // leftover space puts it — the bottom band below the content card could
+  // still read bare. An extra bottom-anchored strip (absolute, clipped by
+  // overflow-hidden) guarantees glyph density at the bottom edge on its own.
+  // Paws tiling is untouched (separate early return above).
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
     >
-      <div style={{ ...GLYPH_BASE_STYLE, fontSize: glyph.fontSize }}>
+      <div className="flex h-full flex-col justify-between">
+        {GLYPH_ROWS.map((row) => (
+          <div
+            key={row}
+            style={{
+              ...GLYPH_BASE_STYLE,
+              fontSize: glyph.fontSize,
+              animationDelay: `${row * 0.55}s`,
+            }}
+          >
+            {glyph.text}
+          </div>
+        ))}
+      </div>
+      {/* Bottom-anchored strip: single clipped glyph row kissing the bottom
+          edge, independent of the justify-between flow above. */}
+      <div
+        className="absolute inset-x-0 -bottom-4"
+        style={{
+          ...GLYPH_BASE_STYLE,
+          fontSize: glyph.fontSize,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          animationDelay: `${GLYPH_ROWS.length * 0.55}s`,
+        }}
+      >
         {glyph.text}
       </div>
     </div>
   );
 }
+
+/** Enough 15vh rows to cover short and tall viewports (excess clips). */
+const GLYPH_ROWS = [0, 1, 2, 3, 4, 5, 6];
 
 /** Métricas copiadas de Pomopopo (`bg-stars/circles/triangles/flowers::after`). */
 const GLYPH_BASE_STYLE: CSSProperties = {

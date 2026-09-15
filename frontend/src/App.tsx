@@ -11,6 +11,7 @@ import { BrainCircuit } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { AuthContainer } from './components/containers/AuthContainer'
 import { BrandBackground } from './components/atoms/BrandBackground'
+import { AmbientGlow } from './components/atoms/AmbientGlow'
 import { PatternLayer } from './components/atoms/PatternLayer'
 import { useThemeSettings } from './hooks/useThemeSettings'
 import { useLanguage } from './i18n/LanguageContext'
@@ -92,7 +93,12 @@ function App() {
 
   return (
     <div className="flex h-screen flex-col bg-transparent text-foreground font-sans selection:bg-primary/20">
+      {/* Fixed decor layers (viewport-anchored, z-0): brand base with bottom
+          wash + AmbientGlow's bottom-anchored accent + pattern on top.
+          MysticForestBackground intentionally not used: its opaque forest base
+          would bury the flat brand color instead of composing with it. */}
       <BrandBackground />
+      <AmbientGlow />
       <PatternLayer pattern={pattern} />
       <Navbar
         userEmail={user?.email}
@@ -103,7 +109,10 @@ function App() {
       />
 
       <div className="relative z-10 flex flex-1 flex-col">
-        <main className="flex w-full flex-1 flex-col overflow-clip px-4">
+        {/* Fixed bg layers are viewport-anchored, so scrolling here never
+            moves or cuts them; y-auto (was overflow-clip) keeps tall library /
+            study content reachable instead of clipped over a flat bottom. */}
+        <main className="flex w-full flex-1 flex-col overflow-x-clip overflow-y-auto px-4">
           <div className="container mx-auto w-full max-w-6xl flex-1 flex flex-col">
             {activeDeckId ? (
               <StudySessionContainer
