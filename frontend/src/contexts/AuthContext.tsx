@@ -35,12 +35,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(user);
         setIsAuthenticated(true);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Only a 401 (invalid/expired token) counts as "no session".
       // Network errors or unresponsive server (500/timeout/ECONNREFUSED)
       // must NOT log the user out: it could be a momentary failure and we
       // would kick them off the page unfairly (e.g. a heavy PDF still processing).
-      const status = err?.response?.status;
+      const status = err instanceof Object && err !== null && 'response' in err && err.response instanceof Object && err.response !== null && 'status' in err.response ? err.response.status : undefined;
       if (status === 401) {
         setUser(null);
         setIsAuthenticated(false);
@@ -69,8 +69,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       await apiClient.post('/auth/login', credentials);
       await checkAuth();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || t('auth.loginError'));
+    } catch (err: unknown) {
+      const message =
+        err instanceof Object &&
+        err !== null &&
+        'response' in err &&
+        err.response instanceof Object &&
+        err.response !== null &&
+        'data' in err.response &&
+        err.response.data instanceof Object &&
+        err.response.data !== null &&
+        'error' in err.response.data
+          ? err.response.data.error
+          : err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+          ? err
+          : t('auth.loginError');
+      setError(message);
       throw err;
     } finally {
       setIsLoading(false);
@@ -83,8 +99,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       await apiClient.post('/auth/register', credentials);
       await checkAuth();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || t('auth.registerError'));
+    } catch (err: unknown) {
+      const message =
+        err instanceof Object &&
+        err !== null &&
+        'response' in err &&
+        err.response instanceof Object &&
+        err.response !== null &&
+        'data' in err.response &&
+        err.response.data instanceof Object &&
+        err.response.data !== null &&
+        'error' in err.response.data
+          ? err.response.data.error
+          : err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+          ? err
+          : t('auth.registerError');
+      setError(message);
       throw err;
     } finally {
       setIsLoading(false);
@@ -98,8 +130,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await apiClient.post('/auth/logout');
       setUser(null);
       setIsAuthenticated(false);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || t('auth.logoutError'));
+    } catch (err: unknown) {
+      const message =
+        err instanceof Object &&
+        err !== null &&
+        'response' in err &&
+        err.response instanceof Object &&
+        err.response !== null &&
+        'data' in err.response &&
+        err.response.data instanceof Object &&
+        err.response.data !== null &&
+        'error' in err.response.data
+          ? err.response.data.error
+          : err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+          ? err
+          : t('auth.logoutError');
+      setError(message);
       throw err;
     } finally {
       setIsLoading(false);
