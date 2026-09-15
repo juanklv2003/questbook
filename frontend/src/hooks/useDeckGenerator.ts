@@ -65,22 +65,71 @@ export function useDeckGenerator() {
       setIsAiProcessing(false);
 
       return response.data;
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsAiProcessing(false);
       const quota = parseQuotaExceeded(err);
       if (quota) {
         setQuotaExceeded(quota);
-        setError(err.response?.data?.error || t('gen.quota'));
+        const message =
+          err instanceof Object &&
+          err !== null &&
+          'response' in err &&
+          err.response instanceof Object &&
+          err.response !== null &&
+          'data' in err.response &&
+          err.response.data instanceof Object &&
+          err.response.data !== null &&
+          'error' in err.response.data
+            ? err.response.data.error
+            : t('gen.quota');
+        setError(message);
       } else if (parseOverloaded(err)) {
         const saturation = parseOverloaded(err);
         if (saturation) {
           setOverloaded(saturation);
-          setError(err.response?.data?.error || t('gen.overloaded'));
+          const message =
+            err instanceof Object &&
+            err !== null &&
+            'response' in err &&
+            err.response instanceof Object &&
+            err.response !== null &&
+            'data' in err.response &&
+            err.response.data instanceof Object &&
+            err.response.data !== null &&
+            'error' in err.response.data
+              ? err.response.data.error
+              : t('gen.overloaded');
+          setError(message);
         }
-      } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+      } else if (
+        err instanceof Object &&
+        err !== null &&
+        'code' in err &&
+        err.code === 'ECONNABORTED'
+      ) || (
+        err instanceof Error &&
+        err.message !== undefined &&
+        err.message.includes('timeout')
+      ) {
         setError(t('gen.timeout'));
       } else {
-        setError(err.response?.data?.error || err.message || t('gen.generic'));
+        const message =
+          err instanceof Object &&
+          err !== null &&
+          'response' in err &&
+          err.response instanceof Object &&
+          err.response !== null &&
+          'data' in err.response &&
+          err.response.data instanceof Object &&
+          err.response.data !== null &&
+          'error' in err.response.data
+            ? err.response.data.error
+            : err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+            ? err
+            : t('gen.generic');
+        setError(message);
       }
       throw err;
     } finally {

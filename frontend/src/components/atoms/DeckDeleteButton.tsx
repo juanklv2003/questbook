@@ -39,9 +39,25 @@ export function DeckDeleteButton({ deckId, onDeleteSuccess, onDeleteError }: Dec
       await apiClient.delete(`/decks/${deckId}`)
       setConfirmOpen(false)
       onDeleteSuccess()
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (onDeleteError) {
-        onDeleteError(err instanceof Error ? err : new Error(err?.response?.data?.error || t("delete.error")))
+        const errorMessage =
+          err instanceof Object &&
+          err !== null &&
+          'response' in err &&
+          err.response instanceof Object &&
+          err.response !== null &&
+          'data' in err.response &&
+          err.response.data instanceof Object &&
+          err.response.data !== null &&
+          'error' in err.response.data
+            ? err.response.data.error
+            : err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+            ? err
+            : t("delete.error");
+        onDeleteError(err instanceof Error ? err : new Error(errorMessage));
       }
     } finally {
       setIsDeleting(false)
