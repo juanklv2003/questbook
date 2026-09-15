@@ -36,7 +36,6 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
 
     // Determine language for prompt text
     const isSpanish = options?.language === 'es';
-    const languageName = isSpanish ? 'Español' : 'English';
 
     // Language-specific difficulty instructions
     const difficultyInstructions: Record<string, Record<string, string>> = {
