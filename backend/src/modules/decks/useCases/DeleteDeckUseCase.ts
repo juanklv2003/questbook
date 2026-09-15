@@ -22,7 +22,12 @@ export class DeleteDeckUseCase {
     await this.deckRepo.delete(deckId);
 
     if (deck.pdfPublicId) {
-      await this.cloudStorage.deletePdf(deck.pdfPublicId);
+      try {
+        await this.cloudStorage.deletePdf(deck.pdfPublicId);
+      } catch (cleanupError) {
+        // No es crítico si falla la eliminación durante el borrado del deck
+        console.error('No se pudo eliminar el PDF de Cloudinary durante la eliminación del deck:', cleanupError);
+      }
     }
   }
 }
