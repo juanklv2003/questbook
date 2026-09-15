@@ -29,6 +29,14 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     return res.status(err.statusCode).json({ error: err.message });
   }
 
+  // Malformed JSON syntax: express.json() throws before controllers run, so
+  // parseBody never sees it. Map to the 400 { error } contract (invalid JSON
+  // bodies MUST yield 400 per the request-validation spec) instead of the
+  // 500 fallback below.
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON body.' });
+  }
+
   // Errores de multer (subida de archivos): el habitual es archivo demasiado grande.
   // MulterError no extiende AppError, así que lo mapeamos a HTTP con mensaje claro.
   if (err && (err as { name?: string }).name === 'MulterError') {

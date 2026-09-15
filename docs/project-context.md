@@ -80,7 +80,7 @@ The system uses PostgreSQL.
 
 ### Table: `users`
 - `id` (UUID, Primary Key)
-- `email` (VARCHAR(255), Unique)
+- `email` (VARCHAR(255)) — identity is case-insensitive: the app normalizes every email with trim + lowercase before validation/storage, lookups match with `LOWER(email)`, and uniqueness is enforced by `UNIQUE (LOWER(email))` (`uq_users_email_ci`; applied via `backend/src/scripts/migrateEmailCi.ts`, which aborts with a report when legacy collisions exist)
 - `password_hash` (VARCHAR(255))
 - `created_at` (Timestamp)
 - `updated_at` (Timestamp)
@@ -123,15 +123,16 @@ The API is served at `/api/v1`.
 - `POST /login`: Logs in an existing user. Expects JSON `{ email, password, rememberMe }`. Returns `{ id, email }` and sets an HttpOnly cookie with the JWT.
 - `POST /logout`: Logs out the current user by clearing the HttpOnly cookie.
 - `GET /me`: Returns the current user's info based on the HttpOnly cookie.
+- Validation contract (controller-level zod via `parseBody`): any invalid body or route param returns `400 { error: string }` describing **only the first issue** as `"<path>: <message>"` (one problem per round trip); syntactically malformed JSON is also `400 { error }` via the `errorHandler` SyntaxError branch (it never reaches `parseBody`). Emails are trimmed + lowercased before format check on register and login. Passwords: register requires length ≥ 8, login requires non-empty. Re-registering an existing email — including a case variant (`User@x` vs `user@x`) — returns `409`.
 
 ### Decks (`/api/v1/decks`)
+- Guard order: every protected deck route checks authentication **before** validating params/body — unauthenticated callers get `401` even when the id or body is also malformed. Every `:id` / `:deckId` is validated as UUID (`400 { error }` when malformed).
 - `GET /`: Lists all decks, ordered by creation date descending. Returns an array of decks including a computed `flashcardsCount` and persisted `progressPercent` (null = no evaluations yet).
 - `POST /generate`: Uploads a PDF or text to generate a new deck. Expects `multipart/form-data` with `file` (optional) and `name` (required). If a `file` is provided, its text is extracted with `pdf-parse` (`PdfTextExtractor`) before being sent to Gemini AI to extract flashcards. To keep requests responsive, the text is truncated to the first 40,000 characters and the AI is limited to 15 flashcards per deck; the Gemini call has a 60s timeout. Returns the new deck info.
 - `GET /:deckId/flashcards`: Retrieves all flashcards associated with a specific `deckId`.
 - `DELETE /:id`: Deletes a specific deck. Uses DB cascades to remove associated flashcards and removes the source file from Cloudinary (via `ICloudStoragePort`).
 - `GET /:id/session`: Returns the resumable study session `{ session: { userId, deckId, currentIndex, results, flashcardsHash, finished, createdAt, updatedAt } }`. 404 = deck not found OR no session yet. 403 = not the owner.
-- `PATCH /:id/session`: Upserts study progress. Body `{ currentIndex: int>=0, results: {id: bool}, flashcardsHash?: string|null, finished?: bool }`. Finishing (`finished: true`) preserves the row for review. 403/404 on ownership.
-- `DELETE /:id/session`: Explicit user action only — deletes the session row (204, idempotent). The ONLY way progress is removed.
+- `PATCH /:id/session`: Upserts study progress. Body `{ currentIndex: int>=0, results: {id: bool}, flashcardsHash?: string|null, finished?: bool }` — also accepts the `flashcards_hash` snake_case alias; unknown keys are ignored. Finishing (`finished: true`) preserves the row for review. 403/404 on ownership.- `DELETE /:id/session`: Explicit user action only — deletes the session row (204, idempotent). The ONLY way progress is removed.
 
 ### Evaluations (`/api/v1/evaluations`)
 - `POST /evaluate`: Evaluates a user's answer against a flashcard. Expects JSON `{ flashcardId, userAnswer }`. Uses Gemini AI to determine correctness, then atomically accumulates the result on the owning deck (`studied_count`+1, `correct_count`+0/1). Returns `{ isCorrect, score, feedback, deckId, deckProgress }`.
@@ -150,5 +151,6 @@ The API is served at `/api/v1`.
 ## 7. AI Agent Instructions
 - **Do not bypass the Architecture**: If you add a feature, create the Domain Port, implement the Infra Adapter, build the UseCase, and wire it in the HTTP Controller.
 - **Frontend State**: Keep API calls inside `hooks/` and consume them in `containers/`. Do not fetch data inside `organisms/`.
+- **Shared deck store contract** (`DeckProvider` in `frontend/src/contexts/`, single access path via `frontend/src/hooks/useDecks.ts` — never import the raw context elsewhere): `GET /decks` fires exactly once per authenticated session (in-flight-guarded, so StrictMode double-effects collapse) and every consumer renders from that cache; unauthenticated sessions fetch nothing. `refetch()` is the only explicit refresh (study-exit guard calls it once on the deck-id null-transition). Logout clears the cache synchronously (`setDecks([])`) so the next account never sees the previous one, and the next login re-fetches.
 - **Imports**: Avoid barrel files outside of their direct folder scopes. Use explicit paths when crossing boundaries.
 - **STRICT DOCUMENTATION RULE**: ANY future updates, new endpoints, or architectural changes MUST be documented in this `project-context.md` file immediately so it never goes out of sync. This file is the absolute source of truth.

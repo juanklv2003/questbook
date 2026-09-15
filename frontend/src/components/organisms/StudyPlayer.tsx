@@ -6,6 +6,7 @@ import { EvaluationResult } from "../molecules/EvaluationResult"
 import { QuotaCountdownAlert } from "../molecules/QuotaCountdownAlert"
 import { Button } from "../atoms/Button"
 import { TextArea } from "../atoms/TextArea"
+import { useLanguage } from "../../i18n/LanguageContext"
 import { Send, RotateCcw, ArrowRight, AlertCircle } from "lucide-react"
 
 export interface StudyPlayerProps {
@@ -33,6 +34,8 @@ export interface StudyPlayerProps {
   activeIndex?: number;
   /** Salto a una tarjeta desde la lista de repaso. */
   onSelectCard?: (index: number) => void;
+  /** Reinicio de la sesión (lo cablea el container). Ausente = se oculta. */
+  onRestart?: () => void;
 }
 
 export function StudyPlayer({
@@ -53,7 +56,9 @@ export function StudyPlayer({
   reviewItems = [],
   activeIndex = 0,
   onSelectCard,
+  onRestart,
 }: StudyPlayerProps) {
+  const { t } = useLanguage();
   const [isFlipped, setIsFlipped] = React.useState(false);
 
   // Auto flip to back when evaluation comes in
@@ -81,8 +86,23 @@ export function StudyPlayer({
           <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
             Sesión de Estudio
           </span>
-          <span className="text-sm font-medium tabular-nums bg-secondary text-secondary-foreground px-3 py-1 rounded-full">
-            {progress} / {total}
+          <span className="flex items-center gap-1">
+            <span className="text-sm font-medium tabular-nums bg-secondary text-secondary-foreground px-3 py-1 rounded-full">
+              {progress} / {total}
+            </span>
+            {onRestart && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onRestart}
+                aria-label={t("study.restart")}
+                title={t("study.restart")}
+                className="h-8 w-8 text-muted-foreground"
+              >
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            )}
           </span>
         </div>
         <div

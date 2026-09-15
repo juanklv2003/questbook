@@ -16,20 +16,34 @@ export class PostgresDeckRepository implements IDeckRepository {
   private static progressFor(alias: string): string {
     return PostgresDeckRepository.PROGRESS_SELECT.split('{alias}').join(alias);
   }
-  async create(deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deck> {    const shelfIndex = deck.shelfIndex ?? 0;
+  async create(deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deck> {
+    const shelfIndex = deck.shelfIndex ?? 0;
     const position = deck.position ?? 0;
-    // New books land first (position 0): shift existing books on the target shelf down.
-    await this.db.query(
-      `UPDATE decks SET position = position + 1, updated_at = NOW()
-       WHERE user_id = $1 AND COALESCE(shelf_index, 0) = $2`,
-      [deck.userId, shelfIndex]
-    );
+    // New books land first (position 0): shift existing books on the target
+    // shelf down. El UPDATE y el INSERT van en UN solo statement (CTE con
+    // writes) → es una única transacción implícita: si el INSERT falla, el
+    // shift de posiciones también se revierte (antes eran dos queries sueltas
+    // y un error dejaba las posiciones corridas).
     const query = `
+      WITH shifted AS (
+        UPDATE decks
+        SET position = position + 1, updated_at = NOW()
+        WHERE user_id = $1 AND COALESCE(shelf_index, 0) = $2
+      )
       INSERT INTO decks (name, user_id, folder_id, pdf_url, pdf_public_id, shelf_index, position, color)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($3, $1, $4, $5, $6, $2, $7, $8)
       RETURNING id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", color, created_at AS "createdAt", updated_at AS "updatedAt"
     `;
-    const values = [deck.name, deck.userId, deck.folderId || null, deck.pdfUrl || null, deck.pdfPublicId || null, shelfIndex, position, deck.color ?? 'primary'];
+    const values = [
+      deck.userId,
+      shelfIndex,
+      deck.name,
+      deck.folderId || null,
+      deck.pdfUrl || null,
+      deck.pdfPublicId || null,
+      position,
+      deck.color ?? 'primary',
+    ];
 
     const result = await this.db.query<Deck>(query, values);
     return result.rows[0];

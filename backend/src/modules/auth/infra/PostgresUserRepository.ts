@@ -10,10 +10,12 @@ export class PostgresUserRepository implements IUserRepository {
   }
 
   async findByEmail(email: string): Promise<User | null> {
+    // Case-insensitive: el login normaliza a minúsculas, pero puede haber
+    // usuarios creados antes de esa normalización (con mayúsculas).
     const result = await this.sql`
       SELECT id, email, password_hash, created_at, updated_at
       FROM users
-      WHERE email = ${email}
+      WHERE LOWER(email) = LOWER(${email})
     ` as any[];
 
     if (result.length === 0) return null;

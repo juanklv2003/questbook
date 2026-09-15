@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Flashcard, EvaluationResult } from '../types';
 import { useEvaluator } from './useEvaluator';
+import { shuffled } from '../lib/shuffle';
 import apiClient from '../lib/axios';
 
 /** Persisted partial study progress. DB is the source, localStorage is offline fallback. */
@@ -127,8 +128,8 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
   // Result per card (keyed by id: survives reorders and avoids syncing
   // lengths if the deck changes). Missing key = pending.
   const [resultsById, setResultsById] = useState<Record<string, boolean>>({});
-  // Last deckProgress reported by POST /evaluate — the dashboard re-fetches
-  // GET /decks on mount anyway, so callers can ignore this (optimistic only).
+  // Last deckProgress reported by POST /evaluate — the shared deck store
+  // refreshes via study-exit refetch, so callers can ignore this (optimistic only).
   const [lastDeckProgress, setLastDeckProgress] = useState<number | null>(null);
 
   // While resume is unresolved, autosave is paused so the pristine 0/0 state
@@ -145,11 +146,31 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
 
   const { evaluateAnswer, isEvaluating, error: evaluationError, quotaExceeded, overloaded, clearError } = useEvaluator();
 
-  const tarjetaActual = tarjetas[currentIndex];
+  // Card id order. null = natural deck order. Set by restart({ reshuffle }).
+  const [order, setOrder] = useState<string[] | null>(null);
+
+  // Order-resolved deck view. Cards missing from the order (deck regenerated
+  // mid-session) are appended so no card is ever lost.
+  const orderedTarjetas = useMemo(() => {
+    if (!order) return tarjetas;
+    const byId = new Map(tarjetas.map((t) => [t.id, t]));
+    const mapped = order
+      .map((id) => byId.get(id))
+      .filter((t): t is Flashcard => t !== undefined);
+    if (mapped.length !== tarjetas.length) {
+      const seen = new Set(mapped.map((t) => t.id));
+      for (const t of tarjetas) {
+        if (!seen.has(t.id)) mapped.push(t);
+      }
+    }
+    return mapped;
+  }, [tarjetas, order]);
+
+  const tarjetaActual = orderedTarjetas[currentIndex];
   const progreso = currentIndex + 1;
-  const haTerminado = currentIndex >= tarjetas.length;
+  const haTerminado = currentIndex >= orderedTarjetas.length;
   const answeredCount = useMemo(() => Object.keys(resultsById).length, [resultsById]);
-  const remainingCount = Math.max(0, tarjetas.length - answeredCount);
+  const remainingCount = Math.max(0, orderedTarjetas.length - answeredCount);
 
   // Fetch the DB session once per deck. 404 = no saved session (normal).
   // Any other failure = offline, fall back to localStorage.
@@ -311,7 +332,9 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
   }, [clearError]);
 
   // Explicit user action only: clears local fallback and the DB row.
-  const restartProgress = useCallback(async () => {
+  // resultsById is keyed by card id, so it needs no remap on reorder —
+  // restart simply drops it along with the index and the input state.
+  const restart = useCallback(async ({ reshuffle }: { reshuffle: boolean }) => {
     if (deckId) {
       clearLocal(deckId);
       try {
@@ -327,8 +350,14 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     setRespuestaUsuario('');
     setFeedbackIA(null);
     clearError();
+    setOrder(reshuffle ? shuffled(tarjetas.map((t) => t.id)) : null);
     setResumeResolved(true);
-  }, [deckId, clearError]);
+  }, [deckId, clearError, tarjetas]);
+
+  // Legacy entry point: plain restart without reshuffling.
+  const restartProgress = useCallback(async () => {
+    await restart({ reshuffle: false });
+  }, [restart]);
 
   const evaluar = async () => {
     if (!tarjetaActual || !respuestaUsuario.trim()) return;
@@ -342,7 +371,7 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
       setResultsById(prev => ({ ...prev, [tarjetaActual.id]: result.isCorrect }));
       setFeedbackIA(result);
       // Optimistic progress hint: trivial to consume (number|null). The
-      // dashboard re-fetches GET /decks on mount, so ignoring it is fine.
+      // shared store refreshes via study-exit refetch, so ignoring it is fine.
       if (typeof result.deckProgress === 'number' || result.deckProgress === null) {
         setLastDeckProgress(result.deckProgress ?? null);
       }
@@ -359,9 +388,9 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     setFeedbackIA(null);
   };
 
-  /** Jump to a card (review list). Keeps results untouched. */
+  /** Jump to a card (review list, order-resolved). Keeps results untouched. */
   const goToCard = (index: number) => {
-    if (index < 0 || index >= tarjetas.length) return;
+    if (index < 0 || index >= orderedTarjetas.length) return;
     clearError();
     setCurrentIndex(index);
     setRespuestaUsuario('');
@@ -376,9 +405,11 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
 
   return {
     tarjetaActual,
+    orderedTarjetas,
+    order,
     currentIndex,
     progreso,
-    total: tarjetas.length,
+    total: orderedTarjetas.length,
     haTerminado,
     respuestaUsuario,
     setRespuestaUsuario,
@@ -397,6 +428,7 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     pendingResume,
     resumeProgress,
     restartProgress,
+    restart,
     answeredCount,
     remainingCount,
     lastDeckProgress,

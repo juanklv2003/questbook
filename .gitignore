@@ -30,3 +30,6 @@ tmp-*
 
 # Test files
 metalgearsolid.pdf
+
+# Local agent tooling (skill registry, caches)
+.atl/

@@ -1,10 +1,28 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { RegisterUseCase } from '../useCases/RegisterUseCase';
 import { LoginUseCase } from '../useCases/LoginUseCase';
 import { LogoutUseCase } from '../useCases/LogoutUseCase';
 import { GetCurrentUserUseCase } from '../useCases/GetCurrentUserUseCase';
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
+import { parseBody } from '../../../core/validation/parseBody';
+
+// Email: se normaliza a minúsculas con trim antes de validar el formato, de
+// modo que tanto el registro como el login comparen siempre el mismo valor
+// (y no se permite crear duplicados "User@x" vs "user@x").
+const emailSchema = z.string().trim().toLowerCase().pipe(z.email('Email inválido'));
+
+const registerSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+});
+
+const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, 'La contraseña es obligatoria'),
+  rememberMe: z.boolean().optional(),
+});
 
 export class AuthController {
   constructor(
@@ -24,16 +42,16 @@ export class AuthController {
   }
 
   public register = async (req: Request, res: Response): Promise<void> => {
-    const { email, password } = req.body;
-    const result = await this.registerUseCase.execute(email, password);
+    const body = parseBody(registerSchema, req.body ?? {});
+    const result = await this.registerUseCase.execute(body.email, body.password);
 
     this.setCookie(res, result.token);
     res.status(201).json({ user: result.user });
   };
 
   public login = async (req: Request, res: Response): Promise<void> => {
-    const { email, password, rememberMe } = req.body;
-    const result = await this.loginUseCase.execute(email, password, rememberMe);
+    const body = parseBody(loginSchema, req.body ?? {});
+    const result = await this.loginUseCase.execute(body.email, body.password, body.rememberMe);
 
     this.setCookie(res, result.token);
     res.status(200).json({ user: result.user });

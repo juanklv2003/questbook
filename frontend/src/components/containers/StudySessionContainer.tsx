@@ -1,10 +1,12 @@
+import * as React from "react"
 import { createPortal } from "react-dom"
 import { useFlashcardStudy } from "../../hooks/useFlashcardStudy"
 import { useDeckFlashcards } from "../../hooks/useDeckFlashcards"
 import { StudyPlayer } from "../organisms/StudyPlayer"
+import { RestartStudyDialog } from "../molecules/RestartStudyDialog"
 import type { Flashcard } from "../../types"
 import type { ReviewListItem } from "../molecules/StudyReviewList"
-import { Loader2, AlertCircle, ArrowLeft, WifiOff } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, RotateCcw, WifiOff } from "lucide-react"
 import { Button } from "../atoms/Button"
 import { useLanguage } from "../../i18n/LanguageContext"
 
@@ -36,8 +38,10 @@ export function StudySessionContainer({ deckId, onBack }: { deckId: string, onBa
 
 function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, flashcards: Flashcard[], onBack: () => void }) {
   const { t } = useLanguage();
+  const [restartOpen, setRestartOpen] = React.useState(false);
   const {
     tarjetaActual,
+    orderedTarjetas,
     currentIndex,
     progreso,
     total,
@@ -57,7 +61,7 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
     goToCard,
     pendingResume,
     resumeProgress,
-    restartProgress,
+    restart,
     answeredCount,
     remainingCount,
     isOffline,
@@ -74,9 +78,13 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
   };
 
   const handleRestart = () => {
-    const ok = window.confirm(t("study.restartConfirm"));
-    if (!ok) return;
-    void restartProgress();
+    if (isEvaluating) return;
+    setRestartOpen(true);
+  };
+
+  const handleConfirmRestart = ({ reshuffle }: { reshuffle: boolean }) => {
+    setRestartOpen(false);
+    void restart({ reshuffle });
   };
 
   if (haTerminado) {
@@ -92,9 +100,20 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
         <p className="text-xs text-muted-foreground max-w-md">
           {t("study.finishedKept")}
         </p>
-        <Button onClick={onBack} size="lg" className="mt-4">
-          {t("study.backToPanel")}
-        </Button>
+        <div className="mt-4 flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" size="lg" onClick={handleRestart}>
+            <RotateCcw className="w-4 h-4 mr-2" aria-hidden="true" />
+            {t("study.restart")}
+          </Button>
+          <Button onClick={onBack} size="lg">
+            {t("study.backToPanel")}
+          </Button>
+        </div>
+        <RestartStudyDialog
+          open={restartOpen}
+          onClose={() => setRestartOpen(false)}
+          onConfirm={handleConfirmRestart}
+        />
       </div>
     );
   }
@@ -102,8 +121,9 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
   // Sin visor de PDF: la columna izquierda es la lista de preguntas
   // (StudyPlayer la pinta como aside) y la derecha la tarjeta activa.
 
-  // Lista de repaso: estado por tarjeta desde el historial del hook.
-  const reviewItems: ReviewListItem[] = flashcards.map((f) => ({
+  // Lista de repaso en el orden activo de la sesión (respeta reshuffle):
+  // estado por tarjeta desde el historial del hook (clave por id).
+  const reviewItems: ReviewListItem[] = orderedTarjetas.map((f) => ({
     id: f.id,
     question: f.question,
     status:
@@ -184,8 +204,14 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
           reviewItems={reviewItems}
           activeIndex={currentIndex}
           onSelectCard={goToCard}
+          onRestart={handleRestart}
         />
       </div>
+      <RestartStudyDialog
+        open={restartOpen}
+        onClose={() => setRestartOpen(false)}
+        onConfirm={handleConfirmRestart}
+      />
     </div>
   );
 }

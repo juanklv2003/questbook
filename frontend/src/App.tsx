@@ -26,10 +26,23 @@ function App() {
   // Opening Settings from inside a book no longer kills the session.
   const [panelRoute, setPanelRoute] = React.useState<TopbarRoute | null>(null);
   const { isAuthenticated, isLoading, logout, user } = useAuth();
+  // Global library state (one GET /decks per session, see DeckContext).
+  // Single access path: this guard consumes the store via useDecks only.
+  const { refetch: refetchDecks } = useDecks();
   // Flat background only: color applied to DOM in lib/theme.ts
   // (only --brand/--brand-dark; buttons use the original primary).
   const { pattern } = useThemeSettings();
   const goHome = React.useCallback(() => setActiveDeckId(null), []);
+  // Leaving a study session changed deck progress on the server: back in
+  // the library, refresh the book data in case the progress panel opens
+  // (no page reload needed). Stable `refetch` + null-transition guard fire
+  // exactly once per study exit.
+  const prevDeckId = React.useRef(activeDeckId);
+  React.useEffect(() => {
+    const wasInStudy = prevDeckId.current !== null && activeDeckId === null;
+    prevDeckId.current = activeDeckId;
+    if (wasInStudy) void refetchDecks();
+  }, [activeDeckId, refetchDecks]);
   // "New Book / Upload PDF" from any view: back to the library, then
   // open the drawer. From a study session the dashboard remounts and would
   // absorb the current signal, so the increment is deferred one frame — just

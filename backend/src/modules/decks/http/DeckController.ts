@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { GenerateDeckUseCase } from '../useCases/GenerateDeckUseCase';
 import { GetDeckFlashcardsUseCase } from '../useCases/GetDeckFlashcardsUseCase';
 import { ListDecksUseCase } from '../useCases/ListDecksUseCase';
@@ -9,7 +10,23 @@ import { SaveStudySessionUseCase } from '../useCases/SaveStudySessionUseCase';
 import { DeleteStudySessionUseCase } from '../useCases/DeleteStudySessionUseCase';
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
+import { parseBody } from '../../../core/validation/parseBody';
 import { extractTextFromPdf } from '../infra/PdfTextExtractor';
+
+// Todos los IDs de la app son UUID v4 generados por Postgres (gen_random_uuid).
+// Validar el formato en el router evita 500 por IDs malformados y da un 400
+// claro.
+const deckIdSchema = z.uuid('ID de libro inválido');
+
+// PATCH /:id/session — cuerpo validado con zod. `finished` opcional conserva la
+// fila para revisión; nunca se borra en este endpoint.
+const sessionBodySchema = z.object({
+  currentIndex: z.number().int().min(0),
+  results: z.record(z.string(), z.boolean()),
+  flashcardsHash: z.string().nullable().optional(),
+  flashcards_hash: z.string().nullable().optional(),
+  finished: z.boolean().optional(),
+});
 
 export class DeckController {
   constructor(
@@ -85,17 +102,15 @@ export class DeckController {
   }
 
   async getFlashcards(req: Request, res: Response) {
-    const { deckId } = req.params;
-    if (!deckId) {
-      throw new AppError(400, 'Deck ID is required');
-    }
-
+    // Auth first: unauthenticated callers get 401 even for malformed ids.
     const userId = req.user?.userId;
     if (!userId) {
       throw new AppError(401, 'Unauthorized');
     }
 
-    const result = await this.getDeckFlashcardsUseCase.execute(deckId as string, userId);
+    const deckId = parseBody(deckIdSchema, req.params.deckId ?? '');
+
+    const result = await this.getDeckFlashcardsUseCase.execute(deckId, userId);
     res.status(200).json(result);
   }
 
@@ -110,17 +125,15 @@ export class DeckController {
   }
 
   async deleteDeck(req: Request, res: Response) {
+    // Auth first: unauthenticated callers get 401 even for malformed ids.
     const userId = req.user?.userId;
     if (!userId) {
       throw new AppError(401, 'Unauthorized');
     }
 
-    const { id } = req.params;
-    if (!id) {
-      throw new AppError(400, 'Deck ID is required');
-    }
+    const deckId = parseBody(deckIdSchema, req.params.id ?? '');
 
-    await this.deleteDeckUseCase.execute(id as string, userId);
+    await this.deleteDeckUseCase.execute(deckId, userId);
     res.status(204).send();
   }
 
@@ -130,10 +143,7 @@ export class DeckController {
       throw new AppError(401, 'Unauthorized');
     }
 
-    const { id } = req.params;
-    if (!id) {
-      throw new AppError(400, 'Deck ID is required');
-    }
+    const deckId = parseBody(deckIdSchema, req.params.id ?? '');
 
     const rawShelf = req.body?.shelf_index ?? req.body?.shelfIndex;
     const rawPosition = req.body?.position;
@@ -145,7 +155,7 @@ export class DeckController {
     }
 
     const result = await this.updateDeckShelfUseCase.execute({
-      deckId: id as string,
+      deckId,
       userId,
       shelfIndex,
       position,
@@ -158,11 +168,8 @@ export class DeckController {
     if (!userId) {
       throw new AppError(401, 'Unauthorized');
     }
-    const { id } = req.params;
-    if (!id) {
-      throw new AppError(400, 'Deck ID is required');
-    }
-    const result = await this.getStudySessionUseCase.execute(id as string, userId);
+    const deckId = parseBody(deckIdSchema, req.params.id ?? '');
+    const result = await this.getStudySessionUseCase.execute(deckId, userId);
     res.status(200).json(result);
   }
 
@@ -171,18 +178,15 @@ export class DeckController {
     if (!userId) {
       throw new AppError(401, 'Unauthorized');
     }
-    const { id } = req.params;
-    if (!id) {
-      throw new AppError(400, 'Deck ID is required');
-    }
-    const { currentIndex, results, flashcardsHash, flashcards_hash, finished } = req.body ?? {};
+    const deckId = parseBody(deckIdSchema, req.params.id ?? '');
+    const body = parseBody(sessionBodySchema, req.body ?? {});
     const result = await this.saveStudySessionUseCase.execute({
-      deckId: id as string,
+      deckId,
       userId,
-      currentIndex,
-      results,
-      flashcardsHash: flashcardsHash ?? flashcards_hash ?? null,
-      finished,
+      currentIndex: body.currentIndex,
+      results: body.results,
+      flashcardsHash: body.flashcardsHash ?? body.flashcards_hash ?? null,
+      finished: body.finished,
     });
     res.status(200).json(result);
   }
@@ -192,12 +196,9 @@ export class DeckController {
     if (!userId) {
       throw new AppError(401, 'Unauthorized');
     }
-    const { id } = req.params;
-    if (!id) {
-      throw new AppError(400, 'Deck ID is required');
-    }
+    const deckId = parseBody(deckIdSchema, req.params.id ?? '');
     // Explicit user action only. Finishing a session never deletes the row.
-    await this.deleteStudySessionUseCase.execute(id as string, userId);
+    await this.deleteStudySessionUseCase.execute(deckId, userId);
     res.status(204).send();
   }
 }
