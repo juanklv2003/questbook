@@ -34,10 +34,6 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
       truncated = true;
     }
 
-    const truncationNotice = truncated
-      ? `\n\nNOTA: El documento original era demasiado largo y solo tienes los primeros ${this.MAX_TEXT_CHARS} caracteres. Genera las tarjetas basándote en esta parte.\n`
-      : '';
-
     // Language-specific prompt texts
     const promptTexts: Record<string, Record<string, string>> = {
       es: {
@@ -58,7 +54,7 @@ No incluyas bloques de markdown, saludos, o cualquier otro texto. SOLO el array 
         languageCommand: `GENERATE ALL QUESTIONS AND ANSWERS STRICTLY IN ENGLISH.`,
         noHallucination: `DO NOT INVENT INFORMATION (0% hallucination).`,
         baseText: `BASE YOURSELF UNIQUELY ON THE PROVIDED TEXT.`,
-        extractConcepts: `EXTRACT REAL, COHERENTE, AND READABLE CONCEPTS.`,
+        extractConcepts: `EXTRACT REAL, COHERENT, AND READABLE CONCEPTS.`,
         generateCards: `GENERATE AT MOST ${maxCards} FLASHCARDS, ONLY THE MOST IMPORTANT ONES.`,
         emptyText: `IF THE TEXT IS TOO SHORT OR EMPTY, RETURN AN EMPTY ARRAY [].`,
         difficultyLabel: `REQUESTED DIFFICULTY:`,
