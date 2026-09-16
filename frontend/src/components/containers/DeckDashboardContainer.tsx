@@ -99,7 +99,7 @@ export function DeckDashboardContainer({
         /* Loading skeleton */
         <Bookshelf>
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-44 w-full rounded-lg bg-muted/50 animate-pulse" />
+            <div key={i} className="h-28 sm:h-44 w-full min-w-0 rounded-lg bg-muted/50 animate-pulse" />
           ))}
         </Bookshelf>
       ) : decks.length > 0 ? (

@@ -72,9 +72,10 @@ function getAccentForDeck(name: string): "primary" | "violet" | "emerald" | "amb
   return accents[Math.abs(hash) % accents.length];
 }
 
-// Deterministic height based on deck name
+// Deterministic height based on deck name (compact on mobile so the tallest
+// book + bookmark still fit the 152px mobile shelf; full size from sm up).
 function getHeightForDeck(name: string): string {
-  const heights = ["h-28", "h-32", "h-36", "h-40", "h-44"];
+  const heights = ["h-24 sm:h-28", "h-24 sm:h-32", "h-28 sm:h-36", "h-28 sm:h-40", "h-32 sm:h-44"];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -82,14 +83,15 @@ function getHeightForDeck(name: string): string {
   return heights[Math.abs(hash) % heights.length];
 }
 
-// Width based on flashcardsCount (more cards = wider)
+// Width based on flashcardsCount (more cards = wider).
+// One step narrower on mobile so a full shelf fits ~360px; full width from sm up.
 function getWidthForCards(count: number): string {
-  if (count <= 5) return "w-7";
-  if (count <= 10) return "w-9";
-  if (count <= 15) return "w-10";
-  if (count <= 20) return "w-11";
-  if (count <= 30) return "w-12";
-  return "w-14";
+  if (count <= 5) return "w-6 sm:w-7";
+  if (count <= 10) return "w-7 sm:w-9";
+  if (count <= 15) return "w-8 sm:w-10";
+  if (count <= 20) return "w-8 sm:w-11";
+  if (count <= 30) return "w-9 sm:w-12";
+  return "w-10 sm:w-14";
 }
 
 export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal, shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight }: BookCardProps) {
@@ -170,7 +172,7 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
             )}
           />
           <div className={cn(
-            "absolute left-1/2 -translate-x-1/2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+            "absolute left-1/2 -translate-x-1/2 w-56 max-w-[70vw] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
             "[transition:opacity_150ms_ease,visibility_0s_linear_200ms]",
             isFirstShelf ? "top-full mt-2" : "bottom-full mb-2"
           )}>
@@ -261,10 +263,19 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
             isLastShelf ? "bottom-0 h-44" : isFirstShelf ? "top-0 h-44" : "top-1/2 -translate-y-1/2 h-44"
           )}
         />
+        {/* Hover card: centered below/above the book on mobile (a side-anchored
+            224px panel would overflow the 360px frame and get clipped by its
+            overflow-hidden); side-anchored from sm up, exactly as before. */}
         <div className={cn(
-          "absolute left-full ml-3 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+          "absolute left-1/2 -translate-x-1/2 w-52 max-w-[70vw] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
           "[transition:opacity_150ms_ease,visibility_0s_linear_200ms]",
-          isLastShelf ? "bottom-0" : isFirstShelf ? "top-0" : "top-1/2 -translate-y-1/2"
+          isLastShelf ? "bottom-full mb-2" : "top-full mt-2",
+          "sm:left-full sm:translate-x-0 sm:ml-3 sm:w-56 sm:max-w-none",
+          isLastShelf
+            ? "sm:bottom-0 sm:mb-0"
+            : isFirstShelf
+              ? "sm:top-0 sm:mt-0"
+              : "sm:top-1/2 sm:-translate-y-1/2 sm:mt-0"
         )}>
           <HoverCard
             name={name}

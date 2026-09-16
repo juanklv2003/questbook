@@ -234,9 +234,9 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
   };
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative w-full max-w-full min-w-0", className)}>
       {/* Main wooden frame */}
-      <div className="relative rounded-lg overflow-hidden shadow-[0_12px_60px_-12px_rgba(60,30,10,0.35)]">
+      <div className="relative max-w-full rounded-lg overflow-hidden shadow-[0_12px_60px_-12px_rgba(60,30,10,0.35)]">
         {/* Top frame - thick wooden bar */}
         <div className="h-6 bg-gradient-to-b from-[#6E4526] via-[#6E3A1F] to-[#472A12] relative">
           <div className="absolute inset-0 opacity-40">
@@ -249,7 +249,7 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
         </div>
 
         {/* Side frames + shelves */}
-        <div className="flex">
+        <div className="flex min-w-0 max-w-full">
           {/* Left frame */}
           <div className="w-5 bg-gradient-to-r from-[#6E4526] via-[#6E3A1F] to-[#472A12] relative flex-shrink-0">
             <div className="absolute inset-0 opacity-40">
@@ -259,7 +259,7 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
           </div>
 
           {/* Interior - dark background with shelves */}
-          <div className="flex-1 bg-gradient-to-b from-[#3D2317] via-[#2D1810] to-[#3D2317]">
+          <div className="flex-1 min-w-0 max-w-full bg-gradient-to-b from-[#3D2317] via-[#2D1810] to-[#3D2317]">
             {shelfData.map((shelfBooks, shelfIndex) => {
               const isOverShelf = dndEnabled && dropTarget?.shelf === shelfIndex;
               return (
@@ -268,7 +268,7 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
                 <div
                   data-shelf-container
                   className={cn(
-                    "relative px-4 h-[min(180px,calc((100vh-170px)/3))] flex flex-col justify-end rounded-sm",
+                    "relative px-2 sm:px-4 h-[152px] sm:h-[min(180px,calc((100vh-170px)/3))] flex flex-col justify-end rounded-sm min-w-0 max-w-full",
                     isOverShelf && "ring-2 ring-inset ring-background/40 bg-background/5"
                   )}
                   onDragOver={dndEnabled ? (e) => handleShelfDragOver(e, shelfIndex) : undefined}
@@ -285,7 +285,7 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
                       so they never displace books mid-drag: that displacement
                       was the left-reorder flicker loop (marker pushes book →
                       cursor halves flip → marker jumps). */}
-                  <div data-shelf-row className="relative flex items-end gap-1 pb-0">
+                  <div data-shelf-row className="relative flex min-w-0 max-w-full items-end gap-0.5 sm:gap-1 pb-0 pt-2">
                     {shelfBooks.map((book, bookIndex) => {
                       const excludingIndex = indexExcludingDragged(shelfBooks, book.id);
                       const restingCount = shelfBooks.filter((b) => b.id !== draggedIdRef.current).length;
@@ -297,7 +297,7 @@ export function Bookshelf({ children, className, shelves = 3, shelfOf, bookIds, 
                         dropTarget.index >= restingCount &&
                         excludingIndex === restingCount - 1;
                       return (
-                      <div key={book.id ?? `legacy-${shelfIndex}-${bookIndex}`} className="relative flex items-end">
+                      <div key={book.id ?? `legacy-${shelfIndex}-${bookIndex}`} className="relative flex min-w-0 items-end">
                         {showMarkerBefore && (
                           <div className="pointer-events-none absolute -left-2 top-6 bottom-6 w-1 rounded-full bg-background/50" aria-hidden="true" />
                         )}
