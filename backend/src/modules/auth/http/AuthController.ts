@@ -45,7 +45,7 @@ export class AuthController {
     const body = parseBody(registerSchema, req.body ?? {});
     const result = await this.registerUseCase.execute(body.email, body.password);
 
-    this.setCookie(res, result.token);
+    this.setCookie(res, result.token, 7); // expiración del JWT de registro (7d)
     res.status(201).json({ user: result.user });
   };
 
@@ -53,7 +53,10 @@ export class AuthController {
     const body = parseBody(loginSchema, req.body ?? {});
     const result = await this.loginUseCase.execute(body.email, body.password, body.rememberMe);
 
-    this.setCookie(res, result.token);
+    // La cookie debe expirar junto con el JWT que emite LoginUseCase
+    // (30d con "recordarme", 1d sin él) para no dejar una cookie viva
+    // sin sesión válida detrás.
+    this.setCookie(res, result.token, body.rememberMe ? 30 : 1);
     res.status(200).json({ user: result.user });
   };
 
@@ -78,12 +81,12 @@ export class AuthController {
     res.status(200).json({ user });
   };
 
-  private setCookie(res: Response, token: string): void {
+  private setCookie(res: Response, token: string, maxAgeDays: number): void {
     res.cookie('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      maxAge: maxAgeDays * 24 * 60 * 60 * 1000,
       path: '/',
     });
   }

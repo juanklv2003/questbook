@@ -34,7 +34,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
     try {
       await register({ email, password });
       if (onSuccess) onSuccess();
-    } catch (err) {
+    } catch {
       // Handled by AuthContext error state
     }
   };

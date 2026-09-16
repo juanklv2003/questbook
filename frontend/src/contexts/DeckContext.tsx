@@ -73,7 +73,6 @@ export function DeckProvider({ children }: { children: React.ReactNode }) {
       // the next account never flashes the previous list. The synchronous
       // clear on this single auth transition is intentional (one extra
       // render, no cascade loop — decks are server state, not derivable).
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDecks([]);
       setError(null);
       setIsLoading(false);

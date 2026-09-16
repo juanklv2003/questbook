@@ -29,7 +29,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     try {
       await login({ email, password, rememberMe });
       if (onSuccess) onSuccess();
-    } catch (err) {
+    } catch {
       // Error is already handled and stored in AuthContext error state
       // but we could also do local error handling if needed
     }
