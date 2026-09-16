@@ -41,7 +41,7 @@ type AuthView = 'login' | 'register';
             src={magicBook}
             alt=""
             aria-hidden="true"
-            className="h-14 w-14 rounded-2xl object-cover shadow-lg shadow-primary/25"
+            className="h-14 w-14 object-cover"
           />
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight">QuestBook</h1>

@@ -7,7 +7,7 @@ import { ProgressPanel, type ProgressBook } from './components/organisms/Progres
 import { SettingsPanel } from './components/organisms/SettingsPanel'
 import { useDecks } from './hooks/useDecks'
 import type { Deck } from './types'
-import { BrainCircuit } from 'lucide-react'
+import magicBook from './assets/magicBook.png'
 import { useAuth } from './contexts/AuthContext'
 import { AuthContainer } from './components/containers/AuthContainer'
 import { BrandBackground } from './components/atoms/BrandBackground'
@@ -81,9 +81,12 @@ function App() {
         <header className="sticky top-0 z-50 w-full bg-auth-backdrop">
           <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <BrainCircuit className="h-4 w-4" aria-hidden="true" />
-              </div>
+              <img
+                src={magicBook}
+                alt=""
+                aria-hidden="true"
+                className="h-7 w-7 object-cover"
+              />
               <span className="text-[15px] font-semibold tracking-tight">QuestBook</span>
             </div>
             <LanguageSwitch />
