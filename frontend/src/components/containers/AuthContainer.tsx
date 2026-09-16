@@ -20,8 +20,8 @@ type AuthView = 'login' | 'register';
  * `min-h-full` (no `min-h-screen`) deja que el contenedor de scroll de App
  * centre en pantallas altas y permita scroll en las bajas: el registro (3
  * campos + hint) ya no se corta en un móvil de 640px de alto.
- */
-export const AuthContainer: React.FC = () => {
+  */
+ export const AuthContainer: React.FC = () => {
   const { t } = useLanguage();
   const [view, setView] = useState<AuthView>('login');
   const { isLoading } = useAuth();
@@ -42,7 +42,7 @@ export const AuthContainer: React.FC = () => {
             <BrainCircuit className="h-7 w-7" aria-hidden="true" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">Andel</h1>
+            <h1 className="text-2xl font-bold tracking-tight">QuestBook</h1>
             <p className="text-sm text-muted-foreground">{t('auth.brandTagline')}</p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-# Despliegue de Andel
+# Despliegue de QuestBook
 
 Guía para publicar la web: **frontend en Vercel o Netlify** y **backend en Render o Railway**,
 con la base de datos Neon (Postgres) y los servicios externos ya configurados.

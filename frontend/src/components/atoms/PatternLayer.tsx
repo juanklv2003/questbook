@@ -12,7 +12,7 @@ import type { PatternId } from "../../lib/theme";
  *   brand (oscuro/saturado). Acá los fondos son claros (beige/bosque), así
  *   que se usa `color-mix(in srgb, var(--brand-dark) 38%, transparent)`:
  *   sutil, decorativo, sin pelear con el contraste AA del contenido.
- * - `cups` (☕) es EXTRA de Andel: Pomopopo no tiene tazas, pero se piden;
+ * - `cups` (☕) es EXTRA de QuestBook: Pomopopo no tiene tazas, pero se piden;
  *   usa la misma técnica y métricas que los demás glifos.
  * - `paws` en Pomopopo NO usa glifos sino radial-gradients que dibujan
  *   huellas (ver `PAW_BACKGROUND` abajo, réplica 1:1 de su `bg-paws::after`,

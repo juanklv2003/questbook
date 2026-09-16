@@ -1,4 +1,4 @@
-# Andel — Flashcards con IA
+# QuestBook — Flashcards con IA
 
 Subí un PDF y generá tarjetas de estudio con IA. Repasá con sesiones guiadas, evaluá tus respuestas y seguí tu progreso desde una biblioteca de libros.
 

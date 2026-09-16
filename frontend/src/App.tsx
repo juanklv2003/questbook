@@ -84,7 +84,7 @@ function App() {
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <BrainCircuit className="h-4 w-4" aria-hidden="true" />
               </div>
-              <span className="text-[15px] font-semibold tracking-tight">Andel</span>
+              <span className="text-[15px] font-semibold tracking-tight">QuestBook</span>
             </div>
             <LanguageSwitch />
           </div>

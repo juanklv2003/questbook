@@ -1,9 +1,9 @@
 /**
- * AmbientGlow — la "decoración del fondo" de Pomopopo, adaptada a Andel.
+ * AmbientGlow — la "decoración del fondo" de Pomopopo, adaptada a QuestBook.
  *
  * Pomopopo (`style.css` líneas 25-34) pinta el body con `var(--brand)` más DOS
  * radial-gradients ambientales (blanco 8% arriba-izq, negro 12% abajo-der).
- * Acá NO teñimos el fondo completo (el bosque/beige es la identidad de Andel):
+ * Acá NO teñimos el fondo completo (el bosque/beige es la identidad de QuestBook):
  * solo replicamos los DOS resplandores, teñidos con el color elegido vía
  * `color-mix()` + `var(--brand)` / `var(--brand-dark)`.
  *

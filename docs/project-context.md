@@ -1,9 +1,9 @@
-# Andel - Project Context
+# QuestBook - Project Context
 
-> **Note for AI Agents**: This document is the single source of truth for the architecture, tech stack, and conventions of the Andel project. Read it carefully before making any structural changes or implementations.
+> **Note for AI Agents**: This document is the single source of truth for the architecture, tech stack, and conventions of the QuestBook project. Read it carefully before making any structural changes or implementations.
 
 ## 1. Project Overview
-Andel is an AI-powered flashcard generation and study application. It allows users to upload PDF documents or text, automatically generates flashcards using AI, and provides a study interface that evaluates user answers using AI to give accurate feedback and scores.
+QuestBook is an AI-powered flashcard generation and study application. It allows users to upload PDF documents or text, automatically generates flashcards using AI, and provides a study interface that evaluates user answers using AI to give accurate feedback and scores.
 
 ## 2. Tech Stack
 
@@ -65,7 +65,7 @@ frontend/src/
 
 **Rule**: Presentational components (`atoms`, `molecules`, `organisms`) should NOT contain data-fetching logic or heavy state. They should receive data and callbacks via props. Stateful logic and hook consumption happens in `containers`.
 
-**Library / Dashboard UI (Andel):**
+**Library / Dashboard UI (QuestBook):**
 - `organisms/Navbar.tsx` — glassmorphism topbar rendered as a **floating pill**: `sticky top-3`, rounded-2xl, `bg-white/55 backdrop-blur-xl border-white/25` with drop+inset shadow. Logo left; "Perfil / Progreso / Ajustes" links, CTA "+ Nuevo Libro / Subir PDF", avatar and logout right. Labels collapse to icons below `sm`. Links are stubs (`onNavigate` defaults to no-op; no screens exist yet).
 - Topbar CTA wiring: `App.tsx` bumps `createSignal` (passed to `DeckDashboardContainer`, which already opens `CreateDeckDrawer` when it changes). From a study session the CTA navigates to the library first and defers the increment one frame (`window.setTimeout(..., 0)`) so the freshly-mounted dashboard baseline ref doesn't absorb the signal.
 - `organisms/CreateDeckDrawer.tsx` renders through a **React portal** (`createPortal(..., document.body)`): the modal used to be trapped inside the dashboard's `relative z-10` wrapper (which creates a stacking context), so the sticky navbar (`z-40`) painted over it and the modal appeared "below the top menu". With the portal the drawer escapes that context and covers the viewport, navbar included.

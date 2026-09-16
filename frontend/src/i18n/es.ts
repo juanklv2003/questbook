@@ -4,7 +4,7 @@ export const es = {
   "app.loading": "Cargando...",
 
   "nav.main": "Navegación principal",
-  "nav.home": "Andel — ir a mi biblioteca",
+  "nav.home": "QuestBook — ir a mi biblioteca",
   "nav.progress": "Progreso",
   "nav.settings": "Ajustes",
   "nav.newShort": "Nuevo",

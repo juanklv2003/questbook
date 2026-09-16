@@ -6,7 +6,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "app.loading": "Loading...",
 
   "nav.main": "Main navigation",
-  "nav.home": "Andel — go to my library",
+  "nav.home": "QuestBook — go to my library",
   "nav.progress": "Progress",
   "nav.settings": "Settings",
   "nav.newShort": "New",

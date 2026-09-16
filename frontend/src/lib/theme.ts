@@ -1,5 +1,5 @@
 /**
- * Sistema de color de Andel — adaptado de Pomopopo (`frontend/src/lib/themes.ts`).
+ * Sistema de color de QuestBook — adaptado de Pomopopo (`frontend/src/lib/themes.ts`).
  *
  * REGLA DE ORO: el color elegido SOLO cambia el fondo de la web, NUNCA los
  * botones. `applyTheme` setea únicamente `--brand` / `--brand-dark` en `:root`;
@@ -9,7 +9,7 @@
  * Qué se porta de Pomopopo y qué no:
  * - SÍ: las 6 paletas brand+dark, `getTheme` con 'custom', `darkenColor` (~35%),
  *   la idea de setear variables en `:root` y un fondo de color cambiable.
- * - NO: el JS vanilla del modal. Andel usa React + panel de ajustes propio.
+ * - NO: el JS vanilla del modal. QuestBook usa React + panel de ajustes propio.
  *
  * Dónde se aplica al arrancar:
  * - El inicializador al pie de este módulo (guardado con `typeof document`)

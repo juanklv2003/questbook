@@ -15,7 +15,7 @@ export interface NavbarProps {
 }
 
 /**
- * Andel topbar — solid surface over the page background.
+ * QuestBook topbar — solid surface over the page background.
  * Logo (library home) on the left; progress link,
  * the primary CTA (new book / upload PDF) and avatar/logout on the right.
  * Labels collapse to icons below `sm`; the CTA keeps a compact short label.
@@ -46,7 +46,7 @@ export function Navbar({ onGoHome, onLogout, onOpenCreator, onNavigate }: Navbar
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <BrainCircuit className="h-4 w-4" aria-hidden="true" />
           </span>
-          <span className="text-[15px] font-semibold tracking-tight">Andel</span>
+          <span className="text-[15px] font-semibold tracking-tight">QuestBook</span>
         </button>
 
         {/* Right: links + CTA + avatar + logout */}
