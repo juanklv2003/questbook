@@ -7,6 +7,7 @@ import { GetCurrentUserUseCase } from '../useCases/GetCurrentUserUseCase';
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
+import { verifyTurnstileToken } from '../infra/TurnstileVerifier';
 import { env } from '../../../config/env';
 
 // Email: se normaliza a minúsculas con trim antes de validar el formato, de
@@ -17,6 +18,8 @@ const emailSchema = z.string().trim().toLowerCase().pipe(z.email('Email inválid
 const registerSchema = z.object({
   email: emailSchema,
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  // Token del widget de Cloudflare Turnstile (el login NO lo pide).
+  turnstileToken: z.string().min(1, 'La verificación humana es obligatoria'),
 });
 
 const loginSchema = z.object({
@@ -44,6 +47,12 @@ export class AuthController {
 
   public register = async (req: Request, res: Response): Promise<void> => {
     const body = parseBody(registerSchema, req.body ?? {});
+    // Verificación humana ANTES de crear el usuario: los tokens son de un
+    // solo uso y expiran, así que un reintento necesita un token fresco.
+    const human = await verifyTurnstileToken(body.turnstileToken, env.TURNSTILE_SECRET_KEY, req.ip);
+    if (!human) {
+      throw new AppError(400, 'La verificación humana falló o expiró, intentá de nuevo');
+    }
     const result = await this.registerUseCase.execute(body.email, body.password);
 
     this.setCookie(res, result.token, 7); // expiración del JWT de registro (7d)

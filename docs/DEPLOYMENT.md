@@ -23,7 +23,7 @@ cd frontend && npm run build && npm run lint # tsc -b + vite build + eslint sin 
 
 - [ ] `/api/v1/health` devuelve `{"status":"ok"}` localmente.
 - [ ] El login funciona en local (`npm run dev` en ambos lados).
-- [ ] Tenés a mano: `DATABASE_URL`, `JWT_SECRET`, `GEMINI_API_KEY`, las 3 credenciales de Cloudinary.
+- [ ] Tenés a mano: `DATABASE_URL`, `JWT_SECRET`, `GEMINI_API_KEY`, las 3 credenciales de Cloudinary, el Secret Key de Turnstile.
 
 ---
 
@@ -65,6 +65,7 @@ npx ts-node src/scripts/migrateStudySessions.ts   # crea la tabla más reciente
 | `COOKIE_SAME_SITE` | `none` (dominios distintos) · `lax` (subdominios del mismo dominio) |
 | `DATABASE_URL` | connection string de Neon |
 | `JWT_SECRET` | string largo y aleatorio (no reutilices el de dev) |
+| `TURNSTILE_SECRET_KEY` | Secret Key de Cloudflare Turnstile (https://dash.cloudflare.com/?to=/:account/turnstile). Sin esto el backend no arranca y el registro devuelve 400 |
 | `FRONTEND_URL` | origen exacto del frontend, **sin barra final** (ej. `https://andel.vercel.app`) |
 | `GEMINI_API_KEY` | clave de Gemini |
 | `GEMINI_API_KEYS` | opcional: claves extra separadas por comas (failover) |
@@ -105,6 +106,7 @@ revisá que `FRONTEND_URL` sea exactamente el origen del frontend, que `COOKIE_S
 | Variable | Valor |
 | --- | --- |
 | `VITE_API_URL` | `https://andel-api.onrender.com/api/v1` |
+| `VITE_TURNSTILE_SITE_KEY` | Site Key pública del mismo sitio de Turnstile. Sin esto el form de registro muestra un aviso y el botón queda deshabilitado |
 
 4. Deployá, copiá la URL final (`https://andel.vercel.app`) y **volvé al paso 2** para fijarla como
    `FRONTEND_URL` del backend (si no, CORS bloquea todo) → el backend se redeploya solo.

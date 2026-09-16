@@ -9,6 +9,11 @@ const envSchema = z.object({
   // Ej.: GEMINI_API_KEYS=clave2,clave3
   GEMINI_API_KEYS: z.string().optional(),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
+  // Secreto de Cloudflare Turnstile para verificar el registro humano.
+  // Se consigue en https://dash.cloudflare.com/?to=/:account/turnstile
+  // El endpoint POST /auth/register lo exige: sin secret válido el backend
+  // no arranca (falla ruidosamente en vez de registrar sin verificación).
+  TURNSTILE_SECRET_KEY: z.string().min(1, 'TURNSTILE_SECRET_KEY is required'),
   FRONTEND_URL: z
     .string()
     .optional()

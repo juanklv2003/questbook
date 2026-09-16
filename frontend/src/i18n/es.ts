@@ -41,6 +41,9 @@ export const es = {
   "auth.brandTagline": "Tu biblioteca de estudio con IA",
   "auth.tabsLabel": "Acceso a tu cuenta",
   "auth.passwordHint": "Mínimo 8 caracteres",
+  "auth.turnstileRequired": "Completá la verificación humana para registrarte",
+  "auth.turnstileExpired": "La verificación expiró, completala de nuevo",
+  "auth.turnstileNotConfigured": "La verificación humana no está configurada, avisá al administrador",
 
   "password.show": "Mostrar contraseña",
   "password.hide": "Ocultar contraseña",

@@ -43,6 +43,9 @@ export const en: { [K in keyof typeof es]: string } = {
   "auth.brandTagline": "Your AI study library",
   "auth.tabsLabel": "Account access",
   "auth.passwordHint": "At least 8 characters",
+  "auth.turnstileRequired": "Complete the human verification to sign up",
+  "auth.turnstileExpired": "Verification expired, please complete it again",
+  "auth.turnstileNotConfigured": "Human verification is not configured, please contact the administrator",
 
   "password.show": "Show password",
   "password.hide": "Hide password",

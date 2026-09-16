@@ -45,6 +45,8 @@ export interface LoginCredentials {
 export interface RegisterCredentials {
   email: string;
   password: string;
+  /** Token de Cloudflare Turnstile. El backend lo verifica en siteverify; es de un solo uso. */
+  turnstileToken: string;
 }
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
