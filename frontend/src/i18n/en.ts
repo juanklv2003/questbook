@@ -137,6 +137,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "study.submitAnswer": "Submit Answer",
   "study.retry": "Retry",
   "study.nextCard": "Next Card",
+  "study.reviewQuestions": "Questions · {done}/{total}",
 
   "card.pending": "Pending",
   "card.correct": "Correct",

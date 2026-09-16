@@ -135,6 +135,7 @@ export const es = {
   "study.submitAnswer": "Enviar Respuesta",
   "study.retry": "Reintentar",
   "study.nextCard": "Siguiente Tarjeta",
+  "study.reviewQuestions": "Preguntas · {done}/{total}",
 
   "card.pending": "Pendiente",
   "card.correct": "Acertada",
