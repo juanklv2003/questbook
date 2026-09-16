@@ -80,7 +80,7 @@ export function StudyPlayer({
   const showReview = reviewItems.length > 0 && typeof onSelectCard === "function";
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 py-6">
+    <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 pt-6 pb-24 sm:pb-28">
       <div className="flex flex-col gap-3 px-1 sm:px-2">
         <div className="w-full flex justify-between items-center">
           <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
