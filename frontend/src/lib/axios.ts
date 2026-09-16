@@ -20,7 +20,10 @@ apiClient.interceptors.response.use(
   (error) => {
     const status = error?.response?.status;
     const url = error?.config?.url || '';
-    const isAuthEndpoint = url.includes('/auth/login') || url === '/auth/me';
+    const isAuthEndpoint =
+      url.includes('/auth/login') ||
+      url === '/auth/me' ||
+      url.includes('/auth/oauth/exchange');
     if (status === 401 && !isAuthEndpoint) {
       window.dispatchEvent(new Event('auth:unauthorized'));
     }

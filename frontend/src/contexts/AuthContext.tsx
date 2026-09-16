@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiClient from '../lib/axios';
+import { completeOAuthLogin, takePendingOAuthCode } from '../lib/oauthSession';
 import { useLanguage } from '../i18n/LanguageContext';
 import type {
   User,
@@ -36,10 +37,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const checkAuth = async () => {
+  const checkAuth = async (options?: { keepError?: boolean }) => {
     try {
       setIsLoading(true);
-      setError(null);
+      if (!options?.keepError) {
+        setError(null);
+      }
       const response = await apiClient.get('/auth/me');
       // Backend respond `GET /auth/me` with `{ user: {...} }`; unwrap it so
       // `user.email` (navbar avatar) is not `undefined`.
@@ -66,30 +69,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get('error');
-    const oauthSuccess = params.get('oauth') === 'success';
+    const pendingOAuthCode = takePendingOAuthCode();
+
     if (oauthError) {
       setError(decodeURIComponent(oauthError));
       params.delete('error');
-    }
-    if (oauthSuccess) {
-      params.delete('oauth');
-    }
-    if (oauthError || oauthSuccess) {
       const qs = params.toString();
       const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
       window.history.replaceState({}, '', nextUrl);
-    }
-
-    const finishInit = async () => {
-      await checkAuth();
-      // Tras OAuth, la cookie a veces tarda un tick en aplicarse en el navegador.
-      if (oauthSuccess) {
-        await new Promise((r) => window.setTimeout(r, 150));
+      setIsInitializing(false);
+    } else {
+      const finishInit = async () => {
+        if (pendingOAuthCode) {
+          try {
+            setIsLoading(true);
+            const oauthUser = await completeOAuthLogin(pendingOAuthCode);
+            if (oauthUser) {
+              setUser(oauthUser);
+              setIsAuthenticated(true);
+              setIsInitializing(false);
+              setIsLoading(false);
+              return;
+            }
+          } catch (err: unknown) {
+            const message =
+              err instanceof Object &&
+              err !== null &&
+              'response' in err &&
+              err.response instanceof Object &&
+              err.response !== null &&
+              'data' in err.response &&
+              err.response.data instanceof Object &&
+              err.response.data !== null &&
+              'error' in err.response.data &&
+              typeof (err.response.data as { error: unknown }).error === 'string'
+                ? (err.response.data as { error: string }).error
+                : t('auth.loginError');
+            setError(message);
+            return;
+          } finally {
+            setIsLoading(false);
+          }
+        }
         await checkAuth();
-      }
-    };
+      };
 
-    finishInit().finally(() => setIsInitializing(false));
+      finishInit().finally(() => setIsInitializing(false));
+    }
 
     // Any authenticated request answering 401 (invalid/expired session)
     // clears the auth state so the app returns to login automatically.

@@ -14,10 +14,19 @@ const envSchema = z.object({
   // El endpoint POST /auth/register lo exige: sin secret válido el backend
   // no arranca (falla ruidosamente en vez de registrar sin verificación).
   TURNSTILE_SECRET_KEY: z.string().min(1, 'TURNSTILE_SECRET_KEY is required'),
-  // Credenciales de Google OAuth
-  GOOGLE_CLIENT_ID: z.string().optional(),
-  GOOGLE_CLIENT_SECRET: z.string().optional(),
-  GOOGLE_CALLBACK_URL: z.string().optional(),
+  // Credenciales de Google OAuth (trim evita redirect_uri_mismatch por espacios en .env)
+  GOOGLE_CLIENT_ID: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : undefined)),
+  GOOGLE_CLIENT_SECRET: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : undefined)),
+  GOOGLE_CALLBACK_URL: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim().replace(/\/+$/, '') : undefined)),
   FRONTEND_URL: z
     .string()
     .optional()

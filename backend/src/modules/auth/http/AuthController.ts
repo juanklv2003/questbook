@@ -11,6 +11,7 @@ import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
 import { verifyTurnstileToken } from '../infra/TurnstileVerifier';
+import { createOAuthExchangeCode, consumeOAuthExchangeCode } from '../infra/OAuthExchangeStore';
 import { env } from '../../../config/env';
 
 /** Must match the redirect URI registered in Google Cloud Console exactly. */
@@ -63,6 +64,10 @@ const forgotPasswordSchema = z.object({
 const resetPasswordSchema = z.object({
   token: z.string().min(1, 'El token es obligatorio'),
   newPassword: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+});
+
+const oauthExchangeSchema = z.object({
+  code: z.string().min(1, 'El código OAuth es obligatorio'),
 });
 
 export class AuthController {
@@ -158,7 +163,7 @@ export class AuthController {
       throw new AppError(500, 'Google OAuth not configured');
     }
     const redirectUri = resolveGoogleRedirectUri(req);
-    const scope = ['profile', 'email'].map(s => s).join(' ');
+    const scope = 'openid email profile';
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', googleClientId);
     authUrl.searchParams.set('redirect_uri', redirectUri);
@@ -230,14 +235,25 @@ export class AuthController {
       // Use Google login use case to find or create user and generate JWT
       const result = await this.googleLoginUseCase.execute(googleId, email, name, picture);
 
-      // Set cookie and redirect to frontend
-      this.setCookie(res, result.token, 7); // same expiration as register (7d)
-      redirectToFrontend(res, { oauth: 'success' });
+      const oauthCode = await createOAuthExchangeCode(result.token, result.user);
+      this.setCookie(res, result.token, 7);
+      redirectToFrontend(res, { oauth_code: oauthCode });
     } catch (error) {
       // On error, redirect to frontend with error message
       const errorMessage = error instanceof AppError ? error.message : 'Internal server error';
       redirectToFrontend(res, { error: errorMessage });
     }
+  });
+
+  /** Completes Google OAuth in the SPA: sets session cookie via same-origin XHR. */
+  public exchangeOAuth = catchAsync(async (req: Request, res: Response): Promise<void> => {
+    const body = parseBody(oauthExchangeSchema, req.body ?? {});
+    const entry = await consumeOAuthExchangeCode(body.code);
+    if (!entry) {
+      throw new AppError(400, 'Código OAuth inválido o expirado. Intentá iniciar sesión con Google de nuevo.');
+    }
+    this.setCookie(res, entry.token, 7);
+    res.status(200).json({ user: entry.user });
   });
 
   private setCookie(res: Response, token: string, maxAgeDays: number): void {

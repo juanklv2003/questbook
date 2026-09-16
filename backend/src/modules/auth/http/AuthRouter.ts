@@ -56,5 +56,6 @@ authRouter.post('/reset-password', authController.resetPassword);
 // Google OAuth routes
 authRouter.get('/google', authController.googleLogin);
 authRouter.get('/google/callback', authController.googleCallback);
+authRouter.post('/oauth/exchange', authController.exchangeOAuth);
 
 export { authRouter, authMiddleware };

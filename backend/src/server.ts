@@ -18,6 +18,9 @@ const startServer = async () => {
       console.log(
         `   Google OAuth: ${env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? 'configured' : 'missing GOOGLE_* env vars'}`
       );
+      if (env.GOOGLE_CALLBACK_URL) {
+        console.log(`   GOOGLE_CALLBACK_URL=${env.GOOGLE_CALLBACK_URL}`);
+      }
       console.log(`   Verify: curl http://localhost:${port}/api/v1/health`);
     });
 
