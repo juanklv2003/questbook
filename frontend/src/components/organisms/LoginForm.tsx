@@ -8,10 +8,11 @@ import { useLanguage } from '../../i18n/LanguageContext';
 
 interface LoginFormProps {
   onSuccess?: () => void;
+  onForgotPassword?: () => void;
 }
 
 /** Contenido del panel de login (la tarjeta y las tabs viven en AuthContainer). */
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPassword }) => {
   const { t } = useLanguage();
   const { login, error: authError, isLoading } = useAuth();
   const [email, setEmail] = useState('');
@@ -88,6 +89,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             disabled={isLoading}
             required
           />
+          {onForgotPassword && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                disabled={isLoading}
+                className="cursor-pointer text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:pointer-events-none disabled:opacity-60"
+              >
+                {t("auth.forgotLink")}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2.5">

@@ -85,6 +85,15 @@ The system uses PostgreSQL.
 - `created_at` (Timestamp)
 - `updated_at` (Timestamp)
 
+### Table: `password_reset_tokens`
+- `id` (UUID, Primary Key, default `gen_random_uuid()`)
+- `user_id` (UUID, FK to `users.id` ON DELETE CASCADE, NOT NULL)
+- `token_hash` (TEXT, UNIQUE, NOT NULL — SHA-256 of the raw token; the raw value is never stored)
+- `expires_at` (Timestamptz, NOT NULL — 15 min TTL from issuance)
+- `used_at` (Timestamptz, nullable — single use; set on successful reset)
+- `created_at` (Timestamptz, default NOW())
+- Applied via `backend/src/scripts/migratePasswordReset.ts` (idempotent `IF NOT EXISTS` + index `idx_password_reset_tokens_user_id`)
+
 ### Table: `decks`
 - `id` (UUID, Primary Key)
 - `user_id` (UUID, Foreign Key to `users.id`)
@@ -123,6 +132,8 @@ The API is served at `/api/v1`.
 - `POST /login`: Logs in an existing user. Expects JSON `{ email, password, rememberMe }`. Returns `{ id, email }` and sets an HttpOnly cookie with the JWT.
 - `POST /logout`: Logs out the current user by clearing the HttpOnly cookie.
 - `GET /me`: Returns the current user's info based on the HttpOnly cookie.
+- `POST /forgot-password`: Step 1 of password recovery (no SMTP in the project). Expects JSON `{ email, turnstileToken }`. Verifies Turnstile with the same `TURNSTILE_SECRET_KEY` as register (fail-closed 400 on human-verification failure), then returns `404` when the email does not exist (enumeration accepted in this version). On success returns `{ resetToken, expiresAt }` — `crypto.randomBytes(32)` hex, stored as SHA-256 with 15 min TTL, single use — and the frontend shows the new-password form directly.
+- `POST /reset-password`: Step 2 of password recovery (no Turnstile here). Expects JSON `{ token, newPassword }` (`newPassword` length ≥ 8, same message as register). Validates the token is known, unused and unexpired (all three fail as generic `400 { error }` so internal state is not leaked), hashes the new password with the existing `BcryptPasswordHasher`, saves it and marks the token used. Returns `{ message }`.
 - Cookie `auth_token` (`backend/src/modules/auth/http/AuthController.ts`): `HttpOnly`, `path=/`, `maxAge` alineado con la expiración del JWT (registro 7d, login 30d con `rememberMe` / 1d sin él), `secure` sólo con `NODE_ENV=production` y `sameSite` desde `COOKIE_SAME_SITE`. Default de esa variable: `none` en producción (frontend y backend en dominios distintos, ej. Vercel + Render — `strict`/`lax` harían que el login "funcione" pero `/me` devuelva 401 al recargar) y `lax` en desarrollo. Con subdominios del mismo dominio alcanza `lax`. `FRONTEND_URL` se normaliza (trim + sin barra final) para que CORS no falle por tipeo. Detalle de despliegue en [`DEPLOYMENT.md`](./DEPLOYMENT.md).
 - Validation contract (controller-level zod via `parseBody`): any invalid body or route param returns `400 { error: string }` describing **only the first issue** as `"<path>: <message>"` (one problem per round trip); syntactically malformed JSON is also `400 { error }` via the `errorHandler` SyntaxError branch (it never reaches `parseBody`). Emails are trimmed + lowercased before format check on register and login. Passwords: register requires length ≥ 8, login requires non-empty. Re-registering an existing email — including a case variant (`User@x` vs `user@x`) — returns `409`.
 

@@ -43,6 +43,7 @@ npx ts-node src/scripts/migratePdfStorage.ts
 npx ts-node src/scripts/migrateProgress.ts
 npx ts-node src/scripts/migrateShelf.ts
 npx ts-node src/scripts/migrateStudySessions.ts   # crea la tabla más reciente
+npx ts-node src/scripts/migratePasswordReset.ts   # tabla password_reset_tokens (recupero sin SMTP)
 ```
 
 > Las migraciones son idempotentes (usan `IF NOT EXISTS`), así que re-ejecutarlas es seguro.

@@ -49,6 +49,22 @@ export interface RegisterCredentials {
   turnstileToken: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+  /** Token del widget Turnstile (solo paso 1). Mismo site key que el registro. */
+  turnstileToken: string;
+}
+
+export interface ForgotPasswordResponse {
+  resetToken: string;
+  expiresAt: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
 /** Gemini free-tier quota hint returned by the API on HTTP 429. */

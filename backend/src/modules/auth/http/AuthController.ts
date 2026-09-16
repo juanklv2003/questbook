@@ -4,6 +4,8 @@ import { RegisterUseCase } from '../useCases/RegisterUseCase';
 import { LoginUseCase } from '../useCases/LoginUseCase';
 import { LogoutUseCase } from '../useCases/LogoutUseCase';
 import { GetCurrentUserUseCase } from '../useCases/GetCurrentUserUseCase';
+import { RequestPasswordResetUseCase } from '../useCases/RequestPasswordResetUseCase';
+import { ResetPasswordUseCase } from '../useCases/ResetPasswordUseCase';
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
@@ -28,12 +30,28 @@ const loginSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
+// Paso 1 del "olvidé mi contraseña": pide el token de reseteo. Exige
+// Turnstile igual que el registro (mismo secreto); el token es de un solo
+// uso y expira, así que un reintento necesita verificación fresca.
+const forgotPasswordSchema = z.object({
+  email: emailSchema,
+  turnstileToken: z.string().min(1, 'La verificación humana es obligatoria'),
+});
+
+// Paso 2: confirma con el token en claro (en DB solo vive su SHA-256).
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'El token es obligatorio'),
+  newPassword: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+});
+
 export class AuthController {
   constructor(
     private registerUseCase: RegisterUseCase,
     private loginUseCase: LoginUseCase,
     private logoutUseCase: LogoutUseCase,
-    private getCurrentUserUseCase: GetCurrentUserUseCase
+    private getCurrentUserUseCase: GetCurrentUserUseCase,
+    private requestPasswordResetUseCase: RequestPasswordResetUseCase,
+    private resetPasswordUseCase: ResetPasswordUseCase
   ) {
     // Any thrown error goes to the global errorHandler, which maps AppError
     // (400/401/409/404/503...) to the right status code. DB/IA failures become
@@ -43,6 +61,8 @@ export class AuthController {
     this.login = catchAsync(this.login.bind(this));
     this.logout = catchAsync(this.logout.bind(this));
     this.me = catchAsync(this.me.bind(this));
+    this.forgotPassword = catchAsync(this.forgotPassword.bind(this));
+    this.resetPassword = catchAsync(this.resetPassword.bind(this));
   }
 
   public register = async (req: Request, res: Response): Promise<void> => {
@@ -89,6 +109,23 @@ export class AuthController {
 
     const user = await this.getCurrentUserUseCase.execute(userId);
     res.status(200).json({ user });
+  };
+
+  public forgotPassword = async (req: Request, res: Response): Promise<void> => {
+    const body = parseBody(forgotPasswordSchema, req.body ?? {});
+    const human = await verifyTurnstileToken(body.turnstileToken, env.TURNSTILE_SECRET_KEY, req.ip);
+    if (!human) {
+      throw new AppError(400, 'La verificación humana falló o expiró, intentá de nuevo');
+    }
+    // 404 si el email no existe (enumeración aceptada en esta versión).
+    const result = await this.requestPasswordResetUseCase.execute(body.email);
+    res.status(200).json(result);
+  };
+
+  public resetPassword = async (req: Request, res: Response): Promise<void> => {
+    const body = parseBody(resetPasswordSchema, req.body ?? {});
+    const result = await this.resetPasswordUseCase.execute(body.token, body.newPassword);
+    res.status(200).json(result);
   };
 
   private setCookie(res: Response, token: string, maxAgeDays: number): void {

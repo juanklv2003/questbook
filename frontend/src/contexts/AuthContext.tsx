@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiClient from '../lib/axios';
 import { useLanguage } from '../i18n/LanguageContext';
-import type { User, LoginCredentials, RegisterCredentials } from '../types';
+import type {
+  User,
+  LoginCredentials,
+  RegisterCredentials,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  ResetPasswordRequest,
+} from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +17,8 @@ interface AuthContextType {
   error: string | null;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
+  requestPasswordReset: (payload: ForgotPasswordRequest) => Promise<ForgotPasswordResponse>;
+  resetPassword: (payload: ResetPasswordRequest) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -125,6 +134,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const requestPasswordReset = async (payload: ForgotPasswordRequest) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await apiClient.post<ForgotPasswordResponse>('/auth/forgot-password', payload);
+      return response.data;
+    } catch (err: unknown) {
+      const message =
+        err instanceof Object &&
+        err !== null &&
+        'response' in err &&
+        err.response instanceof Object &&
+        err.response !== null &&
+        'data' in err.response &&
+        err.response.data instanceof Object &&
+        err.response.data !== null &&
+        'error' in err.response.data &&
+        typeof (err.response.data as { error: unknown }).error === 'string'
+          ? (err.response.data as { error: string }).error
+          : err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+          ? err
+          : t('auth.forgotError');
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (payload: ResetPasswordRequest) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await apiClient.post('/auth/reset-password', payload);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Object &&
+        err !== null &&
+        'response' in err &&
+        err.response instanceof Object &&
+        err.response !== null &&
+        'data' in err.response &&
+        err.response.data instanceof Object &&
+        err.response.data !== null &&
+        'error' in err.response.data &&
+        typeof (err.response.data as { error: unknown }).error === 'string'
+          ? (err.response.data as { error: string }).error
+          : err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+          ? err
+          : t('auth.resetError');
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       setIsLoading(true);
@@ -158,7 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, error, login, register, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, error, login, register, requestPasswordReset, resetPassword, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

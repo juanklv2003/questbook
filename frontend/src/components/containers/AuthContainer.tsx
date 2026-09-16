@@ -3,11 +3,12 @@ import { motion, useReducedMotion } from 'framer-motion';
 import magicBook from '../../assets/libro.png';
 import { LoginForm } from '../organisms/LoginForm';
 import { RegisterForm } from '../organisms/RegisterForm';
+import { ForgotPasswordForm } from '../organisms/ForgotPasswordForm';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { cn } from '../../lib/utils';
 
-type AuthView = 'login' | 'register';
+type AuthView = 'login' | 'register' | 'forgot';
 
 /**
  * Entrada a la app: marca + tarjeta de acceso que conmuta Login/Registro.
@@ -30,10 +31,14 @@ type AuthView = 'login' | 'register';
   const { isLoading } = useAuth();
   const reduceMotion = useReducedMotion();
 
-  const tabs: { id: AuthView; label: string }[] = [
+  const tabs: { id: Exclude<AuthView, 'forgot'>; label: string }[] = [
     { id: 'login', label: t('auth.signIn') },
     { id: 'register', label: t('auth.signUp') },
   ];
+
+  // La vista "forgot" no tiene tab propia: se entra desde el link del login
+  // y se sale con "volver". El panel anima igual que el cambio login/register.
+  const activeTab: Exclude<AuthView, 'forgot'> = view === 'forgot' ? 'login' : view;
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 sm:py-10">
@@ -61,7 +66,7 @@ type AuthView = 'login' | 'register';
             className="grid grid-cols-2 gap-1 border-b bg-secondary/40 p-1.5"
           >
             {tabs.map((tab) => {
-              const active = view === tab.id;
+              const active = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
@@ -89,13 +94,19 @@ type AuthView = 'login' | 'register';
             key={view}
             id="auth-panel"
             role="tabpanel"
-            aria-labelledby={`auth-tab-${view}`}
+            aria-labelledby={`auth-tab-${activeTab}`}
             initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className="p-6 sm:p-7"
           >
-            {view === 'login' ? <LoginForm /> : <RegisterForm />}
+            {view === 'forgot' ? (
+              <ForgotPasswordForm onBackToLogin={() => setView('login')} />
+            ) : view === 'login' ? (
+              <LoginForm onForgotPassword={() => setView('forgot')} />
+            ) : (
+              <RegisterForm />
+            )}
           </motion.div>
         </div>
       </div>
