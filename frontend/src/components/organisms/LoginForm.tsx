@@ -41,7 +41,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPasswor
   const errorMessage = localError || authError;
 
   const handleGoogleLogin = () => {
-    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/v1$/, '') ?? '';
+    const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
     const googleAuthUrl = `${baseUrl}/auth/google`;
     window.location.href = googleAuthUrl;
   };
@@ -128,11 +128,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPasswor
         {isLoading ? t("auth.loginLoading") : t("auth.loginCta")}
       </Button>
 
-      {/* Divider */}
+      {/* Divider with lines and text */}
       {isLoading ? null : (
-        <div className="mt-2 flex items-center gap-1">
+        <div className="mt-0 flex items-center gap-0.5">
           <div className="w-full border-t border-border/50" />
-          <span className="text-xs text-muted-foreground">{t("auth.orContinueWith")}</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {t("auth.orContinueWith")}
+          </span>
           <div className="w-full border-t border-border/50" />
         </div>
       )}

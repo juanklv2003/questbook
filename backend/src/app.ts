@@ -28,6 +28,15 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// CSP middleware to allow Chrome DevTools and other necessary requests
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' http://localhost:3000 ws://localhost:3000 chrome-extension:; frame-src 'self' https://accounts.google.com;"
+  );
+  next();
+});
+
 // Global Error Handler
 app.use(errorHandler);
 

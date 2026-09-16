@@ -138,7 +138,7 @@ export class AuthController {
     if (!googleClientId) {
       throw new AppError(500, 'Google OAuth not configured');
     }
-    const redirectUri = env.GOOGLE_CALLBACK_URL ?? `${req.protocol}://${req.get('host')}/auth/google/callback`;
+    const redirectUri = env.GOOGLE_CALLBACK_URL ?? `${req.protocol}://${req.get('host')}/api/v1/auth/google/callback`;
     const scope = ['profile', 'email'].map(s => s).join(' ');
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', googleClientId);
@@ -165,7 +165,7 @@ export class AuthController {
         throw new AppError(500, 'Google OAuth not configured');
       }
 
-      const redirectUri = env.GOOGLE_CALLBACK_URL ?? `${req.protocol}://${req.get('host')}/auth/google/callback`;
+      const redirectUri = env.GOOGLE_CALLBACK_URL ?? `${req.protocol}://${req.get('host')}/api/v1/auth/google/callback`;
 
       // Exchange code for tokens
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
