@@ -27,6 +27,8 @@ export class RegisterUseCase {
       id: '', // DB will generate it
       email,
       passwordHash: hashedPassword,
+      provider: 'email',
+      providerId: undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

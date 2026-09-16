@@ -40,6 +40,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPasswor
 
   const errorMessage = localError || authError;
 
+  const handleGoogleLogin = () => {
+    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/v1$/, '') ?? '';
+    const googleAuthUrl = `${baseUrl}/auth/google`;
+    window.location.href = googleAuthUrl;
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-1.5 text-center">
@@ -121,6 +127,29 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPasswor
       <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
         {isLoading ? t("auth.loginLoading") : t("auth.loginCta")}
       </Button>
+
+      {/* Divider */}
+      {isLoading ? null : (
+        <div className="mt-2 flex items-center gap-1">
+          <div className="w-full border-t border-border/50" />
+          <span className="text-xs text-muted-foreground">{t("auth.orContinueWith")}</span>
+          <div className="w-full border-t border-border/50" />
+        </div>
+      )}
+
+      {/* Google Button */}
+      {isLoading ? null : (
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-full flex items-center gap-2"
+          onClick={handleGoogleLogin}
+          disabled={isLoading}
+        >
+          <img src="https://www.google.com/favicon.ico" alt="Google" width="20" height="20" />
+          {t("auth.googleLogin")}
+        </Button>
+      )}
     </form>
   );
 };

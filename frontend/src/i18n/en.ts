@@ -253,4 +253,6 @@ export const en: { [K in keyof typeof es]: string } = {
   "pdf.fallback": "This document cannot be previewed in the browser, but you can study with your flashcards without any issue.",
   "pdf.unavailable": "Preview not available",
   "pdf.viewerTitle": "PDF Viewer",
+  "auth.googleLogin": "Continue with Google",
+  "auth.orContinueWith": "Or continue with"
 };

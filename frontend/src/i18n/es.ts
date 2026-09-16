@@ -251,4 +251,6 @@ export const es = {
   "pdf.fallback": "Este documento no se puede previsualizar en el navegador, pero podés estudiar con tus tarjetas sin problema.",
   "pdf.unavailable": "Vista previa no disponible",
   "pdf.viewerTitle": "Visor de PDF",
+  "auth.googleLogin": "Continuar con Google",
+  "auth.orContinueWith": "O continuar con"
 } as const;
