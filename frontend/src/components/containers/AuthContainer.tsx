@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { BrainCircuit } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
+import magicBook from '../../assets/magicBook.png';
 import { LoginForm } from '../organisms/LoginForm';
 import { RegisterForm } from '../organisms/RegisterForm';
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,12 +35,14 @@ type AuthView = 'login' | 'register';
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 sm:py-10">
       <div className="w-full max-w-md">
-        {/* Marca: mismo símbolo y color que la topbar de la app (marrón + crema),
-            que lee bien sobre el fondo arena. */}
+        {/* Marca: el libro mágico de QuestBook. */}
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-            <BrainCircuit className="h-7 w-7" aria-hidden="true" />
-          </div>
+          <img
+            src={magicBook}
+            alt=""
+            aria-hidden="true"
+            className="h-14 w-14 rounded-2xl object-cover shadow-lg shadow-primary/25"
+          />
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight">QuestBook</h1>
             <p className="text-sm text-muted-foreground">{t('auth.brandTagline')}</p>
