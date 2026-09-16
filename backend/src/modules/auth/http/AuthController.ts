@@ -13,6 +13,26 @@ import { parseBody } from '../../../core/validation/parseBody';
 import { verifyTurnstileToken } from '../infra/TurnstileVerifier';
 import { env } from '../../../config/env';
 
+/** Must match the redirect URI registered in Google Cloud Console exactly. */
+function resolveGoogleRedirectUri(req: Request): string {
+  if (env.GOOGLE_CALLBACK_URL) {
+    return env.GOOGLE_CALLBACK_URL;
+  }
+  const host = req.get('x-forwarded-host') ?? req.get('host');
+  const protocol = (req.get('x-forwarded-proto') ?? req.protocol).split(',')[0]?.trim() || 'http';
+  return `${protocol}://${host}/api/v1/auth/google/callback`;
+}
+
+function redirectToFrontend(res: Response, params?: Record<string, string>): void {
+  const url = new URL(env.FRONTEND_URL ?? 'http://localhost:5173');
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+  }
+  res.redirect(url.toString());
+}
+
 // Email: se normaliza a minúsculas con trim antes de validar el formato, de
 // modo que tanto el registro como el login comparen siempre el mismo valor
 // (y no se permite crear duplicados "User@x" vs "user@x").
@@ -137,7 +157,7 @@ export class AuthController {
     if (!googleClientId) {
       throw new AppError(500, 'Google OAuth not configured');
     }
-    const redirectUri = env.GOOGLE_CALLBACK_URL ?? `${req.protocol}://${req.get('host')}/api/v1/auth/google/callback`;
+    const redirectUri = resolveGoogleRedirectUri(req);
     const scope = ['profile', 'email'].map(s => s).join(' ');
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', googleClientId);
@@ -164,7 +184,7 @@ export class AuthController {
         throw new AppError(500, 'Google OAuth not configured');
       }
 
-      const redirectUri = env.GOOGLE_CALLBACK_URL ?? `${req.protocol}://${req.get('host')}/api/v1/auth/google/callback`;
+      const redirectUri = resolveGoogleRedirectUri(req);
 
       // Exchange code for tokens
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -211,16 +231,12 @@ export class AuthController {
       const result = await this.googleLoginUseCase.execute(googleId, email, name, picture);
 
       // Set cookie and redirect to frontend
-      const frontendUrl = env.FRONTEND_URL ?? 'http://localhost:5173';
       this.setCookie(res, result.token, 7); // same expiration as register (7d)
-      res.redirect(frontendUrl);
+      redirectToFrontend(res, { oauth: 'success' });
     } catch (error) {
       // On error, redirect to frontend with error message
-      const frontendUrl = env.FRONTEND_URL ?? 'http://localhost:5173';
       const errorMessage = error instanceof AppError ? error.message : 'Internal server error';
-      const url = new URL(frontendUrl);
-      url.searchParams.set('error', errorMessage);
-      res.redirect(url.toString());
+      redirectToFrontend(res, { error: errorMessage });
     }
   });
 

@@ -66,15 +66,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get('error');
+    const oauthSuccess = params.get('oauth') === 'success';
     if (oauthError) {
       setError(decodeURIComponent(oauthError));
       params.delete('error');
+    }
+    if (oauthSuccess) {
+      params.delete('oauth');
+    }
+    if (oauthError || oauthSuccess) {
       const qs = params.toString();
       const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
       window.history.replaceState({}, '', nextUrl);
     }
 
-    checkAuth().finally(() => setIsInitializing(false));
+    const finishInit = async () => {
+      await checkAuth();
+      // Tras OAuth, la cookie a veces tarda un tick en aplicarse en el navegador.
+      if (oauthSuccess) {
+        await new Promise((r) => window.setTimeout(r, 150));
+        await checkAuth();
+      }
+    };
+
+    finishInit().finally(() => setIsInitializing(false));
 
     // Any authenticated request answering 401 (invalid/expired session)
     // clears the auth state so the app returns to login automatically.
