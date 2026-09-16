@@ -58,6 +58,7 @@ export const es = {
   "up.mediumDesc": "Mezcla de definiciones y relaciones",
   "up.hard": "Difícil",
   "up.hardDesc": "Conceptos avanzados y relaciones complejas",
+  "up.language": "Idioma de las tarjetas",
   "up.color": "Color del libro",
   "up.colorOption": "Color {label}",
   "up.blue": "Azul",

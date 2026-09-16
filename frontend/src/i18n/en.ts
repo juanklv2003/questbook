@@ -60,6 +60,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "up.mediumDesc": "Mix of definitions and connections",
   "up.hard": "Hard",
   "up.hardDesc": "Advanced concepts and complex connections",
+  "up.language": "Card language",
   "up.color": "Book color",
   "up.colorOption": "{label} color",
   "up.blue": "Blue",

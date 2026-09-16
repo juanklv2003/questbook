@@ -169,11 +169,14 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
           </div>
         </div>
 
-      {/* Language */}
+      {/* Language — card generation language (not interface language) */}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">{t("lang.switchLabel")}</label>
+          <label className="text-sm font-medium">{t("up.language")}</label>
           <div className="flex gap-2">
-            {[ { value: 'en', label: t("lang.english") }, { value: 'es', label: t("lang.spanish") } ].map(option => (
+            {([
+              { value: 'en', label: t("lang.english") },
+              { value: 'es', label: t("lang.spanish") },
+            ] as const).map(option => (
               <button
                 key={option.value}
                 type="button"

@@ -79,8 +79,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         'data' in err.response &&
         err.response.data instanceof Object &&
         err.response.data !== null &&
-        'error' in err.response.data
-          ? err.response.data.error
+        'error' in err.response.data &&
+        typeof (err.response.data as { error: unknown }).error === 'string'
+          ? (err.response.data as { error: string }).error
           : err instanceof Error
           ? err.message
           : typeof err === 'string'
@@ -109,8 +110,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         'data' in err.response &&
         err.response.data instanceof Object &&
         err.response.data !== null &&
-        'error' in err.response.data
-          ? err.response.data.error
+        'error' in err.response.data &&
+        typeof (err.response.data as { error: unknown }).error === 'string'
+          ? (err.response.data as { error: string }).error
           : err instanceof Error
           ? err.message
           : typeof err === 'string'
@@ -140,8 +142,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         'data' in err.response &&
         err.response.data instanceof Object &&
         err.response.data !== null &&
-        'error' in err.response.data
-          ? err.response.data.error
+        'error' in err.response.data &&
+        typeof (err.response.data as { error: unknown }).error === 'string'
+          ? (err.response.data as { error: string }).error
           : err instanceof Error
           ? err.message
           : typeof err === 'string'

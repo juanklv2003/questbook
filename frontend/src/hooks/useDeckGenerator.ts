@@ -45,9 +45,8 @@ export function useDeckGenerator() {
       setProgress(20);
 
       const response = await apiClient.post(`/decks/generate`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        // Let axios/browser set the multipart boundary automatically — do NOT set Content-Type manually
+        // (forcing 'multipart/form-data' without boundary breaks the upload)
         // The AI can be slow to respond: allow a wide margin (90s) instead
         // of hanging forever, and show a clear error when exceeded.
         timeout: 90000,
@@ -80,8 +79,9 @@ export function useDeckGenerator() {
           'data' in err.response &&
           err.response.data instanceof Object &&
           err.response.data !== null &&
-          'error' in err.response.data
-            ? err.response.data.error
+          'error' in err.response.data &&
+          typeof (err.response.data as { error: unknown }).error === 'string'
+            ? (err.response.data as { error: string }).error
             : t('gen.quota');
         setError(message);
       } else if (parseOverloaded(err)) {
@@ -97,8 +97,9 @@ export function useDeckGenerator() {
             'data' in err.response &&
             err.response.data instanceof Object &&
             err.response.data !== null &&
-            'error' in err.response.data
-              ? err.response.data.error
+            'error' in err.response.data &&
+            typeof (err.response.data as { error: unknown }).error === 'string'
+              ? (err.response.data as { error: string }).error
               : t('gen.overloaded');
           setError(message);
         }
@@ -122,8 +123,9 @@ export function useDeckGenerator() {
           'data' in err.response &&
           err.response.data instanceof Object &&
           err.response.data !== null &&
-          'error' in err.response.data
-            ? err.response.data.error
+          'error' in err.response.data &&
+          typeof (err.response.data as { error: unknown }).error === 'string'
+            ? (err.response.data as { error: string }).error
             : err instanceof Error
             ? err.message
             : typeof err === 'string'
