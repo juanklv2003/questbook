@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import magicBook from '../../assets/magicBook.png';
+import magicBook from '../../assets/libro.png';
 import { LoginForm } from '../organisms/LoginForm';
 import { RegisterForm } from '../organisms/RegisterForm';
 import { useAuth } from '../../contexts/AuthContext';

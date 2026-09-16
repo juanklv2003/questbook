@@ -7,7 +7,7 @@ import { ProgressPanel, type ProgressBook } from './components/organisms/Progres
 import { SettingsPanel } from './components/organisms/SettingsPanel'
 import { useDecks } from './hooks/useDecks'
 import type { Deck } from './types'
-import magicBook from './assets/magicBook.png'
+import magicBook from './assets/libro.png'
 import { useAuth } from './contexts/AuthContext'
 import { AuthContainer } from './components/containers/AuthContainer'
 import { BrandBackground } from './components/atoms/BrandBackground'
