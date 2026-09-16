@@ -64,6 +64,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('error');
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError));
+      params.delete('error');
+      const qs = params.toString();
+      const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+    }
+
     checkAuth().finally(() => setIsInitializing(false));
 
     // Any authenticated request answering 401 (invalid/expired session)

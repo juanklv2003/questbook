@@ -33,3 +33,7 @@ metalgearsolid.pdf
 
 # Local agent tooling (skill registry, caches)
 .atl/
+
+# Cursor MCP browser profiles / Impeccable local config
+.cursor/data/
+.impeccable/

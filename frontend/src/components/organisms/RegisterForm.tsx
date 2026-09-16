@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../atoms/Input';
 import { PasswordField } from '../atoms/PasswordField';
 import { Button } from '../atoms/Button';
+import { GoogleSignInButton } from '../atoms/GoogleSignInButton';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface RegisterFormProps {
@@ -167,6 +168,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
         {isLoading ? t("auth.registerLoading") : t("auth.registerCta")}
       </Button>
+
+      {!isLoading && (
+        <>
+          <div className="flex items-center gap-0.5">
+            <div className="w-full border-t border-border/50" />
+            <span className="whitespace-nowrap text-xs text-muted-foreground">{t('auth.orContinueWith')}</span>
+            <div className="w-full border-t border-border/50" />
+          </div>
+          <GoogleSignInButton />
+        </>
+      )}
     </form>
   );
 };

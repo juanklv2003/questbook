@@ -6,6 +6,20 @@ import { errorHandler } from './core/middlewares/errorHandler';
 
 const app = express();
 
+// Chrome DevTools probes this path; without a handler Express 404 noise appears in the console.
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (_req, res) => {
+  res.type('application/json').send('{}');
+});
+
+// Legacy paths (wrong docs / old VITE_API_URL without /api/v1 prefix)
+app.get('/auth/google', (_req, res) => {
+  res.redirect(302, '/api/v1/auth/google');
+});
+app.get('/auth/google/callback', (req, res) => {
+  const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  res.redirect(302, `/api/v1/auth/google/callback${query}`);
+});
+
 // Middleware
 app.use(cors({
   origin: env.FRONTEND_URL,
@@ -24,17 +38,13 @@ app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/decks', authMiddleware.requireAuth, deckRouter);
 app.use('/api/v1/evaluations', authMiddleware.requireAuth, evaluationRouter);
 
-app.get('/api/v1/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// CSP middleware to allow Chrome DevTools and other necessary requests
-app.use((req, res, next) => {
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' http://localhost:3000 ws://localhost:3000 chrome-extension:; frame-src 'self' https://accounts.google.com;"
-  );
-  next();
+app.get('/api/v1/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    auth: {
+      googleOAuth: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+    },
+  });
 });
 
 // Global Error Handler

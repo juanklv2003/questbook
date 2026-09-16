@@ -1,0 +1,11 @@
+---
+description: Engram persistent memory protocol for this project
+alwaysApply: true
+---
+
+## Memory (Engram MCP)
+
+You have access to Engram persistent memory via MCP tools (`mem_save`, `mem_search`, `mem_session_summary`, `mem_context`, etc.).
+
+- Save proactively after significant work — do not wait to be asked.
+- After any compaction or context reset, call `mem_context` to recover session state before continuing.

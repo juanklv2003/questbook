@@ -65,8 +65,6 @@ export class AuthController {
     this.me = catchAsync(this.me.bind(this));
     this.forgotPassword = catchAsync(this.forgotPassword.bind(this));
     this.resetPassword = catchAsync(this.resetPassword.bind(this));
-    this.googleLogin = catchAsync(this.googleLogin.bind(this));
-    this.googleCallback = catchAsync(this.googleCallback.bind(this));
   }
 
   public register = async (req: Request, res: Response): Promise<void> => {
@@ -132,8 +130,9 @@ export class AuthController {
     res.status(200).json(result);
   };
 
-  // Google OAuth login initiation
-  public googleLogin = async (req: Request, res: Response): Promise<void> => {
+  // Google OAuth login initiation (catchAsync on the field — not in constructor,
+  // so TS class-field init order cannot leave the router with an undefined handler).
+  public googleLogin = catchAsync(async (req: Request, res: Response): Promise<void> => {
     const googleClientId = env.GOOGLE_CLIENT_ID;
     if (!googleClientId) {
       throw new AppError(500, 'Google OAuth not configured');
@@ -149,10 +148,10 @@ export class AuthController {
     authUrl.searchParams.set('prompt', 'consent');
 
     res.redirect(authUrl.toString());
-  };
+  });
 
   // Google OAuth callback
-  public googleCallback = async (req: Request, res: Response): Promise<void> => {
+  public googleCallback = catchAsync(async (req: Request, res: Response): Promise<void> => {
     try {
       const code = req.query.code as string | undefined;
       if (!code) {
@@ -223,7 +222,7 @@ export class AuthController {
       url.searchParams.set('error', errorMessage);
       res.redirect(url.toString());
     }
-  };
+  });
 
   private setCookie(res: Response, token: string, maxAgeDays: number): void {
     res.cookie('auth_token', token, {

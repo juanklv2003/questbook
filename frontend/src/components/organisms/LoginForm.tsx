@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../atoms/Input';
 import { PasswordField } from '../atoms/PasswordField';
 import { Button } from '../atoms/Button';
+import { GoogleSignInButton } from '../atoms/GoogleSignInButton';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface LoginFormProps {
@@ -39,12 +40,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPasswor
   };
 
   const errorMessage = localError || authError;
-
-  const handleGoogleLogin = () => {
-    const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
-    const googleAuthUrl = `${baseUrl}/auth/google`;
-    window.location.href = googleAuthUrl;
-  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -128,29 +123,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPasswor
         {isLoading ? t("auth.loginLoading") : t("auth.loginCta")}
       </Button>
 
-      {/* Divider with lines and text */}
       {isLoading ? null : (
-        <div className="mt-0 flex items-center gap-0.5">
-          <div className="w-full border-t border-border/50" />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {t("auth.orContinueWith")}
-          </span>
-          <div className="w-full border-t border-border/50" />
-        </div>
-      )}
-
-      {/* Google Button */}
-      {isLoading ? null : (
-        <Button
-          variant="outline"
-          size="lg"
-          className="w-full flex items-center gap-2"
-          onClick={handleGoogleLogin}
-          disabled={isLoading}
-        >
-          <img src="https://www.google.com/favicon.ico" alt="Google" width="20" height="20" />
-          {t("auth.googleLogin")}
-        </Button>
+        <>
+          <div className="mt-0 flex items-center gap-0.5">
+            <div className="w-full border-t border-border/50" />
+            <span className="whitespace-nowrap text-xs text-muted-foreground">{t('auth.orContinueWith')}</span>
+            <div className="w-full border-t border-border/50" />
+          </div>
+          <GoogleSignInButton disabled={isLoading} />
+        </>
       )}
     </form>
   );

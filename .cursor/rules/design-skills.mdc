@@ -1,0 +1,14 @@
+---
+description: UI design taste — Emil Kowalski skills + Impeccable
+globs: "**/*.{tsx,jsx,vue,svelte,css,scss,html}"
+alwaysApply: false
+---
+
+# Design skills (this repo)
+
+For UI, motion, and frontend polish in this project:
+
+1. **Emil Kowalski** — Use project skills under `.cursor/skills/` (especially `emil-design-eng`, `animate`, `review-animations`, `animation-vocabulary`) when choosing easing, duration, press feedback, popovers, and micro-interactions.
+2. **Impeccable** — For broader UX/UI work (audit, polish, layout, typography, anti–AI-slop), follow `.cursor/skills/impeccable/SKILL.md`. Run `.cursor/skills/impeccable/scripts/impeccable.cmd context` once per session before substantive UI edits (Windows).
+
+Invoke explicitly with `/emil-design-eng`, `/impeccable`, or other skill names from `.cursor/skills/` when the user asks for design review or polish.

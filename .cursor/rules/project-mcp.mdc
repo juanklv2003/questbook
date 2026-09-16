@@ -1,0 +1,17 @@
+---
+description: MCP servers and agent tooling scoped to this repo
+alwaysApply: true
+---
+
+# Project MCP (`.cursor/mcp.json`)
+
+Use these MCP servers when they help the task:
+
+- **context7** — Resolve library IDs and fetch up-to-date docs before implementing unfamiliar APIs or setup steps. Prefer Context7 over guessing version-specific behavior.
+- **chrome-devtools** — Debug and inspect a real Chrome instance (console, network, performance). Prefer over Playwright when DevTools-level inspection is needed.
+- **playwright** — Browser automation via accessibility snapshots (E2E flows, form filling, screenshots). Prefer for scripted navigation and repeatable UI checks.
+- **engram** — Durable project memory across sessions. At session start, search/load relevant memories; after meaningful decisions or completed work, save concise memories.
+
+Context7 optional API key: set user env var `CONTEXT7_API_KEY` (from context7.com/dashboard) for higher limits.
+
+After editing `.cursor/mcp.json`, reload the Cursor window so MCP servers reconnect.
