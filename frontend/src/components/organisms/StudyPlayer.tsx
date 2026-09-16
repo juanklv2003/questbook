@@ -80,7 +80,7 @@ export function StudyPlayer({
   const showReview = reviewItems.length > 0 && typeof onSelectCard === "function";
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 pt-6 pb-24 sm:pb-28">
+    <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 pt-3 pb-10">
       <div className="flex flex-col gap-3 px-1 sm:px-2">
         <div className="w-full flex justify-between items-center">
           <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
@@ -123,7 +123,7 @@ export function StudyPlayer({
           </aside>
         )}
 
-        <div className="flex min-w-0 flex-col items-center gap-6">
+        <div className="flex min-w-0 flex-col items-center gap-4">
           <div className="w-full max-w-2xl flex justify-center">
             <Flashcard
               question={card.question}
@@ -134,7 +134,7 @@ export function StudyPlayer({
             />
           </div>
 
-          <div className="w-full max-w-2xl flex flex-col gap-6">
+          <div className="w-full max-w-2xl flex flex-col gap-4">
             {!evaluation ? (
               <div className="flex flex-col gap-4">
                 {((quotaExceeded ?? overloaded) && onAcknowledgeQuota) ? (
@@ -169,7 +169,7 @@ export function StudyPlayer({
                     }
                   }}
                   disabled={isEvaluating}
-                  className="text-base min-h-[120px] bg-card"
+                  className="text-base min-h-[96px] bg-card"
                 />
                 <Button
                   onClick={onSubmit}

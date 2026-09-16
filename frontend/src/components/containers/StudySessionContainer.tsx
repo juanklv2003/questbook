@@ -135,7 +135,7 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
   }));
 
   return (
-    <div className="relative w-full flex flex-col gap-4 pt-4 sm:pt-6">
+    <div className="relative w-full flex flex-col gap-2 pt-2 sm:pt-3">
       {(isOffline || sessionError) && !pendingResume && createPortal(
         <div
           role="status"
