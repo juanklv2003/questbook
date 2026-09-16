@@ -38,6 +38,9 @@ export const es = {
   "auth.loginError": "Error al iniciar sesión",
   "auth.registerError": "Error al registrarse",
   "auth.logoutError": "Error al cerrar sesión",
+  "auth.brandTagline": "Tu biblioteca de estudio con IA",
+  "auth.tabsLabel": "Acceso a tu cuenta",
+  "auth.passwordHint": "Mínimo 8 caracteres",
 
   "password.show": "Mostrar contraseña",
   "password.hide": "Ocultar contraseña",

@@ -40,6 +40,9 @@ export const en: { [K in keyof typeof es]: string } = {
   "auth.loginError": "Failed to log in",
   "auth.registerError": "Failed to sign up",
   "auth.logoutError": "Failed to log out",
+  "auth.brandTagline": "Your AI study library",
+  "auth.tabsLabel": "Account access",
+  "auth.passwordHint": "At least 8 characters",
 
   "password.show": "Show password",
   "password.hide": "Hide password",

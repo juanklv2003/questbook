@@ -13,6 +13,7 @@ import { AuthContainer } from './components/containers/AuthContainer'
 import { BrandBackground } from './components/atoms/BrandBackground'
 import { AmbientGlow } from './components/atoms/AmbientGlow'
 import { PatternLayer } from './components/atoms/PatternLayer'
+import { LanguageSwitch } from './components/atoms/LanguageSwitch'
 import { useThemeSettings } from './hooks/useThemeSettings'
 import { useLanguage } from './i18n/LanguageContext'
 
@@ -69,22 +70,25 @@ function App() {
   }
 
   if (!isAuthenticated) {
-    // Login: original beige library, always matte (bg-background = 36 39% 94%).
-    // No themed backgrounds (Brand/Mystic/Glow/Pattern) so the saved
-    // andel-theme / var(--brand) is ignored. The authenticated app below uses them.
+    // Pantalla de acceso: usa la misma decoración que el resto de la app
+    // (marca, resplandor y patrón persistido) para una entrada coherente.
     return (
-      <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 flex flex-col">
+      <div className="flex h-screen flex-col bg-background text-foreground font-sans selection:bg-primary/20">
+        <BrandBackground />
+        <AmbientGlow />
+        <PatternLayer pattern={pattern} />
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
-          <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-start px-4 sm:px-6">
+          <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <BrainCircuit className="h-4 w-4" aria-hidden="true" />
               </div>
               <span className="text-[15px] font-semibold tracking-tight">Andel</span>
             </div>
+            <LanguageSwitch />
           </div>
         </header>
-        <div className="relative z-10 flex flex-1 flex-col">
+        <div className="relative z-10 flex flex-1 flex-col overflow-y-auto">
           <AuthContainer />
         </div>
       </div>

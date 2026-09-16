@@ -3,10 +3,13 @@ import { Eye, EyeOff } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { useLanguage } from "../../i18n/LanguageContext"
 
-export type PasswordFieldProps = React.InputHTMLAttributes<HTMLInputElement>;
+export interface PasswordFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  /** Icono opcional (lucide) mostrado a la izquierda del campo. */
+  icon?: React.ReactNode;
+}
 
 export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldProps>(
-  ({ className, ...props }, ref) => {
+  ({ className, icon, ...props }, ref) => {
     const { t } = useLanguage();
     const [showPassword, setShowPassword] = React.useState(false)
 
@@ -16,10 +19,19 @@ export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldPro
 
     return (
       <div className="relative">
+        {icon && (
+          <span
+            className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          >
+            {icon}
+          </span>
+        )}
         <input
           type={showPassword ? "text" : "password"}
           className={cn(
-            "flex h-10 w-full rounded-md border border-input bg-background/50 backdrop-blur-sm px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all pr-10",
+            "flex h-10 w-full rounded-md border border-input bg-background/50 backdrop-blur-sm py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+            icon ? "pl-9 pr-10" : "px-3 pr-10",
             className
           )}
           ref={ref}
