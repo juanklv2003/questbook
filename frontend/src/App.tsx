@@ -70,8 +70,8 @@ function App() {
   }
 
   if (!isAuthenticated) {
-    // Pantalla de acceso: SIEMPRE la arena de la marca (el marrón clarito/beige
-    // de la web) y sin decoración de fondo (ni resplandor ni patrón).
+    // Pantalla de acceso: SIEMPRE el beige de marca (#D4C19F) y sin decoración
+    // de fondo (ni resplandor ni patrón).
     // `bg-auth-backdrop` es un token FIJO: no usa --brand a propósito, así la
     // entrada se ve igual para todos sin importar el tema elegido en Ajustes.
     return (
