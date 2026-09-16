@@ -34,6 +34,16 @@ services:
         sync: false
       - key: GEMINI_API_KEYS
         sync: false
+      - key: GEMINI_API_KEY2
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false
+      - key: PDF_MAX_TEXT_CHARS
+        sync: false
+      - key: AI_DECK_TIMEOUT_MS
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

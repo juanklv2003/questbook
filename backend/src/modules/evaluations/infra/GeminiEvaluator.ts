@@ -1,5 +1,6 @@
 import { IEvaluatorPort } from '../domain/IEvaluatorPort';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
+import { generateLlmText } from '../../../core/ai/generateLlmText';
 import { z } from 'zod';
 
 /**
@@ -57,12 +58,7 @@ IMPORTANTE: El campo 'feedback' debe escribirse SIEMPRE EN ESPAÑOL, nunca en in
 No incluyas bloques de markdown, saludos ni ningún otro texto. SOLO el objeto JSON.
     `;
 
-    const result = await this.gemini.withFailover((client) =>
-      client
-        .getGenerativeModel({ model: 'gemini-2.5-flash' })
-        .generateContent(prompt, { timeout: this.TIMEOUT_MS })
-    );
-    const responseText = result.response.text();
+    const responseText = await generateLlmText(this.gemini, prompt, this.TIMEOUT_MS);
     
     let jsonStr = responseText.trim();
     if (jsonStr.startsWith('\`\`\`json')) {

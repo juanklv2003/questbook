@@ -69,7 +69,10 @@ npx ts-node src/scripts/migratePasswordReset.ts   # tabla password_reset_tokens 
 | `TURNSTILE_SECRET_KEY` | Secret Key de Cloudflare Turnstile (https://dash.cloudflare.com/?to=/:account/turnstile). Sin esto el backend no arranca y el registro devuelve 400 |
 | `FRONTEND_URL` | origen exacto del frontend, **sin barra final** (ej. `https://andel.vercel.app`) |
 | `GEMINI_API_KEY` | clave de Gemini |
-| `GEMINI_API_KEYS` | opcional: claves extra separadas por comas (failover) |
+| `GEMINI_API_KEYS` | opcional: claves extra separadas por comas (failover, misma cuenta) |
+| `GEMINI_API_KEY2` | opcional: clave de otro proyecto/cuenta; se usa al final cuando las anteriores agotan cuota |
+| `GROQ_API_KEY` | opcional: respaldo Groq cuando Gemini agota todas las claves |
+| `GROQ_MODEL` | opcional; default `llama-3.3-70b-versatile` |
 | `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | credenciales de Cloudinary |
 
 3. Deployá y verificá:

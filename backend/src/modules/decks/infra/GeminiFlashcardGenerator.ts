@@ -1,5 +1,7 @@
 import { IFlashcardGeneratorPort, GenerateOptions } from '../domain/IFlashcardGeneratorPort';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
+import { generateLlmText } from '../../../core/ai/generateLlmText';
+import { env } from '../../../config/env';
 import { AppError } from '../../../core/errors/AppError';
 import { z } from 'zod';
 
@@ -13,13 +15,19 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
   private readonly gemini: GeminiFailover;
 
   // Las peticiones a Gemini con textos enormes pueden tardar minutos o colgarse.
-  // Limitamos el tamaño del prompt y el nº de tarjetas para mantener la app responsiva.
-  private readonly MAX_TEXT_CHARS = 40000;
+  // Limitamos el tamaño del prompt (PDF_MAX_TEXT_CHARS) y el timeout (AI_DECK_TIMEOUT_MS).
   private readonly DEFAULT_CARDS = 15;
-  private readonly TIMEOUT_MS = 60000;
 
   constructor() {
     this.gemini = new GeminiFailover();
+  }
+
+  private get maxTextChars(): number {
+    return env.PDF_MAX_TEXT_CHARS;
+  }
+
+  private get timeoutMs(): number {
+    return env.AI_DECK_TIMEOUT_MS;
   }
 
   async generateFromText(text: string, options?: GenerateOptions): Promise<Array<{ question: string; answer: string }>> {
@@ -29,8 +37,8 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     // Truncamos el texto si excede el límite para que la IA responda en tiempo razonable.
     let truncated = false;
     let promptText = text;
-    if (promptText.length > this.MAX_TEXT_CHARS) {
-      promptText = promptText.slice(0, this.MAX_TEXT_CHARS);
+    if (promptText.length > this.maxTextChars) {
+      promptText = promptText.slice(0, this.maxTextChars);
       truncated = true;
     }
 
@@ -121,8 +129,8 @@ Do NOT include markdown blocks, greetings, or any other text. ONLY the JSON arra
 
     const truncationNotice = truncated
       ? isSpanish
-        ? `\n\nNOTA: El documento original era demasiado largo y solo tienes los primeros ${this.MAX_TEXT_CHARS} caracteres. Genera las tarjetas basándote en esta parte.\n`
-        : `\n\nNOTE: The original document was too long and you only have the first ${this.MAX_TEXT_CHARS} characters. Generate flashcards based on this part.\n`
+        ? `\n\nNOTA: El documento original era demasiado largo y solo tienes los primeros ${this.maxTextChars} caracteres. Genera las tarjetas basándote en esta parte.\n`
+        : `\n\nNOTE: The original document was too long and you only have the first ${this.maxTextChars} characters. Generate flashcards based on this part.\n`
       : '';
 
     const prompt = `
@@ -147,12 +155,7 @@ ${promptText}${truncationNotice}
     // Attempt to generate content and parse JSON safely
     let responseText = '';
     try {
-      const result = await this.gemini.withFailover((client) =>
-        client
-          .getGenerativeModel({ model: 'gemini-2.5-flash' })
-          .generateContent(prompt, { timeout: this.TIMEOUT_MS })
-      );
-      responseText = result.response.text();
+      responseText = await generateLlmText(this.gemini, prompt, this.timeoutMs);
     } catch (apiErr) {
       console.error('Gemini API call failed:', apiErr);
       throw new AppError(

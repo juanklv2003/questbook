@@ -8,6 +8,22 @@ const envSchema = z.object({
   // Opcional: claves adicionales de Gemini separadas por comas para failover.
   // Ej.: GEMINI_API_KEYS=clave2,clave3
   GEMINI_API_KEYS: z.string().optional(),
+  // Opcional: clave de otra cuenta/proyecto Google (segundo cupo diario).
+  // Se usa al final, cuando GEMINI_API_KEY + GEMINI_API_KEYS agotan cuota (429).
+  GEMINI_API_KEY2: z.string().optional(),
+  // Opcional: respaldo Groq cuando Gemini agota cuota (https://console.groq.com/keys)
+  GROQ_API_KEY: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : undefined)),
+  GROQ_MODEL: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : undefined)),
+  // Máximo de caracteres del PDF enviados a la IA al generar tarjetas (default 500_000).
+  PDF_MAX_TEXT_CHARS: z.string().optional(),
+  // Timeout (ms) de la llamada IA al generar un mazo desde PDF (default 120_000).
+  AI_DECK_TIMEOUT_MS: z.string().optional(),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
   // Secreto de Cloudflare Turnstile para verificar el registro humano.
   // Se consigue en https://dash.cloudflare.com/?to=/:account/turnstile
@@ -63,19 +79,26 @@ if (!_env.success) {
 export const env = {
   ..._env.data,
   /**
-   * Lista de API keys de Gemini para failover.
-   * La primera es siempre GEMINI_API_KEY; las adicionales vienen de
-   * GEMINI_API_KEYS (separadas por comas). Se deduplican por si se repiten.
+   * Lista ordenada de API keys de Gemini para failover (429 / cuota).
+   * 1) GEMINI_API_KEY + GEMINI_API_KEYS (misma cuenta, deduplicadas)
+   * 2) GEMINI_API_KEY2 al final (otra cuenta/proyecto, si está definida)
    */
-  GEMINI_API_KEYS: [
-    ...new Set([
-      _env.data.GEMINI_API_KEY,
-      ...(_env.data.GEMINI_API_KEYS || '')
-        .split(',')
-        .map((k) => k.trim())
-        .filter(Boolean),
-    ]),
-  ],
+  GEMINI_API_KEYS: (() => {
+    const sameAccount = [
+      ...new Set([
+        _env.data.GEMINI_API_KEY,
+        ...(_env.data.GEMINI_API_KEYS || '')
+          .split(',')
+          .map((k) => k.trim())
+          .filter(Boolean),
+      ]),
+    ];
+    const secondAccount = _env.data.GEMINI_API_KEY2?.trim();
+    if (!secondAccount || sameAccount.includes(secondAccount)) {
+      return sameAccount;
+    }
+    return [...sameAccount, secondAccount];
+  })(),
   /**
    * SameSite efectivo de la cookie `auth_token`.
    *
@@ -88,4 +111,22 @@ export const env = {
   COOKIE_SAME_SITE:
     _env.data.COOKIE_SAME_SITE ??
     (_env.data.NODE_ENV === 'production' ? 'none' : 'lax'),
+  /** Modelo Groq para fallback (OpenAI-compatible chat/completions). */
+  GROQ_MODEL: _env.data.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+  /** Caracteres máximos del texto del PDF incluidos en el prompt de generación. */
+  PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 500_000, 5_000, 500_000),
+  /** Tiempo máximo de espera (ms) al generar tarjetas desde un PDF. */
+  AI_DECK_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TIMEOUT_MS, 120_000, 15_000, 300_000),
 };
+
+function clampInt(
+  raw: string | undefined,
+  defaultValue: number,
+  min: number,
+  max: number
+): number {
+  if (raw === undefined || raw.trim() === '') return defaultValue;
+  const n = Number.parseInt(raw.trim(), 10);
+  if (!Number.isFinite(n)) return defaultValue;
+  return Math.min(max, Math.max(min, n));
+}

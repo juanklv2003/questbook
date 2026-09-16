@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env';
+import { isGroqConfigured } from './core/ai/GroqClient';
 import { errorHandler } from './core/middlewares/errorHandler';
 
 const app = express();
@@ -43,6 +44,10 @@ app.get('/api/v1/health', (_req, res) => {
     status: 'ok',
     auth: {
       googleOAuth: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+    },
+    ai: {
+      groqFallback: isGroqConfigured(),
+      groqModel: isGroqConfigured() ? env.GROQ_MODEL : undefined,
     },
   });
 });
