@@ -17,10 +17,13 @@ type AuthView = 'login' | 'register';
  * con su propio color de texto: sobre un fondo plano el glass ya no aportaba
  * nada y su opacidad bajaba el contraste de inputs y labels.
  *
- * `min-h-full` (no `min-h-screen`) deja que el contenedor de scroll de App
- * centre en pantallas altas y permita scroll en las bajas: el registro (3
- * campos + hint) ya no se corta en un móvil de 640px de alto.
-  */
+  * `min-h-full` (no `min-h-screen`) deja que el contenedor de scroll de App
+  * centre en pantallas altas y permita scroll en las bajas: el registro (3
+  * campos + hint) ya no se corta en un móvil de 640px de alto.
+  *
+  * Layout en dos columnas desde `md`: marca en grande a la izquierda,
+  * tarjeta de acceso a la derecha. En móvil se apila (marca compacta arriba).
+   */
  export const AuthContainer: React.FC = () => {
   const { t } = useLanguage();
   const [view, setView] = useState<AuthView>('login');
@@ -34,24 +37,24 @@ type AuthView = 'login' | 'register';
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 sm:py-10">
-      <div className="w-full max-w-md">
-        {/* Marca: el libro mágico de QuestBook. */}
-        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+      <div className="flex w-full max-w-4xl flex-col items-center gap-8 md:flex-row md:gap-12">
+        {/* Marca a la izquierda, en grande. */}
+        <div className="flex flex-col items-center gap-4 text-center md:w-1/2">
           <img
             src={magicBook}
             alt=""
             aria-hidden="true"
-            className="h-14 w-14 object-cover"
+            className="h-24 w-24 object-cover md:h-56 md:w-56"
           />
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">QuestBook</h1>
-            <p className="text-sm text-muted-foreground">{t('auth.brandTagline')}</p>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">QuestBook</h1>
+            <p className="text-sm text-muted-foreground md:text-base">{t('auth.brandTagline')}</p>
           </div>
         </div>
 
-        {/* Tarjeta de acceso: superficie sólida sobre el arena, para máximo
+        {/* Tarjeta de acceso a la derecha: superficie sólida sobre el arena, para máximo
             contraste de inputs, labels y del CTA marrón. */}
-        <div className="overflow-hidden rounded-2xl border bg-card text-foreground shadow-xl shadow-black/10">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border bg-card text-foreground shadow-xl shadow-black/10 md:w-1/2">
           <div
             role="tablist"
             aria-label={t('auth.tabsLabel')}
