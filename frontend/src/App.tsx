@@ -27,7 +27,7 @@ function App() {
   // view — library or study session — without unmounting what is underneath.
   // Opening Settings from inside a book no longer kills the session.
   const [panelRoute, setPanelRoute] = React.useState<TopbarRoute | null>(null);
-  const { isAuthenticated, isLoading, logout, user } = useAuth();
+  const { isAuthenticated, isInitializing, logout, user } = useAuth();
   // Global library state (one GET /decks per session, see DeckContext).
   // Single access path: this guard consumes the store via useDecks only.
   const { refetch: refetchDecks } = useDecks();
@@ -61,7 +61,11 @@ function App() {
     setPanelRoute((prev) => (prev === route ? null : route));
   }, []);
 
-  if (isLoading) {
+  // Solo el chequeo inicial de sesión usa pantalla completa: los loadings de
+  // los forms (login/registro/recupero) usan `isLoading` y NO deben desmontar
+  // la vista (antes, enviar el form de recupero volvía al login porque el
+  // AuthContainer se remontaba y perdía su estado local).
+  if (isInitializing) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground animate-pulse">{t("app.loading")}</p>

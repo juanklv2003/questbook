@@ -14,6 +14,9 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** True solo durante el chequeo inicial de sesión. App lo usa para la
+      pantalla de carga; los forms usan `isLoading` (que NO desmonta nada). */
+  isInitializing: boolean;
   error: string | null;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
@@ -29,7 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const checkAuth = async () => {
@@ -60,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    checkAuth();
+    checkAuth().finally(() => setIsInitializing(false));
 
     // Any authenticated request answering 401 (invalid/expired session)
     // clears the auth state so the app returns to login automatically.
@@ -228,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, error, login, register, requestPasswordReset, resetPassword, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, isInitializing, error, login, register, requestPasswordReset, resetPassword, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );
