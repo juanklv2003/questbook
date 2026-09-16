@@ -70,13 +70,12 @@ function App() {
   }
 
   if (!isAuthenticated) {
-    // Pantalla de acceso: usa la misma decoración que el resto de la app
-    // (marca, resplandor y patrón persistido) para una entrada coherente.
+    // Pantalla de acceso: SIEMPRE la arena de la marca (el marrón clarito/beige
+    // de la web) y sin decoración de fondo (ni resplandor ni patrón).
+    // `bg-auth-backdrop` es un token FIJO: no usa --brand a propósito, así la
+    // entrada se ve igual para todos sin importar el tema elegido en Ajustes.
     return (
-      <div className="flex h-screen flex-col bg-background text-foreground font-sans selection:bg-primary/20">
-        <BrandBackground />
-        <AmbientGlow />
-        <PatternLayer pattern={pattern} />
+      <div className="flex h-screen flex-col bg-auth-backdrop font-sans selection:bg-primary/20">
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
           <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-2.5">

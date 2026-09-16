@@ -12,10 +12,14 @@ type AuthView = 'login' | 'register';
 /**
  * Entrada a la app: marca + tarjeta de acceso que conmuta Login/Registro.
  *
- * El fondo (marca, resplandor y patrón) y el header viven en App; acá solo se
- * compone la tarjeta. `min-h-full` (no `min-h-screen`) deja que el contenedor
- * de scroll de App centre en pantallas altas y permita scroll en las bajas:
- * el registro (3 campos + hint) ya no se corta en un móvil de 640px de alto.
+ * El fondo (arena fijo, sin decoración de fondo) y el header viven en App; acá
+ * solo se compone la tarjeta. La tarjeta es una superficie sólida (`bg-card`)
+ * con su propio color de texto: sobre un fondo plano el glass ya no aportaba
+ * nada y su opacidad bajaba el contraste de inputs y labels.
+ *
+ * `min-h-full` (no `min-h-screen`) deja que el contenedor de scroll de App
+ * centre en pantallas altas y permita scroll en las bajas: el registro (3
+ * campos + hint) ya no se corta en un móvil de 640px de alto.
  */
 export const AuthContainer: React.FC = () => {
   const { t } = useLanguage();
@@ -31,7 +35,8 @@ export const AuthContainer: React.FC = () => {
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 sm:py-10">
       <div className="w-full max-w-md">
-        {/* Marca: mismo símbolo y color que la topbar de la app. */}
+        {/* Marca: mismo símbolo y color que la topbar de la app (marrón + crema),
+            que lee bien sobre el fondo arena. */}
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
             <BrainCircuit className="h-7 w-7" aria-hidden="true" />
@@ -42,8 +47,9 @@ export const AuthContainer: React.FC = () => {
           </div>
         </div>
 
-        {/* Tarjeta de acceso: glass sobre el fondo de marca. */}
-        <div className="overflow-hidden rounded-2xl border bg-card/85 shadow-xl shadow-black/5 backdrop-blur-xl">
+        {/* Tarjeta de acceso: superficie sólida sobre el arena, para máximo
+            contraste de inputs, labels y del CTA marrón. */}
+        <div className="overflow-hidden rounded-2xl border bg-card text-foreground shadow-xl shadow-black/10">
           <div
             role="tablist"
             aria-label={t('auth.tabsLabel')}

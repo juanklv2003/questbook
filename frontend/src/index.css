@@ -29,6 +29,11 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  /* Fondo de la pantalla de acceso: arena fija (mismo valor que el preset
+     "arena" de lib/theme.ts). No sigue el tema elegido en Ajustes a propósito:
+     la entrada se ve igual para todos. */
+  --color-auth-backdrop: #d9c6a5;
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
