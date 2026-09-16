@@ -76,7 +76,9 @@ function App() {
     // entrada se ve igual para todos sin importar el tema elegido en Ajustes.
     return (
       <div className="flex h-screen flex-col bg-auth-backdrop font-sans selection:bg-primary/20">
-        <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
+        {/* Mismo color que el fondo (sin border-b ni blur): la barra queda
+            integrada al beige en vez de leerse como una franja aparte. */}
+        <header className="sticky top-0 z-50 w-full bg-auth-backdrop">
           <div className="container mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
