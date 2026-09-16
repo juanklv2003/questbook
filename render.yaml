@@ -1,0 +1,40 @@
+# Render Blueprint — API de Andel (Express + TypeScript).
+#
+# Crear en Render → New → Blueprint → elegir este repo. Los valores marcados con
+# `sync: false` se cargan a mano en el dashboard (secretos: no van al repo).
+#
+# OJO con las cookies: con el frontend en Vercel/Netlify (otro dominio), el
+# backend debe emitir la cookie con SameSite=None + Secure, o el login no
+# persiste sesión. Ver docs/DEPLOYMENT.md.
+services:
+  - type: web
+    name: andel-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # none → frontend y backend en dominios distintos (Vercel/Netlify + Render).
+      # Si usás subdominios del mismo dominio (app.x.com + api.x.com), poné lax.
+      - key: COOKIE_SAME_SITE
+        value: none
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEYS
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false

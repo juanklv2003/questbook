@@ -7,6 +7,7 @@ import { GetCurrentUserUseCase } from '../useCases/GetCurrentUserUseCase';
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
+import { env } from '../../../config/env';
 
 // Email: se normaliza a minúsculas con trim antes de validar el formato, de
 // modo que tanto el registro como el login comparen siempre el mismo valor
@@ -64,8 +65,8 @@ export class AuthController {
     await this.logoutUseCase.execute();
     res.clearCookie('auth_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.COOKIE_SAME_SITE,
       path: '/',
     });
     res.status(200).json({ message: 'Logged out successfully' });
@@ -84,8 +85,10 @@ export class AuthController {
   private setCookie(res: Response, token: string, maxAgeDays: number): void {
     res.cookie('auth_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      // `secure` es obligatorio con SameSite=None: sobre HTTP el navegador
+      // descarta la cookie. Render/Railway/Vercel sirven HTTPS siempre.
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.COOKIE_SAME_SITE,
       maxAge: maxAgeDays * 24 * 60 * 60 * 1000,
       path: '/',
     });

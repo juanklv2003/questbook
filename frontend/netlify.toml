@@ -1,0 +1,10 @@
+# Netlify: configurá "Base directory" = frontend al crear el sitio.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA: cualquier ruta desconocida sirve index.html (evita 404 al recargar).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
