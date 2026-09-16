@@ -15,13 +15,13 @@ export function EvaluationResult({ score, feedback, isCorrect }: EvaluationResul
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`p-6 rounded-xl border bg-card text-card-foreground shadow-md flex flex-col gap-4 ${
+      className={`p-4 sm:p-6 rounded-xl border bg-card text-card-foreground shadow-md flex flex-col gap-4 ${
         isCorrect
           ? "border-emerald-500/30"
           : "border-destructive/30"
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex min-w-0 items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {isCorrect ? (
             <CheckCircle2 className="w-6 h-6 text-emerald-500" />
@@ -35,7 +35,7 @@ export function EvaluationResult({ score, feedback, isCorrect }: EvaluationResul
           label={isCorrect ? t("eval.correct") : t("eval.needsReview")} 
         />
       </div>
-      <p className="text-card-foreground/90 leading-relaxed text-sm">
+      <p className="min-w-0 text-card-foreground/90 leading-relaxed text-sm break-words">
         {feedback}
       </p>
     </motion.div>

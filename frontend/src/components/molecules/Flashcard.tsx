@@ -60,7 +60,7 @@ export function Flashcard({ question, answer, isFlipped, onFlip, status = "pendi
       aria-label={t("card.ariaLabel", { question })}
       onClick={onFlip}
       onKeyDown={handleKeyDown}
-      className="w-full max-w-2xl min-h-[260px] sm:aspect-[3/2] sm:min-h-0 perspective-1000 cursor-pointer select-none rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="w-full max-w-2xl min-w-0 min-h-[260px] sm:aspect-[3/2] sm:min-h-0 perspective-1000 cursor-pointer select-none rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <motion.div
         className="w-full h-full min-h-[inherit] sm:min-h-0 sm:h-full relative transform-style-3d"
@@ -70,15 +70,15 @@ export function Flashcard({ question, answer, isFlipped, onFlip, status = "pendi
         {/* Front — pregunta */}
         <div className={cn(faceBase, styles.frame)}>
           <div aria-hidden="true" className={cn("h-1 w-full shrink-0", styles.strip)} />
-          <div className="flex items-center justify-between gap-3 px-5 pt-4 sm:px-8 sm:pt-5">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("card.question")}
+          <div className="flex min-w-0 items-center justify-between gap-3 px-5 pt-4 sm:px-8 sm:pt-5">
+            <p className="flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">{t("card.question")}</span>
             </p>
-            <Badge color={styles.badgeColor} label={t(styles.badgeKey)} />
+            <Badge color={styles.badgeColor} label={t(styles.badgeKey)} className="shrink-0" />
           </div>
-          <div className="flex flex-1 items-center justify-center px-5 py-4 sm:px-8">
-            <h3 className="text-center text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
+          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto px-5 py-4 sm:px-8">
+            <h3 className="min-w-0 text-center text-lg font-semibold leading-snug tracking-tight text-foreground break-words sm:text-2xl">
               {question}
             </h3>
           </div>
@@ -94,25 +94,25 @@ export function Flashcard({ question, answer, isFlipped, onFlip, status = "pendi
           style={{ transform: "rotateX(180deg)" }}
         >
           <div aria-hidden="true" className={cn("h-1 w-full shrink-0", styles.strip)} />
-          <div className="flex items-center justify-between gap-3 px-5 pt-4 sm:px-8 sm:pt-5">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("card.answer")}
+          <div className="flex min-w-0 items-center justify-between gap-3 px-5 pt-4 sm:px-8 sm:pt-5">
+            <p className="flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <Lightbulb className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">{t("card.answer")}</span>
             </p>
             {status === "correct" ? (
-              <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                 {t("card.correct")}
               </span>
             ) : status === "incorrect" ? (
-              <span className="flex items-center gap-1 text-xs font-semibold text-destructive">
+              <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-destructive">
                 <XCircle className="h-4 w-4" aria-hidden="true" />
                 {t("card.incorrect")}
               </span>
             ) : null}
           </div>
-          <div className="flex flex-1 items-center justify-center overflow-y-auto px-5 py-4 sm:px-8">
-            <p className="w-full text-center text-base leading-relaxed text-card-foreground sm:text-xl">
+          <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-5 py-4 sm:px-8">
+            <p className="w-full min-w-0 text-center text-base leading-relaxed text-card-foreground break-words sm:text-xl">
               {answer || t("card.noAnswer")}
             </p>
           </div>

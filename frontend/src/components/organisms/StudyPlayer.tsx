@@ -82,11 +82,11 @@ export function StudyPlayer({
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 pt-3 pb-10">
       <div className="flex flex-col gap-3 px-1 sm:px-2">
-        <div className="w-full flex justify-between items-center">
-          <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
+        <div className="w-full flex justify-between items-center gap-2">
+          <span className="min-w-0 truncate text-sm font-medium text-muted-foreground uppercase tracking-widest">
             {t("study.sessionTitle")}
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex shrink-0 items-center gap-1">
             <span className="text-sm font-medium tabular-nums bg-secondary text-secondary-foreground px-3 py-1 rounded-full">
               {progress} / {total}
             </span>            {onRestart && (
@@ -97,7 +97,7 @@ export function StudyPlayer({
                 onClick={onRestart}
                 aria-label={t("study.restart")}
                 title={t("study.restart")}
-                className="h-8 w-8 text-muted-foreground"
+                className="h-9 w-9 shrink-0 text-muted-foreground"
               >
                 <RotateCcw className="h-4 w-4" aria-hidden="true" />
               </Button>
@@ -118,12 +118,12 @@ export function StudyPlayer({
 
       <div className={`grid w-full gap-6 ${showReview ? "lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start" : ""}`}>
         {showReview && (
-          <aside className="rounded-xl border bg-card text-card-foreground p-4 shadow-sm lg:sticky lg:top-20">
+          <aside className="order-2 min-w-0 rounded-xl border bg-card text-card-foreground p-4 shadow-sm lg:order-1 lg:sticky lg:top-20">
             <StudyReviewList items={reviewItems} activeIndex={activeIndex} onSelect={onSelectCard!} />
           </aside>
         )}
 
-        <div className="flex min-w-0 flex-col items-center gap-4">
+        <div className="order-1 flex min-w-0 flex-col items-center gap-4 lg:order-2">
           <div className="w-full max-w-2xl flex justify-center">
             <Flashcard
               question={card.question}
