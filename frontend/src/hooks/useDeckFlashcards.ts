@@ -12,17 +12,28 @@ export function useDeckFlashcards(deckId: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!deckId) return;
+    if (!deckId) {
+      setFlashcards([]);
+      setDeck(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const requestDeckId = deckId;
 
     const fetchFlashcards = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        
-        const response = await apiClient.get(`/decks/${deckId}/flashcards`);
+
+        const response = await apiClient.get(`/decks/${requestDeckId}/flashcards`);
+        if (cancelled) return;
         setFlashcards(response.data.flashcards);
         setDeck(response.data.deck);
       } catch (err: unknown) {
+        if (cancelled) return;
         const errorMessage =
           err instanceof Error
             ? err.message
@@ -31,11 +42,17 @@ export function useDeckFlashcards(deckId: string | null) {
             : 'An unknown error occurred';
         setError(errorMessage || t('deck.flashError'));
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
-    fetchFlashcards();
+    void fetchFlashcards();
+
+    return () => {
+      cancelled = true;
+    };
     // NOTE: `t` intentionally excluded — refetching on locale toggle would
     // flash the study loading state (and new array identity could reset the
     // session hook). The fallback is translated at fetch time.

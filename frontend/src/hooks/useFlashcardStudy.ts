@@ -23,6 +23,7 @@ export interface PendingResume {
 }
 
 const PATCH_DEBOUNCE_MS = 600;
+const LOCAL_WRITE_DEBOUNCE_MS = 300;
 
 const storageKey = (deckId: string) => `andel:study:${deckId}`;
 
@@ -143,6 +144,8 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
   const remoteCache = useRef<RemoteSnapshot | null>(null);
   const remoteChecked = useRef(false);
   const patchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localWriteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingLocalSnapshot = useRef<SavedStudyProgress | null>(null);
 
   const { evaluateAnswer, isEvaluating, error: evaluationError, quotaExceeded, overloaded, clearError } = useEvaluator();
 
@@ -263,13 +266,20 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
       return;
     }
 
-    writeLocal(deckId, {
+    const snapshot: SavedStudyProgress = {
       currentIndex: finished ? tarjetas.length : currentIndex,
       resultsById,
       updatedAt: Date.now(),
       hash,
       finished,
-    });
+    };
+
+    if (localWriteTimer.current) clearTimeout(localWriteTimer.current);
+    pendingLocalSnapshot.current = snapshot;
+    localWriteTimer.current = setTimeout(() => {
+      writeLocal(deckId, snapshot);
+      pendingLocalSnapshot.current = null;
+    }, LOCAL_WRITE_DEBOUNCE_MS);
 
     if (patchTimer.current) clearTimeout(patchTimer.current);
     patchTimer.current = setTimeout(() => {
@@ -305,6 +315,15 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
 
     return () => {
       if (patchTimer.current) clearTimeout(patchTimer.current);
+      if (localWriteTimer.current) {
+        clearTimeout(localWriteTimer.current);
+        localWriteTimer.current = null;
+        const pending = pendingLocalSnapshot.current;
+        if (pending) {
+          writeLocal(deckId, pending);
+          pendingLocalSnapshot.current = null;
+        }
+      }
     };
   }, [deckId, currentIndex, resultsById, tarjetas, resumeResolved]);
 
@@ -335,23 +354,30 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
   // resultsById is keyed by card id, so it needs no remap on reorder —
   // restart simply drops it along with the index and the input state.
   const restart = useCallback(async ({ reshuffle }: { reshuffle: boolean }) => {
+    if (patchTimer.current) clearTimeout(patchTimer.current);
+    if (localWriteTimer.current) clearTimeout(localWriteTimer.current);
+    pendingLocalSnapshot.current = null;
+
     if (deckId) {
       clearLocal(deckId);
-      try {
-        await apiClient.delete(`/decks/${deckId}/session`);
-      } catch {
-        // 404 (no row) or offline: local state still resets.
-      }
+      remoteCache.current = null;
     }
-    if (patchTimer.current) clearTimeout(patchTimer.current);
     setSavedSnapshot(null);
+    setResumeResolved(true);
     setCurrentIndex(0);
     setResultsById({});
     setRespuestaUsuario('');
     setFeedbackIA(null);
     clearError();
     setOrder(reshuffle ? shuffled(tarjetas.map((t) => t.id)) : null);
-    setResumeResolved(true);
+
+    if (deckId) {
+      try {
+        await apiClient.delete(`/decks/${deckId}/session`);
+      } catch {
+        // 404 (no row) or offline: local state already reset.
+      }
+    }
   }, [deckId, clearError, tarjetas]);
 
   // Legacy entry point: plain restart without reshuffling.
