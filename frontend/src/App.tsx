@@ -104,7 +104,7 @@ function App() {
     // `bg-auth-backdrop` es un token FIJO: no usa --brand a propósito, así la
     // entrada se ve igual para todos sin importar el tema elegido en Ajustes.
     return (
-      <div className="flex h-screen flex-col bg-auth-backdrop font-sans selection:bg-primary/20">
+      <div className="flex min-h-dvh flex-col bg-auth-backdrop font-sans selection:bg-primary/20">
         {/* Mismo color que el fondo (sin border-b ni blur): la barra queda
             integrada al beige en vez de leerse como una franja aparte. */}
         <header className="sticky top-0 z-50 w-full bg-auth-backdrop">
@@ -121,7 +121,7 @@ function App() {
             <LanguageSwitch />
           </div>
         </header>
-        <div className="relative z-10 flex flex-1 flex-col overflow-y-auto">
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
           <React.Suspense
             fallback={
               <p className="text-muted-foreground animate-pulse text-center py-12">{t('app.loading')}</p>

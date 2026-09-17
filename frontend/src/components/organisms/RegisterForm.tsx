@@ -71,10 +71,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   const canSubmit = !isLoading && Boolean(TURNSTILE_SITE_KEY) && Boolean(turnstileToken);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="space-y-1.5 text-center">
-        <h2 className="text-xl font-semibold tracking-tight">{t("auth.registerTitle")}</h2>
-        <p className="text-sm text-muted-foreground">{t("auth.registerSubtitle")}</p>
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+      <div className="space-y-1 text-center sm:space-y-1.5">
+        <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("auth.registerTitle")}</h2>
+        <p className="text-xs text-muted-foreground sm:text-sm">{t("auth.registerSubtitle")}</p>
       </div>
 
       {errorMessage && (
@@ -87,7 +87,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <div className="space-y-2">
           <label htmlFor="register-email" className="text-sm font-medium leading-none">
             {t("auth.email")}
@@ -165,7 +165,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         </div>
       )}
 
-      <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
+      <Button type="submit" size="default" className="w-full sm:h-11 sm:px-8 sm:text-base" disabled={!canSubmit}>
         {isLoading ? t("auth.registerLoading") : t("auth.registerCta")}
       </Button>
 

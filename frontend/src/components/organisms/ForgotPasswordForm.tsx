@@ -90,7 +90,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
 
   if (success) {
     return (
-      <div className="space-y-5 text-center">
+      <div className="space-y-4 text-center sm:space-y-5">
         <div
           role="status"
           className="flex items-start gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2.5 text-left text-sm"
@@ -98,7 +98,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
           <span className="min-w-0 break-words text-foreground">{t('auth.resetSuccess')}</span>
         </div>
-        <Button type="button" size="lg" className="w-full" onClick={onBackToLogin}>
+        <Button type="button" size="default" className="w-full sm:h-11 sm:px-8 sm:text-base" onClick={onBackToLogin}>
           {t('auth.signIn')}
         </Button>
       </div>
@@ -108,10 +108,10 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
   // Paso 2: el backend ya entregó el token de un solo uso.
   if (resetToken) {
     return (
-      <form onSubmit={handleReset} className="space-y-5">
-        <div className="space-y-1.5 text-center">
-          <h2 className="text-xl font-semibold tracking-tight">{t('auth.resetTitle')}</h2>
-          <p className="text-sm text-muted-foreground">{t('auth.resetSubtitle')}</p>
+      <form onSubmit={handleReset} className="space-y-4 sm:space-y-5">
+        <div className="space-y-1 text-center sm:space-y-1.5">
+          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t('auth.resetTitle')}</h2>
+          <p className="text-xs text-muted-foreground sm:text-sm">{t('auth.resetSubtitle')}</p>
         </div>
 
         {errorMessage && (
@@ -124,7 +124,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="space-y-2">
             <label htmlFor="reset-new-password" className="text-sm font-medium leading-none">
               {t('auth.newPassword')}
@@ -159,7 +159,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
           </div>
         </div>
 
-        <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+        <Button type="submit" size="default" className="w-full sm:h-11 sm:px-8 sm:text-base" disabled={isLoading}>
           {isLoading ? t('auth.resetLoading') : t('auth.resetCta')}
         </Button>
       </form>
@@ -170,10 +170,10 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
   const canSubmit = !isLoading && Boolean(TURNSTILE_SITE_KEY) && Boolean(turnstileToken);
 
   return (
-    <form onSubmit={handleRequest} className="space-y-5">
-      <div className="space-y-1.5 text-center">
-        <h2 className="text-xl font-semibold tracking-tight">{t('auth.forgotTitle')}</h2>
-        <p className="text-sm text-muted-foreground">{t('auth.forgotSubtitle')}</p>
+    <form onSubmit={handleRequest} className="space-y-4 sm:space-y-5">
+      <div className="space-y-1 text-center sm:space-y-1.5">
+        <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t('auth.forgotTitle')}</h2>
+        <p className="text-xs text-muted-foreground sm:text-sm">{t('auth.forgotSubtitle')}</p>
       </div>
 
       {errorMessage && (
@@ -229,7 +229,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
         </div>
       )}
 
-      <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
+      <Button type="submit" size="default" className="w-full sm:h-11 sm:px-8 sm:text-base" disabled={!canSubmit}>
         {isLoading ? t('auth.forgotLoading') : t('auth.forgotCta')}
       </Button>
 

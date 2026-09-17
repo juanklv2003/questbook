@@ -41,29 +41,28 @@ type AuthView = 'login' | 'register' | 'forgot';
   const activeTab: Exclude<AuthView, 'forgot'> = view === 'forgot' ? 'login' : view;
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 sm:py-10">
-      <div className="flex w-full max-w-4xl flex-col items-center gap-8 md:flex-row md:gap-12">
-        {/* Marca a la izquierda, en grande. */}
-        <div className="flex flex-col items-center gap-4 text-center md:w-1/2">
+    <div className="flex w-full min-h-0 flex-col items-center justify-start px-3 py-4 sm:px-4 sm:py-8 md:min-h-full md:justify-center md:py-10">
+      <div className="flex w-full max-w-4xl flex-col items-center gap-4 md:flex-row md:gap-12">
+        {/* Marca grande solo en tablet/escritorio (en móvil ya está en el header). */}
+        <div className="hidden flex-col items-center gap-4 text-center md:flex md:w-1/2">
           <img
             src={magicBook}
             alt=""
             aria-hidden="true"
-            className="h-24 w-24 object-cover md:h-56 md:w-56"
+            className="h-56 w-56 object-cover"
           />
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">QuestBook</h1>
-            <p className="text-sm text-muted-foreground md:text-base">{t('auth.brandTagline')}</p>
+            <h1 className="text-4xl font-bold tracking-tight">QuestBook</h1>
+            <p className="text-base text-muted-foreground">{t('auth.brandTagline')}</p>
           </div>
         </div>
 
-        {/* Tarjeta de acceso a la derecha: superficie sólida sobre el arena, para máximo
-            contraste de inputs, labels y del CTA marrón. */}
-        <div className="w-full max-w-md overflow-hidden rounded-2xl border bg-card text-foreground shadow-xl shadow-black/10 md:w-1/2">
+        {/* Tarjeta: en móvil altura acotada + scroll interno para teclado / Turnstile / Google */}
+        <div className="flex w-full max-w-md max-h-[calc(100dvh-5.25rem-env(safe-area-inset-bottom,0px))] flex-col overflow-hidden rounded-2xl border bg-card text-foreground shadow-xl shadow-black/10 md:max-h-none md:w-1/2">
           <div
             role="tablist"
             aria-label={t('auth.tabsLabel')}
-            className="grid grid-cols-2 gap-1 border-b bg-secondary/40 p-1.5"
+            className="grid shrink-0 grid-cols-2 gap-1 border-b bg-secondary/40 p-1.5"
           >
             {tabs.map((tab) => {
               const active = activeTab === tab.id;
@@ -98,7 +97,7 @@ type AuthView = 'login' | 'register' | 'forgot';
             initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="p-6 sm:p-7"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 sm:p-6 md:p-7 [-webkit-overflow-scrolling:touch]"
           >
             {view === 'forgot' ? (
               <ForgotPasswordForm onBackToLogin={() => setView('login')} />
