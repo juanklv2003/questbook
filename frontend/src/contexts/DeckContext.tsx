@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import apiClient from '../lib/axios';
+import { getApiErrorMessage } from '../lib/apiErrorMessage';
 import { useAuth } from './AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import { DeckContext } from './deck-context';
 import type { Deck } from '../types';
-
-interface ApiErrorLike {
-  response?: { data?: { error?: unknown } };
-  message?: string;
-}
 
 /**
  * Global library state: ONE GET /decks per session, shared by the dashboard
@@ -16,6 +13,7 @@ interface ApiErrorLike {
  */
 export function DeckProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,19 +28,6 @@ export function DeckProvider({ children }: { children: React.ReactNode }) {
     authRef.current = isAuthenticated;
   }, [isAuthenticated]);
 
-  const applyError = (err: unknown) => {
-    const apiError = err as ApiErrorLike;
-    const serverMessage = apiError.response?.data?.error;
-    setError(
-      (typeof serverMessage === 'string' && serverMessage) ||
-        (err instanceof Error ? err.message : null) ||
-        'Error al cargar libros'
-    );
-  };
-
-  // No session (login screen): nothing to fetch.
-  // Stable identity (useCallback) so consumers can depend on `refetch`
-  // without re-firing their effects on every render.
   const fetchDecks = useCallback(async () => {
     if (!isAuthenticated) return;
     if (inFlightRef.current) return;
@@ -55,14 +40,14 @@ export function DeckProvider({ children }: { children: React.ReactNode }) {
       setError(null);
     } catch (err: unknown) {
       if (!authRef.current) return;
-      applyError(err);
+      setError(getApiErrorMessage(err, t, 'deckLoad'));
     } finally {
       inFlightRef.current = false;
       if (authRef.current) setIsLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, t]);
 
-  // Initial fetch + automatic re-fetch on login. Fetch results settle in
+  // Initial fetch + automatic re-fetch on login.
   // async continuations (never sync in the effect body) — avoids cascading
   // renders. The sole sync write is the logout clear below, which the spec
   // requires to be immediate. Logout clears the cache so the next account

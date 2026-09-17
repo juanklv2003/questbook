@@ -38,6 +38,11 @@ export const en: { [K in keyof typeof es]: string } = {
   "auth.requiredRegister": "All fields are required",
   "auth.passwordMismatch": "Passwords do not match",
   "auth.loginError": "Failed to log in",
+  "auth.invalidCredentials": "Incorrect email or password. Check your details and try again.",
+  "auth.emailTaken": "An account with this email already exists. Try logging in instead.",
+  "auth.emailNotFound": "There is no account with that email.",
+  "auth.oauthFailed": "Could not sign in with Google. Please try again.",
+  "auth.turnstileFailed": "Human verification failed or expired. Complete it and try again.",
   "auth.registerError": "Failed to sign up",
   "auth.logoutError": "Failed to log out",
   "auth.brandTagline": "Your AI study library",
@@ -252,5 +257,19 @@ export const en: { [K in keyof typeof es]: string } = {
   "pattern.paws": "Paws",
 
   "auth.googleLogin": "Continue with Google",
-  "auth.orContinueWith": "Or continue with"
+  "auth.orContinueWith": "Or continue with",
+
+  "errors.network":
+    "We could not reach the server. Check your connection, wait a few seconds if the service was waking up, and try again.",
+  "errors.server": "Something went wrong on the server. Please try again in a few minutes.",
+  "errors.serverBusy": "The service is busy or still starting. Wait a moment and try again.",
+  "errors.timeout": "This took too long. Please try again.",
+  "errors.generic": "Something went wrong. Please try again.",
+  "errors.forbidden": "You do not have permission to do that.",
+  "errors.rateLimitAuth": "Too many attempts in a row. Wait a few minutes and try again.",
+  "errors.rateLimitGenerate": "You created too many books in a short time. Wait before uploading another PDF.",
+  "errors.rateLimitEvaluate": "You evaluated too many answers in a row. Take a short break and try again.",
+  "errors.rateLimitGeneric": "Too many actions in a short time. Wait a moment and try again.",
+
+  "deck.loadError": "Could not load your library. Try refreshing the page.",
 };

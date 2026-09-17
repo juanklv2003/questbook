@@ -36,6 +36,11 @@ export const es = {
   "auth.requiredRegister": "Todos los campos son requeridos",
   "auth.passwordMismatch": "Las contraseñas no coinciden",
   "auth.loginError": "Error al iniciar sesión",
+  "auth.invalidCredentials": "Correo o contraseña incorrectos. Revisá los datos e intentá de nuevo.",
+  "auth.emailTaken": "Ya existe una cuenta con ese correo. Probá iniciar sesión.",
+  "auth.emailNotFound": "No hay ninguna cuenta con ese correo.",
+  "auth.oauthFailed": "No se pudo completar el acceso con Google. Intentá de nuevo.",
+  "auth.turnstileFailed": "La verificación humana falló o expiró. Completala e intentá otra vez.",
   "auth.registerError": "Error al registrarse",
   "auth.logoutError": "Error al cerrar sesión",
   "auth.brandTagline": "Tu biblioteca de estudio con IA",
@@ -250,5 +255,21 @@ export const es = {
   "pattern.paws": "Patitas",
 
   "auth.googleLogin": "Continuar con Google",
-  "auth.orContinueWith": "O continuar con"
+  "auth.orContinueWith": "O continuar con",
+
+  "errors.network":
+    "No pudimos conectar con el servidor. Comprobá tu internet, esperá unos segundos si el servicio se estaba iniciando e intentá de nuevo.",
+  "errors.server": "Algo salió mal en el servidor. Intentá de nuevo en unos minutos.",
+  "errors.serverBusy": "El servicio está ocupado o despertando. Esperá un momento e intentá otra vez.",
+  "errors.timeout": "La operación tardó demasiado. Intentá de nuevo.",
+  "errors.generic": "Ocurrió un error. Intentá de nuevo.",
+  "errors.forbidden": "No tenés permiso para hacer esta acción.",
+  "errors.rateLimitAuth": "Demasiados intentos seguidos. Esperá unos minutos e intentá de nuevo.",
+  "errors.rateLimitGenerate":
+    "Generaste demasiados libros en poco tiempo. Esperá un rato antes de subir otro PDF.",
+  "errors.rateLimitEvaluate":
+    "Evaluaste demasiadas respuestas seguidas. Hacé una pausa e intentá de nuevo.",
+  "errors.rateLimitGeneric": "Hiciste demasiadas acciones seguidas. Esperá un momento e intentá otra vez.",
+
+  "deck.loadError": "No se pudo cargar tu biblioteca. Intentá recargar la página.",
 } as const;

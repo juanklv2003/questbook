@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
+import { getApiErrorMessage } from '../lib/apiErrorMessage';
 import { loadUploadLimits, getMaxPdfBytes, formatMaxPdfMb } from '../lib/uploadConfig';
 import { parseOverloaded, parseQuotaExceeded } from '../lib/quota';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -78,68 +79,21 @@ export function useDeckGenerator() {
       const quota = parseQuotaExceeded(err);
       if (quota) {
         setQuotaExceeded(quota);
-        const message =
-          err instanceof Object &&
-          err !== null &&
-          'response' in err &&
-          err.response instanceof Object &&
-          err.response !== null &&
-          'data' in err.response &&
-          err.response.data instanceof Object &&
-          err.response.data !== null &&
-          'error' in err.response.data &&
-          typeof (err.response.data as { error: unknown }).error === 'string'
-            ? (err.response.data as { error: string }).error
-            : t('gen.quota');
-        setError(message);
-      } else if (parseOverloaded(err)) {
+      } else {
         const saturation = parseOverloaded(err);
         if (saturation) {
           setOverloaded(saturation);
-          const message =
-            err instanceof Object &&
-            err !== null &&
-            'response' in err &&
-            err.response instanceof Object &&
-            err.response !== null &&
-            'data' in err.response &&
-            err.response.data instanceof Object &&
-            err.response.data !== null &&
-            'error' in err.response.data &&
-            typeof (err.response.data as { error: unknown }).error === 'string'
-              ? (err.response.data as { error: string }).error
-              : t('gen.overloaded');
-          setError(message);
         }
-      } else if (
-        (err instanceof Object &&
-          err !== null &&
-          'code' in err &&
-          err.code === 'ECONNABORTED') ||
-        (err instanceof Error &&
-          err.message !== undefined &&
-          err.message.includes('timeout'))
-      ) {
-        setError(t('gen.timeout'));
+      }
+      const status =
+        err instanceof Object &&
+        err !== null &&
+        'response' in err &&
+        (err as { response?: { status?: number } }).response?.status;
+      if (status === 413) {
+        setError(t('gen.fileTooLarge', { maxMb: String(formatMaxPdfMb()) }));
       } else {
-        const message =
-          err instanceof Object &&
-          err !== null &&
-          'response' in err &&
-          err.response instanceof Object &&
-          err.response !== null &&
-          'data' in err.response &&
-          err.response.data instanceof Object &&
-          err.response.data !== null &&
-          'error' in err.response.data &&
-          typeof (err.response.data as { error: unknown }).error === 'string'
-            ? (err.response.data as { error: string }).error
-            : err instanceof Error
-            ? err.message
-            : typeof err === 'string'
-            ? err
-            : t('gen.generic');
-        setError(message);
+        setError(getApiErrorMessage(err, t, 'deckGenerate'));
       }
       throw err;
     } finally {

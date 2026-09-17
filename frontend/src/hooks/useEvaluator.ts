@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
+import { getApiErrorMessage } from '../lib/apiErrorMessage';
 import { parseOverloaded, parseQuotaExceeded } from '../lib/quota';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { EvaluationResult, ModelOverloadedInfo, QuotaExceededInfo } from '../types';
-
 
 export function useEvaluator() {
   const { t } = useLanguage();
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Structured quota state, same contract as useDeckGenerator.
   const [quotaExceeded, setQuotaExceeded] = useState<QuotaExceededInfo | null>(null);
-  // Structured saturation state (503). Same countdown shape as the quota block.
   const [overloaded, setOverloaded] = useState<ModelOverloadedInfo | null>(null);
 
   const clearError = () => {
@@ -32,7 +30,7 @@ export function useEvaluator() {
     try {
       const response = await apiClient.post(`/evaluations/evaluate`, {
         flashcardId,
-        userAnswer
+        userAnswer,
       });
 
       return response.data;
@@ -40,59 +38,13 @@ export function useEvaluator() {
       const quota = parseQuotaExceeded(err);
       if (quota) {
         setQuotaExceeded(quota);
-        const message =
-          err instanceof Object &&
-          err !== null &&
-          'response' in err &&
-          err.response instanceof Object &&
-          err.response !== null &&
-          'data' in err.response &&
-          err.response.data instanceof Object &&
-          err.response.data !== null &&
-          'error' in err.response.data &&
-          typeof (err.response.data as { error: unknown }).error === 'string'
-            ? (err.response.data as { error: string }).error
-            : t('eval.quota');
-        setError(message);
-      } else if (parseOverloaded(err)) {
+      } else {
         const saturation = parseOverloaded(err);
         if (saturation) {
           setOverloaded(saturation);
-          const message =
-            err instanceof Object &&
-            err !== null &&
-            'response' in err &&
-            err.response instanceof Object &&
-            err.response !== null &&
-            'data' in err.response &&
-            err.response.data instanceof Object &&
-            err.response.data !== null &&
-            'error' in err.response.data &&
-            typeof (err.response.data as { error: unknown }).error === 'string'
-              ? (err.response.data as { error: string }).error
-              : t('eval.overloaded');
-          setError(message);
         }
-      } else {
-        const message =
-          err instanceof Object &&
-          err !== null &&
-          'response' in err &&
-          err.response instanceof Object &&
-          err.response !== null &&
-          'data' in err.response &&
-          err.response.data instanceof Object &&
-          err.response.data !== null &&
-          'error' in err.response.data &&
-          typeof (err.response.data as { error: unknown }).error === 'string'
-            ? (err.response.data as { error: string }).error
-            : err instanceof Error
-            ? err.message
-            : typeof err === 'string'
-            ? err
-            : t('eval.generic');
-        setError(message);
       }
+      setError(getApiErrorMessage(err, t, 'eval'));
       throw err;
     } finally {
       setIsEvaluating(false);

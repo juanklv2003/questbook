@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiClient from '../lib/axios';
+import { getApiErrorMessage } from '../lib/apiErrorMessage';
 import { completeOAuthLogin, takePendingOAuthCode } from '../lib/oauthSession';
 import { useLanguage } from '../i18n/LanguageContext';
 import type {
@@ -72,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const pendingOAuthCode = takePendingOAuthCode();
 
     if (oauthError) {
-      setError(decodeURIComponent(oauthError));
+      setError(t('auth.oauthFailed'));
       params.delete('error');
       const qs = params.toString();
       const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
@@ -92,20 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return;
             }
           } catch (err: unknown) {
-            const message =
-              err instanceof Object &&
-              err !== null &&
-              'response' in err &&
-              err.response instanceof Object &&
-              err.response !== null &&
-              'data' in err.response &&
-              err.response.data instanceof Object &&
-              err.response.data !== null &&
-              'error' in err.response.data &&
-              typeof (err.response.data as { error: unknown }).error === 'string'
-                ? (err.response.data as { error: string }).error
-                : t('auth.loginError');
-            setError(message);
+            setError(getApiErrorMessage(err, t, 'authOAuth'));
             return;
           } finally {
             setIsLoading(false);
@@ -125,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     window.addEventListener('auth:unauthorized', handleUnauthorized);
     return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
-  }, []);
+  }, [t]);
 
   const login = async (credentials: LoginCredentials) => {
     try {
@@ -134,24 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await apiClient.post('/auth/login', credentials);
       await checkAuth();
     } catch (err: unknown) {
-      const message =
-        err instanceof Object &&
-        err !== null &&
-        'response' in err &&
-        err.response instanceof Object &&
-        err.response !== null &&
-        'data' in err.response &&
-        err.response.data instanceof Object &&
-        err.response.data !== null &&
-        'error' in err.response.data &&
-        typeof (err.response.data as { error: unknown }).error === 'string'
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-          ? err
-          : t('auth.loginError');
-      setError(message);
+      setError(getApiErrorMessage(err, t, 'authLogin'));
       throw err;
     } finally {
       setIsLoading(false);
@@ -165,24 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await apiClient.post('/auth/register', credentials);
       await checkAuth();
     } catch (err: unknown) {
-      const message =
-        err instanceof Object &&
-        err !== null &&
-        'response' in err &&
-        err.response instanceof Object &&
-        err.response !== null &&
-        'data' in err.response &&
-        err.response.data instanceof Object &&
-        err.response.data !== null &&
-        'error' in err.response.data &&
-        typeof (err.response.data as { error: unknown }).error === 'string'
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-          ? err
-          : t('auth.registerError');
-      setError(message);
+      setError(getApiErrorMessage(err, t, 'authRegister'));
       throw err;
     } finally {
       setIsLoading(false);
@@ -196,24 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await apiClient.post<ForgotPasswordResponse>('/auth/forgot-password', payload);
       return response.data;
     } catch (err: unknown) {
-      const message =
-        err instanceof Object &&
-        err !== null &&
-        'response' in err &&
-        err.response instanceof Object &&
-        err.response !== null &&
-        'data' in err.response &&
-        err.response.data instanceof Object &&
-        err.response.data !== null &&
-        'error' in err.response.data &&
-        typeof (err.response.data as { error: unknown }).error === 'string'
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-          ? err
-          : t('auth.forgotError');
-      setError(message);
+      setError(getApiErrorMessage(err, t, 'authForgot'));
       throw err;
     } finally {
       setIsLoading(false);
@@ -226,24 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       await apiClient.post('/auth/reset-password', payload);
     } catch (err: unknown) {
-      const message =
-        err instanceof Object &&
-        err !== null &&
-        'response' in err &&
-        err.response instanceof Object &&
-        err.response !== null &&
-        'data' in err.response &&
-        err.response.data instanceof Object &&
-        err.response.data !== null &&
-        'error' in err.response.data &&
-        typeof (err.response.data as { error: unknown }).error === 'string'
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-          ? err
-          : t('auth.resetError');
-      setError(message);
+      setError(getApiErrorMessage(err, t, 'authReset'));
       throw err;
     } finally {
       setIsLoading(false);
@@ -258,24 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setIsAuthenticated(false);
     } catch (err: unknown) {
-      const message =
-        err instanceof Object &&
-        err !== null &&
-        'response' in err &&
-        err.response instanceof Object &&
-        err.response !== null &&
-        'data' in err.response &&
-        err.response.data instanceof Object &&
-        err.response.data !== null &&
-        'error' in err.response.data &&
-        typeof (err.response.data as { error: unknown }).error === 'string'
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-          ? err
-          : t('auth.logoutError');
-      setError(message);
+      setError(getApiErrorMessage(err, t, 'authLogout'));
       throw err;
     } finally {
       setIsLoading(false);

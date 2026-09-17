@@ -11,6 +11,14 @@ interface QuotaErrorPayload {
 /** Raw 503 payload sent by the backend errorHandler for model saturation. */
 type OverloadErrorPayload = QuotaErrorPayload;
 
+/** True when an axios failure is an app rate limit (429 + RATE_LIMITED), not Gemini quota. */
+export function parseRateLimited(err: unknown): boolean {
+  const response = (err as { response?: { status?: unknown; data?: unknown } })?.response;
+  if (response?.status !== 429) return false;
+  const data = response.data as { code?: unknown } | null | undefined;
+  return data?.code === 'RATE_LIMITED';
+}
+
 /** True when an axios failure is a Gemini quota response (429 + code). */
 export function isQuotaErrorResponse(err: unknown): boolean {
   const response = (err as { response?: { status?: unknown; data?: unknown } })?.response;

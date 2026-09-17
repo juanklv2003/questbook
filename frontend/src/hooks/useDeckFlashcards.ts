@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../lib/axios';
+import { getApiErrorMessage } from '../lib/apiErrorMessage';
 import type { Flashcard, Deck } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -34,13 +35,7 @@ export function useDeckFlashcards(deckId: string | null) {
         setDeck(response.data.deck);
       } catch (err: unknown) {
         if (cancelled) return;
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : typeof err === 'string'
-            ? err
-            : 'An unknown error occurred';
-        setError(errorMessage || t('deck.flashError'));
+        setError(getApiErrorMessage(err, t, 'deckFlashcards'));
       } finally {
         if (!cancelled) {
           setIsLoading(false);

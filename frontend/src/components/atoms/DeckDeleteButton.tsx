@@ -3,6 +3,7 @@ import { createPortal } from "react-dom"
 import { Trash2 } from "lucide-react"
 import { Button } from "./Button"
 import apiClient from "../../lib/axios"
+import { getApiErrorMessage } from "../../lib/apiErrorMessage"
 import { useLanguage } from "../../i18n/LanguageContext"
 
 export interface DeckDeleteButtonProps {
@@ -41,23 +42,7 @@ export function DeckDeleteButton({ deckId, onDeleteSuccess, onDeleteError }: Dec
       onDeleteSuccess()
     } catch (err: unknown) {
       if (onDeleteError) {
-        const errorMessage =
-          err instanceof Object &&
-          err !== null &&
-          'response' in err &&
-          err.response instanceof Object &&
-          err.response !== null &&
-          'data' in err.response &&
-          err.response.data instanceof Object &&
-          err.response.data !== null &&
-          'error' in err.response.data &&
-          typeof (err.response.data as { error: unknown }).error === 'string'
-            ? (err.response.data as { error: string }).error
-            : err instanceof Error
-            ? err.message
-            : typeof err === 'string'
-            ? err
-            : t("delete.error");
+        const errorMessage = getApiErrorMessage(err, t, 'deleteDeck');
         onDeleteError(err instanceof Error ? err : new Error(errorMessage));
       }
     } finally {
