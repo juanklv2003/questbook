@@ -19,7 +19,8 @@ export function DeckDeleteButton({ deckId, onDeleteSuccess, onDeleteError }: Dec
   const cancelRef = React.useRef<HTMLButtonElement>(null);
 
   const openConfirm = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering card click
+    e.preventDefault();
+    e.stopPropagation();
     setConfirmOpen(true);
   };
 
@@ -57,6 +58,10 @@ export function DeckDeleteButton({ deckId, onDeleteSuccess, onDeleteError }: Dec
         size="icon"
         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         onClick={openConfirm}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         disabled={isDeleting}
         isLoading={isDeleting}
         aria-label={t("delete.aria")}

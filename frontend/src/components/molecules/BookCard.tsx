@@ -1,3 +1,4 @@
+import * as React from "react"
 import type { KeyboardEvent } from "react"
 import { cn } from "../../lib/utils"
 import { BookOpen, Play, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
@@ -109,6 +110,44 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
   const isLastShelf =
     shelfIndex !== undefined && shelfCount !== undefined && shelfCount > 1 && shelfIndex === shelfCount - 1;
 
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const [touchMenuOpen, setTouchMenuOpen] = React.useState(false);
+  const prefersHover = React.useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches,
+    []
+  );
+
+  React.useEffect(() => {
+    if (!touchMenuOpen) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return;
+      setTouchMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onDocPointerDown);
+    return () => document.removeEventListener("pointerdown", onDocPointerDown);
+  }, [touchMenuOpen]);
+
+  const handleSpineClick = () => {
+    if (prefersHover) {
+      onSelect();
+      return;
+    }
+    setTouchMenuOpen((open) => !open);
+  };
+
+  const handleDeleteSuccess = () => {
+    setTouchMenuOpen(false);
+    onDeleteSuccess();
+  };
+
+  const hoverPanelClass = cn(
+    "opacity-0 invisible pointer-events-none",
+    "[transition:opacity_150ms_ease,visibility_0s_linear_200ms]",
+    touchMenuOpen && "opacity-100 visible pointer-events-auto [transition:opacity_150ms_ease,visibility_0s]",
+    "group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto group-hover:[transition:opacity_150ms_ease,visibility_0s]",
+    "group-focus-within:opacity-100 group-focus-within:visible group-focus-within:pointer-events-auto group-focus-within:[transition:opacity_150ms_ease,visibility_0s]"
+  );
+
   const handleKeyDown = (e: KeyboardEvent) => {
     // Let the action buttons inside the hover card handle their own keys.
     if ((e.target as HTMLElement).closest("button")) return;
@@ -121,9 +160,9 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
   // Horizontal book (laying down)
   if (horizontal) {
     return (
-      <div className="group relative hover:z-30 focus-within:z-30">
+      <div ref={rootRef} className="group relative hover:z-30 focus-within:z-30">
         <div
-          onClick={(e) => { e.preventDefault(); onSelect(); }}
+          onClick={handleSpineClick}
           onKeyDown={handleKeyDown}
           tabIndex={0}
           role="button"
@@ -152,41 +191,43 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
               <span>{flashcardsCount}</span>
             </div>
             <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/10" />
-            {/* Subtle study-progress bar at the base of the horizontal spine */}
             {progress !== null && (
               <div className="absolute bottom-0 inset-x-0 h-[2px] bg-white/10" aria-hidden="true">
                 <div className="h-full bg-white/35" style={{ width: `${progress}%` }} />
               </div>
             )}
           </div>
+        </div>
 
-          {/* Hover card for horizontal (first shelf opens downward, rest upward) */}
-          {/* Puente invisible: cubre el hueco entre el libro y el panel para que
-              el hover no se corte al cruzar el ratón. */}
-          <div
-            aria-hidden="true"
-            className={cn(
-              "absolute left-1/2 -translate-x-1/2 z-40 hidden group-hover:block",
-              isFirstShelf ? "top-full h-2" : "bottom-full h-2",
-              "w-52"
-            )}
-          />
-          <div className={cn(
-            "absolute left-1/2 -translate-x-1/2 w-56 max-w-[70vw] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
-            "[transition:opacity_150ms_ease,visibility_0s_linear_200ms]",
+        {/* Hover card — fuera del botón del lomo para que borrar/editar no abra el libro */}
+        <div
+          aria-hidden="true"
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 z-40 hidden group-hover:block",
+            isFirstShelf ? "top-full h-2" : "bottom-full h-2",
+            "w-52"
+          )}
+        />
+        <div
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 w-56 max-w-[70vw] z-50",
+            hoverPanelClass,
             isFirstShelf ? "top-full mt-2" : "bottom-full mb-2"
-          )}>
-            <HoverCard
-              name={name}
-              flashcardsCount={flashcardsCount}
-              deckId={deckId}
-              onDeleteSuccess={onDeleteSuccess}
-              onEdit={onEdit}
-              onSelect={onSelect}
-              badgeStyle={styles.badge}
-              {...moveProps}
-            />
-          </div>
+          )}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <HoverCard
+            name={name}
+            flashcardsCount={flashcardsCount}
+            progressPercent={progress}
+            deckId={deckId}
+            onDeleteSuccess={handleDeleteSuccess}
+            onEdit={onEdit}
+            onSelect={onSelect}
+            badgeStyle={styles.badge}
+            {...moveProps}
+          />
         </div>
       </div>
     );
@@ -194,21 +235,21 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
 
   // Vertical book (standing up) - spine view
   return (
-    <div className="group relative hover:z-30 focus-within:z-30">
+    <div ref={rootRef} className="group relative hover:z-30 focus-within:z-30">
       <div
-        onClick={(e) => { e.preventDefault(); onSelect(); }}
+        onClick={handleSpineClick}
         onKeyDown={handleKeyDown}
-          tabIndex={0}
-            role="button"
-            aria-label={t("book.openAria", { name })}
-          className={cn(
-            "relative cursor-pointer select-none",
-            "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-            "hover:-translate-y-1 focus-visible:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-sm",
-            styles.hover
-          )}
-        >
-          {/* Bookmark */}
+        tabIndex={0}
+        role="button"
+        aria-label={t("book.openAria", { name })}
+        className={cn(
+          "relative cursor-pointer select-none",
+          "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          "hover:-translate-y-1 focus-visible:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-sm",
+          styles.hover
+        )}
+      >
+        {/* Bookmark */}
         <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
           <div className={cn(
             "w-3 h-6",
@@ -245,30 +286,26 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
             <div className="w-4 h-0.5 bg-white/30 rounded-full" />
           </div>
           <div className="absolute right-0 top-1 bottom-1 w-0.5 bg-white/10" />
-          {/* Subtle study-progress bar at the base of the spine */}
           {progress !== null && (
             <div className="absolute bottom-0 inset-x-0 h-[3px] bg-white/10" aria-hidden="true">
               <div className="h-full bg-white/35" style={{ width: `${progress}%` }} />
             </div>
           )}
         </div>
+      </div>
 
-        {/* Hover card (side-anchored; grows away from the nearest board) */}
-        {/* Puente invisible hover: cubre el hueco de ml-3 entre el libro y el
-            panel para que el hover no se corte al cruzar el ratón. */}
-        <div
-          aria-hidden="true"
-          className={cn(
-            "absolute z-40 hidden group-hover:block left-full w-3",
-            isLastShelf ? "bottom-0 h-44" : isFirstShelf ? "top-0 h-44" : "top-1/2 -translate-y-1/2 h-44"
-          )}
-        />
-        {/* Hover card: centered below/above the book on mobile (a side-anchored
-            224px panel would overflow the 360px frame and get clipped by its
-            overflow-hidden); side-anchored from sm up, exactly as before. */}
-        <div className={cn(
-          "absolute left-1/2 -translate-x-1/2 w-52 max-w-[70vw] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible z-50 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
-          "[transition:opacity_150ms_ease,visibility_0s_linear_200ms]",
+      {/* Hover card — hermano del lomo, no hijo del onClick de abrir */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          "absolute z-40 hidden group-hover:block left-full w-3",
+          isLastShelf ? "bottom-0 h-44" : isFirstShelf ? "top-0 h-44" : "top-1/2 -translate-y-1/2 h-44"
+        )}
+      />
+      <div
+        className={cn(
+          "absolute left-1/2 -translate-x-1/2 w-52 max-w-[70vw] z-50",
+          hoverPanelClass,
           isLastShelf ? "bottom-full mb-2" : "top-full mt-2",
           "sm:left-full sm:translate-x-0 sm:ml-3 sm:w-56 sm:max-w-none",
           isLastShelf
@@ -276,18 +313,21 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
             : isFirstShelf
               ? "sm:top-0 sm:mt-0"
               : "sm:top-1/2 sm:-translate-y-1/2 sm:mt-0"
-        )}>
-          <HoverCard
-            name={name}
-            flashcardsCount={flashcardsCount}
-            deckId={deckId}
-            onDeleteSuccess={onDeleteSuccess}
-            onEdit={onEdit}
-            onSelect={onSelect}
-            badgeStyle={styles.badge}
-            {...moveProps}
-          />
-        </div>
+        )}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <HoverCard
+          name={name}
+          flashcardsCount={flashcardsCount}
+          progressPercent={progress}
+          deckId={deckId}
+          onDeleteSuccess={handleDeleteSuccess}
+          onEdit={onEdit}
+          onSelect={onSelect}
+          badgeStyle={styles.badge}
+          {...moveProps}
+        />
       </div>
     </div>
   )
@@ -367,7 +407,11 @@ function HoverCard({
       {/* Actions */}
       <div className="flex items-center gap-2">
         <button
-          onClick={(e) => { e.stopPropagation(); onSelect(); }}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect();
+          }}
           className={cn(
             "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg",
             "bg-primary text-primary-foreground text-xs font-medium",
