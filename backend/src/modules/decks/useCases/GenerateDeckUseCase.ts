@@ -27,28 +27,56 @@ export class GenerateDeckUseCase {
   ) {}
 
   async execute(dto: GenerateDeckDTO) {
-    // 1. Generate flashcards from content
-    const generatedCards = await this.aiGenerator.generateFromText(dto.content, {
-      cardCount: dto.cardCount,
-      difficulty: dto.difficulty,
-      language: dto.language,
-    });
-
-    if (!generatedCards || generatedCards.length === 0) {
-      throw new AppError(422, 'La IA no pudo generar tarjetas para este contenido. Probá de nuevo.');
-    }
-
     let pdfUrl: string | undefined;
     let pdfPublicId: string | undefined;
 
-    try {
-      if (dto.fileBuffer) {
-        const uploadResult = await this.cloudStorage.uploadPdf(dto.fileBuffer, dto.fileName);
-        pdfUrl = uploadResult.url;
-        pdfPublicId = uploadResult.publicId;
-      }
+    const uploadPromise: Promise<{ url: string; publicId: string } | null> =
+      dto.fileBuffer != null
+        ? this.cloudStorage
+            .uploadPdf(dto.fileBuffer, dto.fileName)
+            .then((uploadResult) => {
+              pdfUrl = uploadResult.url;
+              pdfPublicId = uploadResult.publicId;
+              return uploadResult;
+            })
+        : Promise.resolve(null);
 
-      // 2. Create the Deck
+    let generatedCards;
+    try {
+      const [cards] = await Promise.all([
+        this.aiGenerator.generateFromText(dto.content, {
+          cardCount: dto.cardCount,
+          difficulty: dto.difficulty,
+          language: dto.language,
+        }),
+        uploadPromise,
+      ]);
+      generatedCards = cards;
+    } catch (error) {
+      try {
+        const uploaded = await uploadPromise;
+        if (uploaded?.publicId) {
+          await this.cloudStorage.deletePdf(uploaded.publicId);
+        }
+      } catch (cleanupError) {
+        console.error('No se pudo limpiar el PDF huérfano en Cloudinary:', cleanupError);
+      }
+      throw error;
+    }
+
+    if (!generatedCards || generatedCards.length === 0) {
+      if (pdfPublicId) {
+        try {
+          await this.cloudStorage.deletePdf(pdfPublicId);
+        } catch (cleanupError) {
+          console.error('No se pudo limpiar el PDF huérfano en Cloudinary:', cleanupError);
+        }
+      }
+      throw new AppError(422, 'La IA no pudo generar tarjetas para este contenido. Probá de nuevo.');
+    }
+
+    try {
+      // Create the Deck
       const deck = await this.deckRepo.create({
         name: dto.name,
         userId: dto.userId,
