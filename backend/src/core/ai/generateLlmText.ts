@@ -6,9 +6,17 @@ import { ModelOverloadedError } from '../errors/ModelOverloadedError';
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
+function readGeminiText(result: { response: { text: () => string } }): string {
+  const text = result.response.text()?.trim();
+  if (!text) {
+    throw new Error('Gemini returned empty text.');
+  }
+  return text;
+}
+
 /**
  * 1) Gemini (rotación GEMINI_API_KEY / GEMINI_API_KEYS / GEMINI_API_KEY2)
- * 2) Si Gemini agota cuota (429) o el modelo está saturado (503) → Groq (GROQ_API_KEY)
+ * 2) Si Gemini falla y hay GROQ_API_KEY → Groq (timeout, bloqueos, cuota, saturación, etc.)
  */
 export async function generateLlmText(
   gemini: GeminiFailover,
@@ -21,15 +29,23 @@ export async function generateLlmText(
         timeout: timeoutMs,
       })
     );
-    return result.response.text();
+    return readGeminiText(result);
   } catch (error) {
-    const tryGroq =
-      isGroqConfigured() &&
-      (error instanceof QuotaExceededError || error instanceof ModelOverloadedError);
-    if (!tryGroq) {
+    if (!isGroqConfigured()) {
       throw error;
     }
-    console.warn('[AI] Gemini unavailable (quota or overload); trying Groq fallback.');
-    return generateWithGroq(prompt, timeoutMs);
+    const reason =
+      error instanceof QuotaExceededError || error instanceof ModelOverloadedError
+        ? 'quota or overload'
+        : 'primary provider error';
+    console.warn(`[AI] Gemini failed (${reason}); trying Groq fallback.`);
+    try {
+      return await generateWithGroq(prompt, timeoutMs);
+    } catch (groqErr) {
+      if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
+        throw error;
+      }
+      throw groqErr;
+    }
   }
 }

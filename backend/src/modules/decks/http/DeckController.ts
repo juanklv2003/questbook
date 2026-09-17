@@ -141,7 +141,7 @@ export class DeckController {
         throw new AppError(400, 'difficulty must be easy, medium, or hard');
       }
 
-      const parsedLanguageEarly = language || 'en';
+      const parsedLanguageEarly = language || 'es';
       if (parsedLanguageEarly !== 'en' && parsedLanguageEarly !== 'es') {
         throw new AppError(400, 'language must be either "en" or "es"');
       }
@@ -186,8 +186,8 @@ export class DeckController {
       throw new AppError(400, 'difficulty must be easy, medium, or hard');
     }
 
-    // Validate language (optional, default to 'en')
-    const parsedLanguage = language || 'en';
+    // Validate language (optional, default to 'es')
+    const parsedLanguage = language || 'es';
     if (parsedLanguage !== 'en' && parsedLanguage !== 'es') {
       throw new AppError(400, 'language must be either "en" or "es"');
     }

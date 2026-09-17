@@ -103,7 +103,7 @@ export function useDeckGenerator() {
             cardCount: options.cardCount,
             difficulty: options.difficulty,
             color: options.color ?? 'primary',
-            language: options.language ?? 'en',
+            language: options.language ?? 'es',
             shelf_index: 0,
             pdfUrl: uploaded.url,
             pdfPublicId: uploaded.publicId,

@@ -20,7 +20,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
   const [cardCount, setCardCount] = React.useState<number>(10);
   const [difficulty, setDifficulty] = React.useState<Difficulty>('medium');
   const [color, setColor] = React.useState<string>('primary');
-  const [language, setLanguage] = React.useState<'en' | 'es'>('en');
+  const [language, setLanguage] = React.useState<'en' | 'es'>('es');
 
   const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; description: string }[] = [
     { value: 'easy', label: t("up.easy"), description: t("up.easyDesc") },

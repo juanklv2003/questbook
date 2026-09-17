@@ -47,6 +47,7 @@ export async function generateWithGroq(prompt: string, timeoutMs: number): Promi
         model: env.GROQ_MODEL,
         messages: [{ role: 'user', content: safePrompt }],
         temperature: 0.3,
+        max_tokens: 16_384,
       }),
       signal: controller.signal,
     });

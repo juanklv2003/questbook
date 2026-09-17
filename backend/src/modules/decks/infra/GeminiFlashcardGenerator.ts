@@ -28,6 +28,10 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     return env.PDF_MAX_TEXT_CHARS;
   }
 
+  /** Menos texto en el prompt = respuestas más rápidas y menos 502 por timeout. */
+  private static readonly PRACTICAL_TEXT_CAP = 120_000;
+  private static readonly BATCH_CARD_LIMIT = 20;
+
   private timeoutMsFor(cardCount: number): number {
     const base = env.AI_DECK_TIMEOUT_MS;
     const extra = Math.max(0, cardCount - 15) * 4_000;
@@ -36,13 +40,45 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
 
   async generateFromText(text: string, options?: GenerateOptions): Promise<Array<{ question: string; answer: string }>> {
     const maxCards = options?.cardCount ?? this.DEFAULT_CARDS;
-    const difficulty = options?.difficulty ?? 'medium';
+    if (maxCards <= GeminiFlashcardGenerator.BATCH_CARD_LIMIT) {
+      return this.generatePass(text, options, maxCards, []);
+    }
 
-    // Truncamos el texto si excede el límite para que la IA responda en tiempo razonable.
+    const cards: Array<{ question: string; answer: string }> = [];
+    while (cards.length < maxCards) {
+      const need = Math.min(GeminiFlashcardGenerator.BATCH_CARD_LIMIT, maxCards - cards.length);
+      const batch = await this.generatePass(
+        text,
+        options,
+        need,
+        cards.map((c) => c.question)
+      );
+      if (batch.length === 0) break;
+      cards.push(...batch);
+    }
+
+    if (cards.length === 0) {
+      throw new AppError(
+        422,
+        'La IA no pudo generar tarjetas válidas de este documento. Probá con otro archivo o intentá de nuevo.'
+      );
+    }
+    return cards.slice(0, maxCards);
+  }
+
+  private async generatePass(
+    text: string,
+    options: GenerateOptions | undefined,
+    maxCards: number,
+    existingQuestions: string[]
+  ): Promise<Array<{ question: string; answer: string }>> {
+    const difficulty = options?.difficulty ?? 'medium';
+    const textCap = Math.min(this.maxTextChars, GeminiFlashcardGenerator.PRACTICAL_TEXT_CAP);
+
     let truncated = false;
     let promptText = text;
-    if (promptText.length > this.maxTextChars) {
-      promptText = promptText.slice(0, this.maxTextChars);
+    if (promptText.length > textCap) {
+      promptText = promptText.slice(0, textCap);
       truncated = true;
     }
 
@@ -133,9 +169,22 @@ Do NOT include markdown blocks, greetings, or any other text. ONLY the JSON arra
 
     const truncationNotice = truncated
       ? isSpanish
-        ? `\n\nNOTA: El documento original era demasiado largo y solo tienes los primeros ${this.maxTextChars} caracteres. Genera las tarjetas basándote en esta parte.\n`
-        : `\n\nNOTE: The original document was too long and you only have the first ${this.maxTextChars} characters. Generate flashcards based on this part.\n`
+        ? `\n\nNOTA: El documento original era demasiado largo y solo tienes los primeros ${textCap} caracteres. Genera las tarjetas basándote en esta parte.\n`
+        : `\n\nNOTE: The original document was too long and you only have the first ${textCap} characters. Generate flashcards based on this part.\n`
       : '';
+
+    const excludeNotice =
+      existingQuestions.length > 0
+        ? isSpanish
+          ? `\n\nNO repitas ni parafrasees estas preguntas ya generadas (generá otras distintas del mismo texto):\n${existingQuestions
+              .slice(-35)
+              .map((q) => `- ${q.slice(0, 140)}`)
+              .join('\n')}\n`
+          : `\n\nDO NOT repeat or paraphrase these questions already generated (create different ones from the same text):\n${existingQuestions
+              .slice(-35)
+              .map((q) => `- ${q.slice(0, 140)}`)
+              .join('\n')}\n`
+        : '';
 
     const prompt = `
 ${texts.opening}
@@ -153,7 +202,7 @@ ${difficultyInstructions[isSpanish ? 'es' : 'en'][difficulty]}
 ${texts.returnFormat}
 
 ${texts.textToAnalyze}
-${promptText}${truncationNotice}
+${promptText}${truncationNotice}${excludeNotice}
     `;
 
     // Attempt to generate content and parse JSON safely

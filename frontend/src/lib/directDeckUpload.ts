@@ -21,11 +21,15 @@ export async function generateDeckViaDirectUpload(
   formData.append('cardCount', String(options.cardCount));
   formData.append('difficulty', options.difficulty);
   formData.append('color', options.color ?? 'primary');
-  formData.append('language', options.language ?? 'en');
+  formData.append('language', options.language ?? 'es');
   formData.append('shelf_index', '0');
 
   const cards = options.cardCount ?? 15;
-  const timeoutMs = Math.min(360_000, 150_000 + cards * 4_000 + Math.ceil(file.size / (512 * 1024)) * 5_000);
+  const aiBatches = Math.max(1, Math.ceil(cards / 20));
+  const timeoutMs = Math.min(
+    600_000,
+    90_000 + aiBatches * 130_000 + Math.ceil(file.size / (512 * 1024)) * 5_000
+  );
 
   const response = await axios.post(uploadUrl, formData, {
     headers: { Authorization: `Bearer ${token}` },
