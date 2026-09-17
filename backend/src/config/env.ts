@@ -171,7 +171,7 @@ export const env = {
     return [...new Set([FRONTEND_URL, ...extra])];
   })(),
   /** Modelo Groq para fallback (OpenAI-compatible chat/completions). */
-  GROQ_MODEL: _env.data.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+  GROQ_MODEL: _env.data.GROQ_MODEL ?? 'openai/gpt-oss-20b',
   /** Caracteres máximos del texto del PDF incluidos en el prompt de generación. */
   PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 500_000, 5_000, 500_000),
   /** Tiempo máximo de espera (ms) al generar tarjetas desde un PDF. */

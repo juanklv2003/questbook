@@ -14,6 +14,38 @@ function readGeminiText(result: { response: { text: () => string } }): string {
   return text;
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
+async function generateWithGemini(
+  gemini: GeminiFailover,
+  prompt: string,
+  timeoutMs: number
+): Promise<string> {
+  const result = await withTimeout(
+    gemini.withFailover((client: GoogleGenerativeAI) =>
+      client.getGenerativeModel({ model: GEMINI_MODEL }).generateContent(prompt)
+    ),
+    timeoutMs,
+    'Gemini'
+  );
+  return readGeminiText(result);
+}
+
 /**
  * 1) Gemini (rotación GEMINI_API_KEY / GEMINI_API_KEYS / GEMINI_API_KEY2)
  * 2) Si Gemini falla y hay GROQ_API_KEY → Groq (timeout, bloqueos, cuota, saturación, etc.)
@@ -24,12 +56,7 @@ export async function generateLlmText(
   timeoutMs: number
 ): Promise<string> {
   try {
-    const result = await gemini.withFailover((client: GoogleGenerativeAI) =>
-      client.getGenerativeModel({ model: GEMINI_MODEL }).generateContent(prompt, {
-        timeout: timeoutMs,
-      })
-    );
-    return readGeminiText(result);
+    return await generateWithGemini(gemini, prompt, timeoutMs);
   } catch (error) {
     if (!isGroqConfigured()) {
       throw error;
