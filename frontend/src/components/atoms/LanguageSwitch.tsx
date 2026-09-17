@@ -19,6 +19,7 @@ interface LanguageSwitchProps {
 export function LanguageSwitch({ variant = "responsive", className }: LanguageSwitchProps) {
   const { locale, setLocale, toggleLocale, t } = useLanguage();
   const next: Locale = locale === "es" ? "en" : "es";
+  const toggleAria = next === "en" ? t("lang.toggleToEnglish") : t("lang.toggleToSpanish");
 
   const pill = (visibleClasses: string) => (
     <div
@@ -62,12 +63,14 @@ export function LanguageSwitch({ variant = "responsive", className }: LanguageSw
       <button
         type="button"
         onClick={toggleLocale}
-        aria-label={t("lang.toggleAria")}
+        aria-label={toggleAria}
         title={t("lang.switchLabel")}
-        className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border bg-secondary/60 px-2.5 text-[11px] font-bold tracking-wide text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:hidden"
+        className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border bg-secondary/60 px-2.5 text-[11px] font-bold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:hidden"
       >
-        <Languages className="h-3.5 w-3.5" aria-hidden="true" />
-        {next.toUpperCase()}
+        <Languages className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="rounded-full bg-primary px-2 py-0.5 text-primary-foreground shadow-sm">
+          {locale.toUpperCase()}
+        </span>
       </button>
     </span>
   );

@@ -15,6 +15,8 @@ export const en: { [K in keyof typeof es]: string } = {
 
   "lang.switchLabel": "Language",
   "lang.toggleAria": "Switch language to Spanish",
+  "lang.toggleToEnglish": "Switch language to English",
+  "lang.toggleToSpanish": "Switch language to Spanish",
   "lang.english": "English",
   "lang.spanish": "Spanish",
 

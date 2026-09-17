@@ -13,6 +13,8 @@ export const es = {
 
   "lang.switchLabel": "Idioma",
   "lang.toggleAria": "Cambiar idioma a inglés",
+  "lang.toggleToEnglish": "Cambiar idioma a inglés",
+  "lang.toggleToSpanish": "Cambiar idioma a español",
   "lang.english": "Inglés",
   "lang.spanish": "Español",
 
