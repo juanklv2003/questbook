@@ -8,6 +8,14 @@ Usuario ─► Frontend (Vercel/Netlify)  ──XHR con cookie──►  Backend
    *.vercel.app                      CORS + SameSite=None        *.onrender.com
 ```
 
+> **Elegí los nombres primero.** Los dominios son únicos por plataforma y algunos ya están tomados:
+> `andel.vercel.app` y `questbook.vercel.app` pertenecen a otros proyectos (verificado), mientras que
+> `myquestbook.vercel.app` y `flashcards-ia.vercel.app` están libres. En Render, el `name` del
+> blueprint define la URL `*.onrender.com`: si ya existe, Render te lo va a avisar al crear el
+> servicio. Los ejemplos de esta guía usan `flashcards-ia.vercel.app` y
+> `flashcards-ia-api.onrender.com`; si cambiás alguno, actualizá en cadena `VITE_API_URL` (Vercel) →
+> `FRONTEND_URL` (Render) → Google Console → Turnstile.
+
 ---
 
 ## 0. Checklist antes de tocar producción
@@ -59,7 +67,7 @@ npm run migrate:flashcards-index                  # índice flashcards(deck_id) 
 
 ## 2. Backend en Render
 
-1. **New → Blueprint** y elegí este repo: Render lee `render.yaml` de la raíz (servicio `andel-api`,
+1. **New → Blueprint** y elegí este repo: Render lee `render.yaml` de la raíz (servicio `flashcards-ia-api`,
    `rootDir: backend`, health check en `/api/v1/health`).
    - Alternativa manual: **New → Web Service**, Root Directory = `backend`,
      Build Command = `npm ci --include=dev && npm run build`, Start Command = `npm start`.
@@ -75,7 +83,7 @@ npm run migrate:flashcards-index                  # índice flashcards(deck_id) 
 | `DATABASE_URL` | connection string de Neon |
 | `JWT_SECRET` | string largo y aleatorio (no reutilices el de dev) |
 | `TURNSTILE_SECRET_KEY` | Secret Key de Cloudflare Turnstile (https://dash.cloudflare.com/?to=/:account/turnstile). Sin esto el backend no arranca y el registro devuelve 400 |
-| `FRONTEND_URL` | origen exacto del frontend, **sin barra final** (ej. `https://andel.vercel.app`) |
+| `FRONTEND_URL` | origen exacto del frontend, **sin barra final** (ej. `https://flashcards-ia.vercel.app`) |
 | `CORS_ORIGINS` | opcional: orígenes extra permitidos, separados por comas (ej. previews de Vercel `https://tu-app-git-rama.vercel.app`). `FRONTEND_URL` siempre está permitido |
 | `GEMINI_API_KEY` | clave de Gemini |
 | `GEMINI_API_KEYS` | opcional: claves extra separadas por comas (failover, misma cuenta) |
@@ -85,13 +93,15 @@ npm run migrate:flashcards-index                  # índice flashcards(deck_id) 
 | `MAX_PDF_UPLOAD_MB` | opcional; default **100**. El PDF vive en RAM durante `POST /decks/generate` (multer + copia del worker de pdf-parse + subida a Cloudinary): en el plan free (≈512 MB) un PDF de 100 MB puede provocar OOM/502. Si pasa, bajalo (ej. `25`) o pasá a un plan pago |
 | `DB_POOL_MAX` | opcional; default **10** conexiones al pool Neon |
 | `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | credenciales de Cloudinary |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | opcional: OAuth Google (sin las dos, el botón no inicia flujo) |
+| `GOOGLE_CALLBACK_URL` | opcional; en prod suele ser `https://<tu-api>/api/v1/auth/google/callback` (debe coincidir con Google Console) |
 
 **Rendimiento / abuso:** el API aplica rate limits (auth, generación IA ~5/h, evaluaciones ~60/h por usuario), compresión gzip y `helmet` en respuestas JSON. En Render free, evitá **varias subidas de PDF grandes a la vez** (hasta 100 MB en memoria por request) y revisá los logs por OOM si subís archivos muy pesados.
 
 3. Deployá y verificá:
 
 ```bash
-curl https://andel-api.onrender.com/api/v1/health      # {"status":"ok"}
+curl https://flashcards-ia-api.onrender.com/api/v1/health      # {"status":"ok"}
 ```
 
 > **Plan free de Render:** el servicio se duerme tras ~15 min sin tráfico; la primera petición
@@ -128,10 +138,11 @@ revisá que `FRONTEND_URL` sea exactamente el origen del frontend, que `COOKIE_S
 
 | Variable | Valor |
 | --- | --- |
-| `VITE_API_URL` | `https://andel-api.onrender.com/api/v1` (el build **falla a propósito** si falta o apunta a `localhost`: guard en `vite.config.ts`) |
+| `VITE_API_URL` | `https://flashcards-ia-api.onrender.com/api/v1` (el build **falla a propósito** si falta o apunta a `localhost`: guard en `vite.config.ts`) |
 | `VITE_TURNSTILE_SITE_KEY` | Site Key pública del mismo sitio de Turnstile. Sin esto el form de registro muestra un aviso y el botón queda deshabilitado |
 
-4. Deployá, copiá la URL final (`https://andel.vercel.app`) y **volvé al paso 2** para fijarla como
+4. Deployá, copiá la URL final (`https://flashcards-ia.vercel.app`, o la que te asigne Vercel) y
+   **volvé al paso 2** para fijarla como
    `FRONTEND_URL` del backend (si no, CORS bloquea todo) → el backend se redeploya solo.
 
 ### Netlify (alternativa)

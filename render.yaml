@@ -12,7 +12,7 @@
 # pdf-parse (>=22.3) y del driver de Neon (WebSocket global, Node >=21).
 services:
   - type: web
-    name: andel-api # nombre histórico del servicio: define la URL *.onrender.com
+    name: flashcards-ia-api # define la URL *.onrender.com: si el nombre ya está tomado, cambialo acá y actualizá las URLs en docs/DEPLOYMENT.md
     runtime: node
     rootDir: backend
     plan: free
@@ -68,4 +68,10 @@ services:
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
         sync: false
