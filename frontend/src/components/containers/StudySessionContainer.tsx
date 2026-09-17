@@ -4,6 +4,7 @@ import { useFlashcardStudy } from "../../hooks/useFlashcardStudy"
 import { useDeckFlashcards } from "../../hooks/useDeckFlashcards"
 import { StudyPlayer } from "../organisms/StudyPlayer"
 import { RestartStudyDialog } from "../molecules/RestartStudyDialog"
+import { ExitStudyDialog } from "../molecules/ExitStudyDialog"
 import type { Flashcard } from "../../types"
 import type { ReviewListItem } from "../molecules/StudyReviewList"
 import { Loader2, AlertCircle, ArrowLeft, RotateCcw, WifiOff } from "lucide-react"
@@ -39,6 +40,7 @@ export function StudySessionContainer({ deckId, onBack }: { deckId: string, onBa
 function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, flashcards: Flashcard[], onBack: () => void }) {
   const { t } = useLanguage();
   const [restartOpen, setRestartOpen] = React.useState(false);
+  const [exitOpen, setExitOpen] = React.useState(false);
   const {
     tarjetaActual,
     orderedTarjetas,
@@ -71,9 +73,14 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
   const handleBack = () => {
     if (isEvaluating) return;
     if (!haTerminado && answeredCount > 0) {
-      const ok = window.confirm(t("study.exitConfirm", { remaining: remainingCount }));
-      if (!ok) return;
+      setExitOpen(true);
+      return;
     }
+    onBack();
+  };
+
+  const handleConfirmExit = () => {
+    setExitOpen(false);
     onBack();
   };
 
@@ -213,6 +220,12 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
         open={restartOpen}
         onClose={() => setRestartOpen(false)}
         onConfirm={handleConfirmRestart}
+      />
+      <ExitStudyDialog
+        open={exitOpen}
+        remaining={remainingCount}
+        onClose={() => setExitOpen(false)}
+        onConfirm={handleConfirmExit}
       />
     </div>
   );

@@ -149,7 +149,10 @@ export const es = {
   "study.reshuffle": "Mezclar el orden de las preguntas",
   "study.confirm": "Reiniciar",
   "study.cancel": "Cancelar",
-  "study.exitConfirm": "Tienes {remaining} sin terminar, ¿salir?",
+  "study.exitTitle": "¿Salir de la sesión?",
+  "study.exitDesc":
+    "Te quedan {remaining} tarjetas sin responder. Tu avance se guarda automáticamente.",
+  "study.exitLeave": "Salir",
   "study.sessionOffline": "Sin conexión: usando el avance guardado en este dispositivo.",
   "study.sessionError": "No se pudo sincronizar el avance. Seguimos con lo guardado en este dispositivo.",
   "study.finishedTitle": "¡Sesión Completada!",

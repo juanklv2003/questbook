@@ -151,7 +151,10 @@ export const en: { [K in keyof typeof es]: string } = {
   "study.reshuffle": "Shuffle question order",
   "study.confirm": "Restart",
   "study.cancel": "Cancel",
-  "study.exitConfirm": "You have {remaining} unfinished, exit?",
+  "study.exitTitle": "Leave study session?",
+  "study.exitDesc":
+    "You still have {remaining} cards unanswered. Your progress is saved automatically.",
+  "study.exitLeave": "Leave",
   "study.sessionOffline": "Offline: using progress saved on this device.",
   "study.sessionError": "Could not sync progress. Continuing with what's saved on this device.",
   "study.finishedTitle": "Session Complete!",
