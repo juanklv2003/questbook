@@ -87,6 +87,21 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
     void restart({ reshuffle });
   };
 
+  const reviewItems: ReviewListItem[] = React.useMemo(
+    () =>
+      orderedTarjetas.map((f) => ({
+        id: f.id,
+        question: f.question,
+        status:
+          resultsById[f.id] === true
+            ? 'correct'
+            : resultsById[f.id] === false
+              ? 'incorrect'
+              : 'pending',
+      })),
+    [orderedTarjetas, resultsById]
+  );
+
   if (haTerminado) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center animate-in zoom-in-95">
@@ -120,19 +135,6 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
 
   // Sin visor de PDF: la columna izquierda es la lista de preguntas
   // (StudyPlayer la pinta como aside) y la derecha la tarjeta activa.
-
-  // Lista de repaso en el orden activo de la sesión (respeta reshuffle):
-  // estado por tarjeta desde el historial del hook (clave por id).
-  const reviewItems: ReviewListItem[] = orderedTarjetas.map((f) => ({
-    id: f.id,
-    question: f.question,
-    status:
-      resultsById[f.id] === true
-        ? "correct"
-        : resultsById[f.id] === false
-          ? "incorrect"
-          : "pending",
-  }));
 
   return (
     <div className="relative w-full min-w-0 flex flex-col gap-2 pt-2 sm:pt-3">

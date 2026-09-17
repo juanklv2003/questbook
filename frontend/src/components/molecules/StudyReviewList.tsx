@@ -2,6 +2,7 @@ import * as React from "react"
 import { CheckCircle2, ChevronDown, Circle, ListChecks, XCircle } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { useLanguage, type TranslationKey } from "../../i18n/LanguageContext"
+import { useMinWidthLg } from "../../hooks/useMinWidthLg"
 import type { FlashcardStatus } from "./Flashcard"
 
 export interface ReviewListItem {
@@ -43,14 +44,91 @@ function StatusIcon({ status }: { status: FlashcardStatus }) {
  */
 export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewListProps) {
   const { t } = useLanguage();
+  const isDesktop = useMinWidthLg();
   const [open, setOpen] = React.useState(false);
   const listId = React.useId();
   const doneCount = items.filter((i) => i.status !== "pending").length;
 
+  const questionList = (variant: "mobile" | "desktop") => (
+    <ol
+      id={variant === "mobile" ? listId : undefined}
+      className={cn(
+        variant === "mobile"
+          ? "flex max-h-64 min-h-0 flex-col gap-1 overflow-y-auto overscroll-contain pb-1 pr-1"
+          : "flex min-h-0 snap-x gap-2 overflow-x-auto pb-1 lg:max-h-[52vh] lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:pb-0 lg:pr-1"
+      )}
+    >
+      {items.map((item, index) => {
+        const isActive = index === activeIndex;
+        const meta = STATUS_META[item.status];
+        const statusLabel = t(meta.labelKey);
+        return (
+          <li
+            key={item.id}
+            className={cn(
+              "min-w-0",
+              variant === "desktop" && "shrink-0 basis-52 snap-start sm:basis-60 lg:basis-auto lg:shrink"
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => onSelect(index)}
+              aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
+              aria-current={isActive ? "true" : undefined}
+              className={cn(
+                "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                isActive
+                  ? "border-primary/40 bg-accent/70"
+                  : "border-transparent bg-transparent hover:border-border hover:bg-accent/50"
+              )}
+            >
+              <span className="mt-0.5">
+                <StatusIcon status={item.status} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t("review.questionLabel", { n: index + 1, label: statusLabel })}
+                </span>
+                <span
+                  className={cn(
+                    "mt-0.5 block text-sm text-foreground break-words",
+                    variant === "desktop" ? "line-clamp-2 leading-snug" : "leading-relaxed"
+                  )}
+                >
+                  {item.question}
+                </span>
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
+  );
+
+  if (isDesktop) {
+    return (
+      <nav aria-label={t("review.title")} className="flex min-h-0 flex-col gap-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
+            <ListChecks className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            {t("review.title")}
+          </h2>
+          <p className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground" aria-live="polite">
+            {doneCount}/{items.length}
+          </p>
+        </div>
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
+        ) : (
+          questionList("desktop")
+        )}
+      </nav>
+    );
+  }
+
   return (
-    <>
-      {/* Móvil: toggle + lista vertical colapsable */}
-      <nav aria-label={t("review.title")} className="flex min-h-0 flex-col gap-2 lg:hidden">
+    <nav aria-label={t("review.title")} className="flex min-h-0 flex-col gap-2">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -80,97 +158,8 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
           (items.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
           ) : (
-            <ol id={listId} className="flex max-h-64 min-h-0 flex-col gap-1 overflow-y-auto overscroll-contain pb-1 pr-1">
-              {items.map((item, index) => {
-                const isActive = index === activeIndex;
-                const meta = STATUS_META[item.status];
-                const statusLabel = t(meta.labelKey);
-                return (
-                  <li key={item.id} className="min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => onSelect(index)}
-                      aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
-                      aria-current={isActive ? "true" : undefined}
-                      className={cn(
-                        "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                        isActive
-                          ? "border-primary/40 bg-accent/70"
-                          : "border-transparent bg-transparent hover:border-border hover:bg-accent/50"
-                      )}
-                    >
-                      <span className="mt-0.5">
-                        <StatusIcon status={item.status} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {t("review.questionLabel", { n: index + 1, label: statusLabel })}
-                        </span>
-                        <span className="mt-0.5 block text-sm leading-relaxed text-foreground break-words">
-                          {item.question}
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
+            questionList("mobile")
           ))}
-      </nav>
-
-      {/* Desktop: sidebar vertical, sin cambios visuales */}
-      <nav aria-label={t("review.title")} className="hidden min-h-0 flex-col gap-3 lg:flex">
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
-            <ListChecks className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            {t("review.title")}
-          </h2>
-          <p className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground" aria-live="polite">
-            {doneCount}/{items.length}
-          </p>
-        </div>
-        {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
-        ) : (
-          <ol className="flex min-h-0 snap-x gap-2 overflow-x-auto pb-1 lg:max-h-[52vh] lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:pb-0 lg:pr-1">
-            {items.map((item, index) => {
-              const isActive = index === activeIndex;
-              const meta = STATUS_META[item.status];
-              const statusLabel = t(meta.labelKey);
-              return (
-                <li key={item.id} className="min-w-0 shrink-0 basis-52 snap-start sm:basis-60 lg:basis-auto lg:shrink">
-                  <button
-                    type="button"
-                    onClick={() => onSelect(index)}
-                    aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
-                    aria-current={isActive ? "true" : undefined}
-                    className={cn(
-                      "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                      isActive
-                        ? "border-primary/40 bg-accent/70"
-                        : "border-transparent bg-transparent hover:border-border hover:bg-accent/50"
-                    )}
-                  >
-                    <span className="mt-0.5">
-                      <StatusIcon status={item.status} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {t("review.questionLabel", { n: index + 1, label: statusLabel })}
-                      </span>
-                      <span className="mt-0.5 line-clamp-2 block text-sm leading-snug text-foreground break-words">
-                        {item.question}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </nav>
-    </>
-  )
+    </nav>
+  );
 }
