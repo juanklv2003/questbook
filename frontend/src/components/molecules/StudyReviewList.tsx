@@ -15,8 +15,6 @@ export interface StudyReviewListProps {
   items: ReviewListItem[];
   activeIndex: number;
   onSelect: (index: number) => void;
-  /** Scroll interno en el listado (móvil / ventana baja). */
-  compactLayout?: boolean;
 }
 
 const STATUS_META: Record<FlashcardStatus, { labelKey: TranslationKey }> = {
@@ -35,117 +33,21 @@ function StatusIcon({ status }: { status: FlashcardStatus }) {
   return <Circle className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 }
 
-function QuestionList({
-  items,
-  activeIndex,
-  onSelect,
-  listId,
-  variant,
-  clampDesktop,
-}: {
-  items: ReviewListItem[];
-  activeIndex: number;
-  onSelect: (index: number) => void;
-  listId?: string;
-  variant: "mobile" | "desktop";
-  clampDesktop: boolean;
-}) {
-  const { t } = useLanguage();
-
-  return (
-    <ol
-      id={listId}
-      className={cn(
-        "flex flex-col gap-1",
-        variant === "desktop" && clampDesktop && "gap-2"
-      )}
-    >
-      {items.map((item, index) => {
-        const isActive = index === activeIndex;
-        const meta = STATUS_META[item.status];
-        const statusLabel = t(meta.labelKey);
-        return (
-          <li key={item.id} className="min-w-0">
-            <button
-              type="button"
-              onClick={() => onSelect(index)}
-              aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
-              aria-current={isActive ? "true" : undefined}
-              className={cn(
-                "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                isActive
-                  ? "border-primary/40 bg-accent/70"
-                  : "border-transparent bg-transparent hover:border-border hover:bg-accent/50"
-              )}
-            >
-              <span className="mt-0.5">
-                <StatusIcon status={item.status} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t("review.questionLabel", { n: index + 1, label: statusLabel })}
-                </span>
-                <span
-                  className={cn(
-                    "mt-0.5 block break-words text-sm text-foreground",
-                    variant === "desktop" && clampDesktop ? "line-clamp-2 leading-snug" : "leading-relaxed"
-                  )}
-                >
-                  {item.question}
-                </span>
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
 /**
- * Lista de repaso de la sesión.
- * Móvil (<lg): acordeón. En layout compacto, la lista scrollea dentro del panel.
- * Escritorio ancho y alto: sidebar natural (scroll de página).
+ * Móvil (<lg): acordeón con scroll interno al expandir.
+ * Escritorio (≥1024, p. ej. 720p/1080p): sidebar «Repasar» como antes — lista vertical con max 52vh.
  */
-export function StudyReviewList({
-  items,
-  activeIndex,
-  onSelect,
-  compactLayout = false,
-}: StudyReviewListProps) {
+export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewListProps) {
   const { t } = useLanguage();
   const isDesktop = useMinWidthLg();
   const [open, setOpen] = React.useState(false);
   const listId = React.useId();
   const doneCount = items.filter((i) => i.status !== "pending").length;
 
-  const scrollClass =
-    "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]";
-
-  const listScrollWrap = (variant: "mobile" | "desktop", node: React.ReactNode) => {
-    if (!compactLayout) return node;
-    return (
-      <div
-        className={cn(
-          scrollClass,
-          variant === "mobile"
-            ? "max-h-[min(18rem,calc(100dvh-16rem))] pr-1"
-            : "max-h-[calc(100dvh-8rem)] pr-1"
-        )}
-      >
-        {node}
-      </div>
-    );
-  };
-
   if (isDesktop) {
     return (
-      <nav
-        aria-label={t("review.title")}
-        className={cn("flex flex-col gap-3", compactLayout && "min-h-0 flex-1 overflow-hidden")}
-      >
-        <div className="flex shrink-0 items-baseline justify-between gap-2">
+      <nav aria-label={t("review.title")} className="flex min-h-0 flex-col gap-3">
+        <div className="flex items-baseline justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
             <ListChecks className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             {t("review.title")}
@@ -157,16 +59,42 @@ export function StudyReviewList({
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
         ) : (
-          listScrollWrap(
-            "desktop",
-            <QuestionList
-              items={items}
-              activeIndex={activeIndex}
-              onSelect={onSelect}
-              variant="desktop"
-              clampDesktop={compactLayout}
-            />
-          )
+          <ol className="flex min-h-0 max-h-[52vh] flex-col gap-2 overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]">
+            {items.map((item, index) => {
+              const isActive = index === activeIndex;
+              const meta = STATUS_META[item.status];
+              const statusLabel = t(meta.labelKey);
+              return (
+                <li key={item.id} className="min-w-0 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onSelect(index)}
+                    aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
+                    aria-current={isActive ? "true" : undefined}
+                    className={cn(
+                      "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                      isActive
+                        ? "border-primary/40 bg-accent/70"
+                        : "border-transparent bg-transparent hover:border-border hover:bg-accent/50"
+                    )}
+                  >
+                    <span className="mt-0.5">
+                      <StatusIcon status={item.status} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {t("review.questionLabel", { n: index + 1, label: statusLabel })}
+                      </span>
+                      <span className="mt-0.5 block line-clamp-2 break-words text-sm leading-snug text-foreground">
+                        {item.question}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
         )}
       </nav>
     );
@@ -203,17 +131,45 @@ export function StudyReviewList({
         (items.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
         ) : (
-          listScrollWrap(
-            "mobile",
-            <QuestionList
-              items={items}
-              activeIndex={activeIndex}
-              onSelect={onSelect}
-              listId={listId}
-              variant="mobile"
-              clampDesktop={false}
-            />
-          )
+          <ol
+            id={listId}
+            className="flex max-h-[min(18rem,calc(100dvh-16rem))] min-h-0 flex-col gap-1 overflow-y-auto overscroll-y-contain pb-1 pr-1 [-webkit-overflow-scrolling:touch]"
+          >
+            {items.map((item, index) => {
+              const isActive = index === activeIndex;
+              const meta = STATUS_META[item.status];
+              const statusLabel = t(meta.labelKey);
+              return (
+                <li key={item.id} className="min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => onSelect(index)}
+                    aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
+                    aria-current={isActive ? "true" : undefined}
+                    className={cn(
+                      "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                      isActive
+                        ? "border-primary/40 bg-accent/70"
+                        : "border-transparent bg-transparent hover:border-border hover:bg-accent/50"
+                    )}
+                  >
+                    <span className="mt-0.5">
+                      <StatusIcon status={item.status} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {t("review.questionLabel", { n: index + 1, label: statusLabel })}
+                      </span>
+                      <span className="mt-0.5 block break-words text-sm leading-relaxed text-foreground">
+                        {item.question}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
         ))}
     </nav>
   );
