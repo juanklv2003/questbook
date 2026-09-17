@@ -17,6 +17,7 @@ import { DeckController } from './DeckController';
 import { db } from '../../../config/db';
 import { env } from '../../../config/env';
 import { aiGenerateLimiter } from '../../../core/middlewares/rateLimits';
+import { JwtTokenService } from '../../auth/infra/JwtTokenService';
 
 // PDF en memoria (multer). Tamaño: MAX_PDF_UPLOAD_MB en .env (default 100 MB).
 // `limits` acota también la cantidad de archivos/campos aceptados: un solo
@@ -37,6 +38,7 @@ const deckRepo = new PostgresDeckRepository(db);
 const flashcardRepo = new PostgresFlashcardRepository(db);
 const aiGenerator = new GeminiFlashcardGenerator();
 const cloudStorage = new CloudinaryStorageAdapter();
+const tokenService = new JwtTokenService(env.JWT_SECRET);
 
 // 2. Inject into Use Cases
 const generateDeckUseCase = new GenerateDeckUseCase(deckRepo, aiGenerator, flashcardRepo, cloudStorage);
@@ -59,7 +61,8 @@ const deckController = new DeckController(
   getStudySessionUseCase,
   saveStudySessionUseCase,
   deleteStudySessionUseCase,
-  cloudStorage
+  cloudStorage,
+  tokenService
 );
 
 // 4. Wire Router
@@ -67,6 +70,7 @@ const deckRouter = Router();
 
 // Auth: app.ts mounts requireAuth on /api/v1/decks (do not duplicate per route).
 deckRouter.post('/generate/pdf-upload-params', deckController.getPdfUploadParams);
+deckRouter.post('/generate/direct-upload-token', deckController.createDirectUploadToken);
 deckRouter.post('/generate', aiGenerateLimiter, upload.single('file'), deckController.generate);
 deckRouter.get('/:deckId/flashcards', deckController.getFlashcards);
 deckRouter.get('/', deckController.listDecks);

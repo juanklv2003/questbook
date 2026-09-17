@@ -78,6 +78,11 @@ app.get('/api/v1/health', (_req, res) => {
     upload: {
       maxPdfBytes: env.MAX_PDF_UPLOAD_BYTES,
       maxPdfMb: env.MAX_PDF_UPLOAD_MB,
+      cloudinaryMaxPdfBytes: env.CLOUDINARY_MAX_PDF_BYTES,
+      cloudinaryMaxPdfMb: env.CLOUDINARY_MAX_PDF_MB,
+      directUploadBaseUrl: env.API_PUBLIC_BASE_URL
+        ? `${env.API_PUBLIC_BASE_URL}/decks/generate`
+        : undefined,
     },
   });
 });

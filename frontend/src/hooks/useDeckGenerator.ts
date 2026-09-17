@@ -1,23 +1,28 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
 import { fetchPdfUploadParams, uploadPdfToCloudinary } from '../lib/cloudinaryUpload';
+import { generateDeckViaDirectUpload } from '../lib/directDeckUpload';
 import { getApiErrorMessage } from '../lib/apiErrorMessage';
-import { loadUploadLimits, getMaxPdfBytes, formatMaxPdfMb } from '../lib/uploadConfig';
+import {
+  loadUploadLimits,
+  getMaxPdfBytes,
+  getCloudinaryMaxPdfBytes,
+  getDirectUploadUrl,
+  formatMaxPdfMb,
+  formatCloudinaryMaxPdfMb,
+} from '../lib/uploadConfig';
 import { parseOverloaded, parseQuotaExceeded } from '../lib/quota';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { DeckGenerationOptions, ModelOverloadedInfo, QuotaExceededInfo } from '../types';
+import type { DirectUploadTokenResponse } from '../lib/directDeckUpload';
 
 export function useDeckGenerator() {
   const { t } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  // Structured quota state (null = no quota block). Kept alongside the
-  // legacy string error so existing callers keep working.
   const [quotaExceeded, setQuotaExceeded] = useState<QuotaExceededInfo | null>(null);
-  // Structured saturation state (503). Same countdown shape as the quota block.
   const [overloaded, setOverloaded] = useState<ModelOverloadedInfo | null>(null);
-  // true = upload finished and the AI is generating the cards
   const [isAiProcessing, setIsAiProcessing] = useState(false);
 
   const clearError = () => {
@@ -41,6 +46,42 @@ export function useDeckGenerator() {
         const msg = t('gen.fileTooLarge', { maxMb: String(formatMaxPdfMb()) });
         setError(msg);
         throw new Error(msg);
+      }
+
+      const cloudinaryMax = getCloudinaryMaxPdfBytes();
+      const useDirectApi = file.size > cloudinaryMax;
+
+      if (useDirectApi) {
+        const directUrl = getDirectUploadUrl();
+        if (!directUrl) {
+          const msg = t('gen.fileTooLargeCloudinary', {
+            maxMb: String(formatCloudinaryMaxPdfMb()),
+          });
+          setError(msg);
+          throw new Error(msg);
+        }
+
+        setProgress(5);
+        const tokenRes = await apiClient.post<DirectUploadTokenResponse>('/decks/generate/direct-upload-token');
+        setProgress(10);
+
+        const result = await generateDeckViaDirectUpload(
+          tokenRes.data.uploadUrl || directUrl,
+          tokenRes.data.token,
+          file,
+          options,
+          (pct) => {
+            setProgress(10 + Math.round(pct * 0.45));
+            if (pct >= 100) {
+              setIsAiProcessing(true);
+              setProgress(60);
+            }
+          }
+        );
+
+        setProgress(100);
+        setIsAiProcessing(false);
+        return result;
       }
 
       setProgress(5);
@@ -95,7 +136,14 @@ export function useDeckGenerator() {
       if (status === 413) {
         setError(t('gen.fileTooLarge', { maxMb: String(formatMaxPdfMb()) }));
       } else if (err instanceof Error && err.message.startsWith('cloudinary_upload')) {
-        setError(t('gen.pdfStorage'));
+        const detail = err.message.split(':').slice(1).join(':').toLowerCase();
+        if (detail.includes('file size too large')) {
+          setError(
+            t('gen.fileTooLargeCloudinary', { maxMb: String(formatCloudinaryMaxPdfMb()) })
+          );
+        } else {
+          setError(t('gen.pdfStorage'));
+        }
       } else {
         setError(getApiErrorMessage(err, t, 'deckGenerate'));
       }

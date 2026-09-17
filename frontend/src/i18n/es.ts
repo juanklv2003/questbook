@@ -132,6 +132,8 @@ export const es = {
   "gen.overloaded": "El modelo de IA está saturado. Inténtalo de nuevo en unos segundos.",
   "gen.timeout": "La IA está tardando demasiado. El documento es muy extenso; prueba con un PDF más corto o inténtalo de nuevo.",
   "gen.fileTooLarge": "El PDF supera el tamaño máximo ({maxMb} MB). Comprímelo o súbelo en partes más pequeñas.",
+  "gen.fileTooLargeCloudinary":
+    "Los PDF de más de {maxMb} MB no se guardan en la nube, pero podemos generar las tarjetas igual. Si falla, el administrador debe configurar API_PUBLIC_BASE_URL en Render.",
   "gen.pdfStorage": "No se pudo subir el PDF al almacenamiento. Comprobá tu conexión e intentá de nuevo.",
   "gen.generic": "Error al generar el libro",
 

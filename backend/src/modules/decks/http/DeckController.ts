@@ -14,6 +14,8 @@ import { parseBody } from '../../../core/validation/parseBody';
 import { extractTextFromPdf } from '../infra/PdfTextExtractor';
 import { fetchPdfBufferFromUrl } from '../infra/fetchCloudinaryPdf';
 import type { ICloudStoragePort } from '../domain/ICloudStoragePort';
+import type { ITokenServicePort } from '../../auth/domain/ITokenServicePort';
+import { env } from '../../../config/env';
 
 // Todos los IDs de la app son UUID v4 generados por Postgres (gen_random_uuid).
 // Validar el formato en el router evita 500 por IDs malformados y da un 400
@@ -40,10 +42,12 @@ export class DeckController {
     private readonly getStudySessionUseCase: GetStudySessionUseCase,
     private readonly saveStudySessionUseCase: SaveStudySessionUseCase,
     private readonly deleteStudySessionUseCase: DeleteStudySessionUseCase,
-    private readonly cloudStorage: ICloudStoragePort
+    private readonly cloudStorage: ICloudStoragePort,
+    private readonly tokenService: ITokenServicePort
   ) {
     this.generate = catchAsync(this.generate.bind(this));
     this.getPdfUploadParams = catchAsync(this.getPdfUploadParams.bind(this));
+    this.createDirectUploadToken = catchAsync(this.createDirectUploadToken.bind(this));
     this.getFlashcards = catchAsync(this.getFlashcards.bind(this));
     this.listDecks = catchAsync(this.listDecks.bind(this));
     this.deleteDeck = catchAsync(this.deleteDeck.bind(this));
@@ -59,6 +63,31 @@ export class DeckController {
       throw new AppError(401, 'Unauthorized');
     }
     res.status(200).json(this.cloudStorage.getSignedPdfUploadParams());
+  }
+
+  /** Short-lived JWT so the browser can POST a large PDF directly to Render (bypasses Vercel). */
+  async createDirectUploadToken(req: Request, res: Response) {
+    const user = req.user;
+    if (!user?.userId || !user.email) {
+      throw new AppError(401, 'Unauthorized');
+    }
+    if (!env.API_PUBLIC_BASE_URL) {
+      throw new AppError(
+        503,
+        'La subida de PDFs grandes no está configurada en el servidor (API_PUBLIC_BASE_URL).'
+      );
+    }
+    const expiresInSeconds = 900;
+    const token = this.tokenService.generateToken(
+      { userId: user.userId, email: user.email },
+      `${expiresInSeconds}s`
+    );
+    res.status(200).json({
+      token,
+      uploadUrl: `${env.API_PUBLIC_BASE_URL}/decks/generate`,
+      expiresInSeconds,
+      cloudinaryMaxPdfBytes: env.CLOUDINARY_MAX_PDF_BYTES,
+    });
   }
 
   async generate(req: Request, res: Response) {
@@ -115,12 +144,16 @@ export class DeckController {
       throw new AppError(400, 'language must be either "en" or "es"');
     }
 
+    const storePdfOnCloudinary =
+      Boolean(uploadedPdfPublicId) ||
+      (req.file != null && req.file.buffer.length <= env.CLOUDINARY_MAX_PDF_BYTES);
+
     const result = await this.generateDeckUseCase.execute({
       name,
       userId,
       folderId,
       content,
-      fileBuffer: req.file?.buffer,
+      fileBuffer: storePdfOnCloudinary ? req.file?.buffer : undefined,
       fileName: req.file?.originalname,
       pdfUrl: uploadedPdfUrl,
       pdfPublicId: uploadedPdfPublicId,

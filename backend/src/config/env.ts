@@ -77,6 +77,13 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => (v?.trim() ? v.trim() : undefined)),
+  /** Cloudinary upload API limit per file (MB). Free tier is typically 10 MB. */
+  CLOUDINARY_MAX_PDF_MB: z.string().optional(),
+  /** Public API base for large PDF uploads (browser → Render, bypasses Vercel body limit). */
+  API_PUBLIC_BASE_URL: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim().replace(/\/+$/, '') : undefined)),
   /** `legacy` = fixed folder mode (`folder` param). Default = dynamic folders (`asset_folder`). */
   CLOUDINARY_UPLOAD_FOLDER_MODE: z
     .string()
@@ -172,6 +179,13 @@ export const env = {
   /** Límite de subida PDF (bytes), configurable vía MAX_PDF_UPLOAD_MB (default 100). */
   MAX_PDF_UPLOAD_MB: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100),
   MAX_PDF_UPLOAD_BYTES: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100) * 1024 * 1024,
+  /** Per-file limit on Cloudinary's upload API (free tier ≈ 10 MB). */
+  CLOUDINARY_MAX_PDF_MB: clampInt(_env.data.CLOUDINARY_MAX_PDF_MB, 10, 1, 100),
+  CLOUDINARY_MAX_PDF_BYTES: clampInt(_env.data.CLOUDINARY_MAX_PDF_MB, 10, 1, 100) * 1024 * 1024,
+  /** Base URL for browser → API multipart (must match Render/Railway public URL). */
+  API_PUBLIC_BASE_URL:
+    _env.data.API_PUBLIC_BASE_URL ??
+    (_env.data.NODE_ENV === 'production' ? undefined : `http://localhost:${_env.data.PORT}/api/v1`),
   DB_POOL_MAX: clampInt(_env.data.DB_POOL_MAX, 10, 1, 30),
 };
 

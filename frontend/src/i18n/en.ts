@@ -134,6 +134,8 @@ export const en: { [K in keyof typeof es]: string } = {
   "gen.overloaded": "The AI model is overloaded. Try again in a few seconds.",
   "gen.timeout": "AI is taking too long. The document is very large; try a shorter PDF or try again.",
   "gen.fileTooLarge": "The PDF exceeds the maximum size ({maxMb} MB). Compress it or upload smaller parts.",
+  "gen.fileTooLargeCloudinary":
+    "The PDF exceeds storage limit ({maxMb} MB). Larger files need API_PUBLIC_BASE_URL on the server; if it is set, try again after redeploy.",
   "gen.pdfStorage": "Could not upload the PDF to storage. Check your connection and try again.",
   "gen.generic": "Failed to generate the book",
 
