@@ -53,9 +53,10 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
     <ol
       id={variant === "mobile" ? listId : undefined}
       className={cn(
+        "flex min-h-0 flex-col gap-1 overscroll-contain",
         variant === "mobile"
-          ? "flex max-h-64 min-h-0 flex-col gap-1 overflow-y-auto overscroll-contain pb-1 pr-1"
-          : "flex min-h-0 snap-x gap-2 overflow-x-auto pb-1 lg:max-h-[52vh] lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:pb-0 lg:pr-1"
+          ? "max-h-[min(16rem,calc(100dvh-20rem))] overflow-y-auto pb-1 pr-1"
+          : "gap-2 overflow-y-auto pb-0 pr-1"
       )}
     >
       {items.map((item, index) => {
@@ -65,10 +66,7 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
         return (
           <li
             key={item.id}
-            className={cn(
-              "min-w-0",
-              variant === "desktop" && "shrink-0 basis-52 snap-start sm:basis-60 lg:basis-auto lg:shrink"
-            )}
+            className="min-w-0 shrink-0"
           >
             <button
               type="button"
@@ -108,8 +106,8 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
 
   if (isDesktop) {
     return (
-      <nav aria-label={t("review.title")} className="flex min-h-0 flex-col gap-3">
-        <div className="flex items-baseline justify-between gap-2">
+      <nav aria-label={t("review.title")} className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+        <div className="flex shrink-0 items-baseline justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
             <ListChecks className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             {t("review.title")}
@@ -121,14 +119,16 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
         ) : (
-          questionList("desktop")
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            {questionList("desktop")}
+          </div>
         )}
       </nav>
     );
   }
 
   return (
-    <nav aria-label={t("review.title")} className="flex min-h-0 flex-col gap-2">
+    <nav aria-label={t("review.title")} className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -158,7 +158,9 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
           (items.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
           ) : (
-            questionList("mobile")
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              {questionList("mobile")}
+            </div>
           ))}
     </nav>
   );

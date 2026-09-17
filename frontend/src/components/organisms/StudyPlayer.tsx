@@ -80,7 +80,7 @@ export function StudyPlayer({
   const showReview = reviewItems.length > 0 && typeof onSelectCard === "function";
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 pt-3 pb-10">
+    <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 pt-3 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <div className="flex flex-col gap-3 px-1 sm:px-2">
         <div className="w-full flex justify-between items-center gap-2">
           <span className="min-w-0 truncate text-sm font-medium text-muted-foreground uppercase tracking-widest">
@@ -118,7 +118,7 @@ export function StudyPlayer({
 
       <div className={`grid w-full gap-6 ${showReview ? "lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start" : ""}`}>
         {showReview && (
-          <aside className="order-2 min-w-0 rounded-xl border bg-card text-card-foreground p-4 shadow-sm lg:order-1 lg:sticky lg:top-20">
+          <aside className="order-2 flex min-h-0 min-w-0 max-h-[min(280px,42dvh)] flex-col overflow-hidden rounded-xl border bg-card p-4 shadow-sm lg:order-1 lg:max-h-[calc(100dvh-5.5rem)] lg:sticky lg:top-20">
             <StudyReviewList items={reviewItems} activeIndex={activeIndex} onSelect={onSelectCard!} />
           </aside>
         )}
