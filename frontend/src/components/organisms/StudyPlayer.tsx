@@ -7,7 +7,9 @@ import { QuotaCountdownAlert } from "../molecules/QuotaCountdownAlert"
 import { Button } from "../atoms/Button"
 import { TextArea } from "../atoms/TextArea"
 import { useLanguage } from "../../i18n/LanguageContext"
+import { useStudyCompactLayout } from "../../hooks/useStudyCompactLayout"
 import { Send, RotateCcw, ArrowRight, AlertCircle } from "lucide-react"
+import { cn } from "../../lib/utils"
 
 export interface StudyPlayerProps {
   card: FlashcardType;
@@ -59,6 +61,7 @@ export function StudyPlayer({
   onRestart,
 }: StudyPlayerProps) {
   const { t } = useLanguage();
+  const compactLayout = useStudyCompactLayout();
   const [isFlipped, setIsFlipped] = React.useState(false);
 
   // Auto flip to back when evaluation comes in
@@ -118,8 +121,19 @@ export function StudyPlayer({
 
       <div className={`grid w-full gap-6 ${showReview ? "lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start" : ""}`}>
         {showReview && (
-          <aside className="order-2 flex min-h-0 min-w-0 max-h-[min(280px,42dvh)] flex-col overflow-hidden rounded-xl border bg-card p-4 shadow-sm lg:order-1 lg:max-h-[calc(100dvh-5.5rem)] lg:sticky lg:top-20">
-            <StudyReviewList items={reviewItems} activeIndex={activeIndex} onSelect={onSelectCard!} />
+          <aside
+            className={cn(
+              "order-2 min-w-0 rounded-xl border bg-card p-4 text-card-foreground shadow-sm lg:order-1 lg:sticky lg:top-20",
+              compactLayout &&
+                "lg:flex lg:min-h-0 lg:max-h-[calc(100dvh-6rem)] lg:flex-col lg:overflow-hidden"
+            )}
+          >
+            <StudyReviewList
+              items={reviewItems}
+              activeIndex={activeIndex}
+              onSelect={onSelectCard!}
+              compactLayout={compactLayout}
+            />
           </aside>
         )}
 

@@ -15,6 +15,8 @@ export interface StudyReviewListProps {
   items: ReviewListItem[];
   activeIndex: number;
   onSelect: (index: number) => void;
+  /** Scroll interno en el listado (móvil / ventana baja). */
+  compactLayout?: boolean;
 }
 
 const STATUS_META: Record<FlashcardStatus, { labelKey: TranslationKey }> = {
@@ -33,30 +35,29 @@ function StatusIcon({ status }: { status: FlashcardStatus }) {
   return <Circle className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 }
 
-/**
- * Lista de repaso de la sesión — solo presentación, sin fetch.
- * Cada pregunta es un botón real que salta a esa tarjeta.
- *
- * Móvil (<lg): panel colapsable colapsado por defecto para no empujar
- * el Submit bajo el fold. Al expandir muestra lista vertical scrolleable
- * con la pregunta completa (sin line-clamp).
- * Desktop (lg:): sidebar vertical exactamente como antes.
- */
-export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewListProps) {
+function QuestionList({
+  items,
+  activeIndex,
+  onSelect,
+  listId,
+  variant,
+  clampDesktop,
+}: {
+  items: ReviewListItem[];
+  activeIndex: number;
+  onSelect: (index: number) => void;
+  listId?: string;
+  variant: "mobile" | "desktop";
+  clampDesktop: boolean;
+}) {
   const { t } = useLanguage();
-  const isDesktop = useMinWidthLg();
-  const [open, setOpen] = React.useState(false);
-  const listId = React.useId();
-  const doneCount = items.filter((i) => i.status !== "pending").length;
 
-  const questionList = (variant: "mobile" | "desktop") => (
+  return (
     <ol
-      id={variant === "mobile" ? listId : undefined}
+      id={listId}
       className={cn(
-        "flex min-h-0 flex-col gap-1 overscroll-contain",
-        variant === "mobile"
-          ? "max-h-[min(16rem,calc(100dvh-20rem))] overflow-y-auto pb-1 pr-1"
-          : "gap-2 overflow-y-auto pb-0 pr-1"
+        "flex flex-col gap-1",
+        variant === "desktop" && clampDesktop && "gap-2"
       )}
     >
       {items.map((item, index) => {
@@ -64,10 +65,7 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
         const meta = STATUS_META[item.status];
         const statusLabel = t(meta.labelKey);
         return (
-          <li
-            key={item.id}
-            className="min-w-0 shrink-0"
-          >
+          <li key={item.id} className="min-w-0">
             <button
               type="button"
               onClick={() => onSelect(index)}
@@ -90,8 +88,8 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
                 </span>
                 <span
                   className={cn(
-                    "mt-0.5 block text-sm text-foreground break-words",
-                    variant === "desktop" ? "line-clamp-2 leading-snug" : "leading-relaxed"
+                    "mt-0.5 block break-words text-sm text-foreground",
+                    variant === "desktop" && clampDesktop ? "line-clamp-2 leading-snug" : "leading-relaxed"
                   )}
                 >
                   {item.question}
@@ -103,10 +101,50 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
       })}
     </ol>
   );
+}
+
+/**
+ * Lista de repaso de la sesión.
+ * Móvil (<lg): acordeón. En layout compacto, la lista scrollea dentro del panel.
+ * Escritorio ancho y alto: sidebar natural (scroll de página).
+ */
+export function StudyReviewList({
+  items,
+  activeIndex,
+  onSelect,
+  compactLayout = false,
+}: StudyReviewListProps) {
+  const { t } = useLanguage();
+  const isDesktop = useMinWidthLg();
+  const [open, setOpen] = React.useState(false);
+  const listId = React.useId();
+  const doneCount = items.filter((i) => i.status !== "pending").length;
+
+  const scrollClass =
+    "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]";
+
+  const listScrollWrap = (variant: "mobile" | "desktop", node: React.ReactNode) => {
+    if (!compactLayout) return node;
+    return (
+      <div
+        className={cn(
+          scrollClass,
+          variant === "mobile"
+            ? "max-h-[min(18rem,calc(100dvh-16rem))] pr-1"
+            : "max-h-[calc(100dvh-8rem)] pr-1"
+        )}
+      >
+        {node}
+      </div>
+    );
+  };
 
   if (isDesktop) {
     return (
-      <nav aria-label={t("review.title")} className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <nav
+        aria-label={t("review.title")}
+        className={cn("flex flex-col gap-3", compactLayout && "min-h-0 flex-1 overflow-hidden")}
+      >
         <div className="flex shrink-0 items-baseline justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
             <ListChecks className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -119,49 +157,64 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            {questionList("desktop")}
-          </div>
+          listScrollWrap(
+            "desktop",
+            <QuestionList
+              items={items}
+              activeIndex={activeIndex}
+              onSelect={onSelect}
+              variant="desktop"
+              clampDesktop={compactLayout}
+            />
+          )
         )}
       </nav>
     );
   }
 
   return (
-    <nav aria-label={t("review.title")} className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls={listId}
-          className={cn(
-            "flex min-h-[44px] w-full cursor-pointer select-none items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-            "border-border/60 bg-background hover:bg-accent/50"
-          )}
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <ListChecks className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <span className="truncate text-sm font-semibold tracking-tight tabular-nums">
-              {t("study.reviewQuestions", { done: doneCount, total: items.length })}
-            </span>
+    <nav aria-label={t("review.title")} className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={listId}
+        className={cn(
+          "flex min-h-[44px] w-full cursor-pointer select-none items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+          "border-border/60 bg-background hover:bg-accent/50"
+        )}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <ListChecks className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="truncate text-sm font-semibold tracking-tight tabular-nums">
+            {t("study.reviewQuestions", { done: doneCount, total: items.length })}
           </span>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
-              open && "rotate-180"
-            )}
-            aria-hidden="true"
-          />
-        </button>
-        {open &&
-          (items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
-          ) : (
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              {questionList("mobile")}
-            </div>
-          ))}
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+            open && "rotate-180"
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      {open &&
+        (items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
+        ) : (
+          listScrollWrap(
+            "mobile",
+            <QuestionList
+              items={items}
+              activeIndex={activeIndex}
+              onSelect={onSelect}
+              listId={listId}
+              variant="mobile"
+              clampDesktop={false}
+            />
+          )
+        ))}
     </nav>
   );
 }

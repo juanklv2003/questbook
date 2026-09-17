@@ -151,12 +151,12 @@ function App() {
         onNavigate={openPanel}
       />
 
-      <div className="relative z-10 flex flex-1 flex-col">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         {/* Fixed bg layers are viewport-anchored, so scrolling here never
             moves or cuts them; y-auto (was overflow-clip) keeps tall library /
             study content reachable instead of clipped over a flat bottom. */}
-        <main className="flex w-full flex-1 flex-col overflow-x-clip overflow-y-auto px-4">
-          <div className="container mx-auto w-full max-w-6xl flex-1 flex flex-col">
+        <main className="flex min-h-0 w-full flex-1 flex-col overflow-x-clip overflow-y-auto px-4 overscroll-y-contain">
+          <div className="container mx-auto flex w-full max-w-6xl min-h-0 flex-1 flex-col">
             {activeDeckId ? (
               <React.Suspense
                 fallback={
