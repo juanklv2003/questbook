@@ -19,9 +19,17 @@ import { env } from '../../../config/env';
 import { aiGenerateLimiter } from '../../../core/middlewares/rateLimits';
 
 // PDF en memoria (multer). Tamaño: MAX_PDF_UPLOAD_MB en .env (default 100 MB).
+// `limits` acota también la cantidad de archivos/campos aceptados: un solo
+// archivo y los ~7 campos de texto que manda el frontend. El contenido se valida
+// como PDF real en el controller antes de gastar IA o Cloudinary.
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: env.MAX_PDF_UPLOAD_BYTES },
+  limits: {
+    fileSize: env.MAX_PDF_UPLOAD_BYTES,
+    files: 1,
+    fields: 12,
+    parts: 24,
+  },
 });
 
 // 1. Instantiate Adapters

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
+import helmet from 'helmet';
 import { env } from './config/env';
 import { isGroqConfigured } from './core/ai/GroqClient';
 import { errorHandler } from './core/middlewares/errorHandler';
@@ -23,13 +24,30 @@ app.get('/auth/google/callback', (req, res) => {
 });
 
 // Middleware
-app.use(cors({
-  origin: env.FRONTEND_URL,
-  credentials: true,
-}));
+// Headers de seguridad. La API sólo sirve JSON y redirects de OAuth, así que no
+// definimos CSP (podría romper Turnstile/Google) y dejamos CORP en cross-origin
+// porque el frontend vive en otro dominio (Vercel) y descarga PDFs de Cloudinary.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+// Orígenes permitidos: FRONTEND_URL + CORS_ORIGINS (ver config/env.ts). Sin
+// header Origin (curl, health check de Render) pasa; un origen desconocido NO
+// recibe headers CORS y el navegador lo bloquea.
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      callback(null, !origin || env.CORS_ORIGINS.includes(origin));
+    },
+    credentials: true,
+  })
+);
 app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 1 MB alcanza para JSON/urlencoded de esta app (los PDFs van por multipart).
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
 import { deckRouter } from './modules/decks/http/DeckRouter';
@@ -44,6 +62,9 @@ app.use('/api/v1/evaluations', authMiddleware.requireAuth, evaluationRouter);
 app.get('/api/v1/health', (_req, res) => {
   res.json({
     status: 'ok',
+    node: process.version,
+    uptimeSeconds: Math.round(process.uptime()),
+    corsOrigins: env.CORS_ORIGINS.length,
     auth: {
       googleOAuth: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
     },
@@ -56,6 +77,12 @@ app.get('/api/v1/health', (_req, res) => {
       maxPdfMb: env.MAX_PDF_UPLOAD_MB,
     },
   });
+});
+
+// 404 explícito en JSON: sin esto Express respondía con HTML y el cliente
+// intentaba leer `error` de un body que no era JSON.
+app.use((req, res) => {
+  res.status(404).json({ error: `Not found: ${req.method} ${req.path}` });
 });
 
 // Global Error Handler

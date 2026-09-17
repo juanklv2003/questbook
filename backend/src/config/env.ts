@@ -57,6 +57,10 @@ const envSchema = z.object({
       const normalized = (value ?? '').trim().replace(/\/+$/, '');
       return normalized || 'http://localhost:5173';
     }),
+  // Orígenes extra permitidos por CORS, separados por comas. Útil para los
+  // preview deployments de Vercel (https://mi-app-git-rama-usuario.vercel.app)
+  // o un dominio propio además del principal. FRONTEND_URL siempre se incluye.
+  CORS_ORIGINS: z.string().optional(),
   // SameSite de la cookie de sesión. Si no se define (o queda vacío): 'none' en
   // producción (frontend y backend en dominios distintos, ej. Vercel + Render) y
   // 'lax' en desarrollo (localhost). 'none' exige HTTPS (ver docs/DEPLOYMENT.md).
@@ -114,6 +118,19 @@ export const env = {
   COOKIE_SAME_SITE:
     _env.data.COOKIE_SAME_SITE ??
     (_env.data.NODE_ENV === 'production' ? 'none' : 'lax'),
+  /**
+   * Orígenes permitidos por CORS: siempre FRONTEND_URL (el origen canónico, que
+   * también es el destino del redirect de OAuth) + los de CORS_ORIGINS.
+   * Normalizamos igual que FRONTEND_URL (trim + sin barra final) porque el
+   * navegador compara el origen sin barra.
+   */
+  CORS_ORIGINS: (() => {
+    const extra = (_env.data.CORS_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim().replace(/\/+$/, ''))
+      .filter(Boolean);
+    return [...new Set([_env.data.FRONTEND_URL, ...extra])];
+  })(),
   /** Modelo Groq para fallback (OpenAI-compatible chat/completions). */
   GROQ_MODEL: _env.data.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
   /** Caracteres máximos del texto del PDF incluidos en el prompt de generación. */

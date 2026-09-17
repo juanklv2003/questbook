@@ -14,15 +14,22 @@ const startServer = async () => {
 
     const port = env.PORT || 3000;
     const server = app.listen(port, () => {
-      console.log(`🚀 Server is running on http://localhost:${port} (pid ${process.pid})`);
+      console.log(`🚀 Server is running on port ${port} (pid ${process.pid}, node ${process.version})`);
       console.log(
         `   Google OAuth: ${env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? 'configured' : 'missing GOOGLE_* env vars'}`
       );
       if (env.GOOGLE_CALLBACK_URL) {
         console.log(`   GOOGLE_CALLBACK_URL=${env.GOOGLE_CALLBACK_URL}`);
       }
+      console.log(`   CORS origins: ${env.CORS_ORIGINS.join(', ')}`);
       console.log(`   Verify: curl http://localhost:${port}/api/v1/health`);
     });
+
+    // Render documenta timeouts y "Connection reset by peer" en servicios Node
+    // con requests largos (aquí una generación con IA puede tardar minutos).
+    // Los defaults de Node (5s keep-alive) cortan conexiones reutilizadas.
+    server.keepAliveTimeout = 120_000;
+    server.headersTimeout = 125_000;
 
     server.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
@@ -37,6 +44,35 @@ const startServer = async () => {
       }
       process.exit(1);
     });
+
+    // Cierre ordenado: Render/Railway mandan SIGTERM en cada deploy o restart.
+    // Dejamos terminar las respuestas en vuelo (hay generaciones de IA de hasta
+    // 2 min) y forzamos la salida un poco antes del SIGKILL de la plataforma.
+    let shuttingDown = false;
+    const shutdown = (signal: NodeJS.Signals) => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      console.log(`\n${signal} received: closing HTTP server (draining requests)...`);
+      server.close(() => {
+        console.log('HTTP server closed. Bye.');
+        process.exit(0);
+      });
+      setTimeout(() => {
+        console.error('Forcing exit after 15s grace period.');
+        process.exit(1);
+      }, 15_000).unref();
+    };
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+
+    // Los rechazos no manejados se loguean pero no tumban el servicio: un crash
+    // a mitad de una request es peor que seguir vivo con un error registrado.
+    process.on('unhandledRejection', (reason) => {
+      console.error('UNHANDLED REJECTION:', reason);
+    });
+    process.on('uncaughtException', (error) => {
+      console.error('UNCAUGHT EXCEPTION:', error);
+    });
   } catch (error) {
     console.error('❌ Failed to start the server:', error);
     process.exit(1);
@@ -44,3 +80,4 @@ const startServer = async () => {
 };
 
 startServer();
+

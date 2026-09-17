@@ -37,6 +37,9 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      # Opcional: orígenes extra permitidos por CORS (previews de Vercel, etc.).
+      - key: CORS_ORIGINS
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_API_KEYS

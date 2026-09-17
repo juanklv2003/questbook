@@ -76,6 +76,7 @@ npm run migrate:flashcards-index                  # índice flashcards(deck_id) 
 | `JWT_SECRET` | string largo y aleatorio (no reutilices el de dev) |
 | `TURNSTILE_SECRET_KEY` | Secret Key de Cloudflare Turnstile (https://dash.cloudflare.com/?to=/:account/turnstile). Sin esto el backend no arranca y el registro devuelve 400 |
 | `FRONTEND_URL` | origen exacto del frontend, **sin barra final** (ej. `https://andel.vercel.app`) |
+| `CORS_ORIGINS` | opcional: orígenes extra permitidos, separados por comas (ej. previews de Vercel `https://tu-app-git-rama.vercel.app`). `FRONTEND_URL` siempre está permitido |
 | `GEMINI_API_KEY` | clave de Gemini |
 | `GEMINI_API_KEYS` | opcional: claves extra separadas por comas (failover, misma cuenta) |
 | `GEMINI_API_KEY2` | opcional: clave de otro proyecto/cuenta; se usa al final cuando las anteriores agotan cuota |

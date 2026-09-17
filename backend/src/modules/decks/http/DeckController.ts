@@ -65,6 +65,9 @@ export class DeckController {
     if (req.file) {
       // Real PDF parsing: PDFs are binary — passing the buffer as utf-8 corrupts
       // the text and makes Gemini fail. Extract the readable text instead.
+      // Falla rápido si el archivo no es un PDF: evita spawnear el worker, subir
+      // basura a Cloudinary y gastar cuota de IA.
+      assertLooksLikePdf(req.file.buffer);
       content = await extractTextFromPdf(req.file.buffer);
     }
 
@@ -207,6 +210,17 @@ export class DeckController {
     // Explicit user action only. Finishing a session never deletes the row.
     await this.deleteStudySessionUseCase.execute(deckId, userId);
     res.status(204).send();
+  }
+}
+
+/**
+ * La cabecera `%PDF-` identifica a un PDF. La spec permite bytes basura antes de
+ * la cabecera, así que la buscamos en el primer KB en vez de exigir el offset 0.
+ */
+function assertLooksLikePdf(buffer: Buffer): void {
+  const head = buffer.subarray(0, 1024).toString('latin1');
+  if (!head.includes('%PDF-')) {
+    throw new AppError(422, 'El archivo no es un PDF válido. Subí un archivo PDF.');
   }
 }
 
