@@ -10,7 +10,7 @@ cloudinary.config({
   api_secret: env.CLOUDINARY_API_SECRET,
 });
 
-/** Only accept PDFs the user just uploaded to our Cloudinary account. */
+/** Only accept PDFs hosted on our Cloudinary account (delivery CDN). */
 export function assertTrustedCloudinaryPdfUrl(url: string): void {
   let parsed: URL;
   try {
@@ -22,7 +22,8 @@ export function assertTrustedCloudinaryPdfUrl(url: string): void {
     throw new AppError(400, 'URL del PDF inválida.');
   }
   const hostOk =
-    parsed.hostname === 'res.cloudinary.com' || parsed.hostname.endsWith('.cloudinary.com');
+    parsed.hostname === 'res.cloudinary.com' ||
+    parsed.hostname.endsWith('.cloudinary.com');
   if (!hostOk) {
     throw new AppError(400, 'URL del PDF inválida.');
   }
@@ -70,26 +71,37 @@ async function fetchPdfBufferFromUrl(url: string): Promise<Buffer> {
   }
 }
 
+async function secureUrlForPublicId(
+  publicId: string,
+  resourceType: 'raw' | 'image'
+): Promise<string | null> {
+  try {
+    const info = await cloudinary.api.resource(publicId, { resource_type: resourceType });
+    return typeof info.secure_url === 'string' ? info.secure_url : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Download the original PDF bytes after a browser upload to Cloudinary.
- * Tries signed raw URL first (correct for PDFs), then legacy image delivery, then the client URL.
+ * Download original PDF bytes after a browser upload to Cloudinary.
+ * Resolves the delivery URL via the Admin API (signed client URLs are unreliable for raw PDFs).
  */
 export async function fetchPdfBufferForDeck(publicId: string, fallbackUrl: string): Promise<Buffer> {
+  const seen = new Set<string>();
   const candidates: string[] = [];
 
   for (const resourceType of ['raw', 'image'] as const) {
-    candidates.push(
-      cloudinary.url(publicId, {
-        resource_type: resourceType,
-        type: 'upload',
-        secure: true,
-        sign_url: true,
-      })
-    );
+    const resolved = await secureUrlForPublicId(publicId, resourceType);
+    if (resolved && !seen.has(resolved)) {
+      seen.add(resolved);
+      candidates.push(resolved);
+    }
   }
 
-  if (fallbackUrl.trim()) {
-    candidates.push(fallbackUrl.trim());
+  const fallback = fallbackUrl.trim();
+  if (fallback && !seen.has(fallback)) {
+    candidates.push(fallback);
   }
 
   for (const url of candidates) {
@@ -99,9 +111,12 @@ export async function fetchPdfBufferForDeck(publicId: string, fallbackUrl: strin
         return buffer;
       }
     } catch {
-      // try next delivery URL
+      // try next URL
     }
   }
 
-  throw new AppError(422, 'El archivo no es un PDF válido. Subí un archivo PDF.');
+  throw new AppError(
+    422,
+    'No se pudo descargar el PDF desde el almacenamiento. Volvé a subirlo; si el archivo es válido en tu PC, probá de nuevo tras unos minutos.'
+  );
 }
