@@ -1,6 +1,6 @@
 import { IFlashcardGeneratorPort, GenerateOptions } from '../domain/IFlashcardGeneratorPort';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
-import { generateLlmText } from '../../../core/ai/generateLlmText';
+import { generateDeckLlmText } from '../../../core/ai/generateLlmText';
 import { env } from '../../../config/env';
 import { AppError } from '../../../core/errors/AppError';
 import { QuotaExceededError } from '../../../core/errors/QuotaExceededError';
@@ -29,13 +29,13 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
   }
 
   /** Menos texto en el prompt = respuestas más rápidas y menos 502 por timeout. */
-  private static readonly PRACTICAL_TEXT_CAP = 120_000;
-  private static readonly BATCH_CARD_LIMIT = 20;
+  private static readonly PRACTICAL_TEXT_CAP = 50_000;
+  private static readonly BATCH_CARD_LIMIT = 10;
 
   private timeoutMsFor(cardCount: number): number {
-    const base = env.AI_DECK_TIMEOUT_MS;
-    const extra = Math.max(0, cardCount - 15) * 4_000;
-    return Math.min(300_000, base + extra);
+    const base = Math.min(env.AI_DECK_TIMEOUT_MS, 90_000);
+    const extra = Math.max(0, cardCount - 10) * 2_500;
+    return Math.min(120_000, base + extra);
   }
 
   async generateFromText(text: string, options?: GenerateOptions): Promise<Array<{ question: string; answer: string }>> {
@@ -208,12 +208,13 @@ ${promptText}${truncationNotice}${excludeNotice}
     // Attempt to generate content and parse JSON safely
     let responseText = '';
     try {
-      responseText = await generateLlmText(this.gemini, prompt, this.timeoutMsFor(maxCards));
+      responseText = await generateDeckLlmText(this.gemini, prompt, this.timeoutMsFor(maxCards));
     } catch (apiErr) {
       if (apiErr instanceof QuotaExceededError || apiErr instanceof ModelOverloadedError) {
         throw apiErr;
       }
-      console.error('Gemini API call failed:', apiErr);
+      const detail = apiErr instanceof Error ? apiErr.message : String(apiErr);
+      console.error('Deck AI call failed:', detail);
       throw new AppError(
         502,
         'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.'

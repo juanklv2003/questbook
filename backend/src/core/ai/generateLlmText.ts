@@ -47,8 +47,42 @@ async function generateWithGemini(
 }
 
 /**
- * 1) Gemini (rotación GEMINI_API_KEY / GEMINI_API_KEYS / GEMINI_API_KEY2)
- * 2) Si Gemini falla y hay GROQ_API_KEY → Groq (timeout, bloqueos, cuota, saturación, etc.)
+ * Generación de mazos: Groq primero (más rápido en PDFs grandes), Gemini como respaldo.
+ */
+export async function generateDeckLlmText(
+  gemini: GeminiFailover,
+  prompt: string,
+  timeoutMs: number
+): Promise<string> {
+  if (isGroqConfigured()) {
+    try {
+      return await generateWithGroq(prompt, timeoutMs);
+    } catch (groqErr) {
+      if (groqErr instanceof QuotaExceededError) {
+        throw groqErr;
+      }
+      console.warn(
+        '[AI] Groq failed for deck generation; trying Gemini.',
+        groqErr instanceof Error ? groqErr.message : groqErr
+      );
+    }
+  }
+  try {
+    return await generateWithGemini(gemini, prompt, timeoutMs);
+  } catch (error) {
+    if (!isGroqConfigured()) {
+      throw error;
+    }
+    if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
+      throw error;
+    }
+    console.warn('[AI] Gemini failed after Groq; retrying Groq once.');
+    return generateWithGroq(prompt, timeoutMs);
+  }
+}
+
+/**
+ * Evaluaciones y otros flujos: Gemini primero, Groq si falla.
  */
 export async function generateLlmText(
   gemini: GeminiFailover,

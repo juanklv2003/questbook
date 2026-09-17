@@ -11,10 +11,11 @@ import { DeleteStudySessionUseCase } from '../useCases/DeleteStudySessionUseCase
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
-import { extractTextFromPdf } from '../infra/PdfTextExtractor';
-import { fetchPdfBufferForDeck } from '../infra/fetchCloudinaryPdf';
 import { assertLooksLikePdf } from '../infra/pdfHeader';
 import { readUploadedPdfBuffer, deleteUploadedPdfFile } from '../infra/pdfUploadStorage';
+import { extractTextFromPdf, extractTextFromPdfPath } from '../infra/PdfTextExtractor';
+import { fetchPdfBufferForDeck } from '../infra/fetchCloudinaryPdf';
+import fs from 'fs/promises';
 import type { ICloudStoragePort } from '../domain/ICloudStoragePort';
 import type { ITokenServicePort } from '../../auth/domain/ITokenServicePort';
 import { env } from '../../../config/env';
@@ -110,23 +111,45 @@ export class DeckController {
 
     if (req.file) {
       let pdfBuffer: Buffer | undefined;
+      let storePdfOnCloudinary = false;
+      const uploadPath = req.file.path;
       try {
-        pdfBuffer = await readUploadedPdfBuffer(req.file);
-        assertLooksLikePdf(pdfBuffer);
-        content = await extractTextFromPdf(pdfBuffer);
+        if (uploadPath) {
+          const head = Buffer.alloc(1024);
+          const handle = await fs.open(uploadPath, 'r');
+          try {
+            const { bytesRead } = await handle.read(head, 0, 1024, 0);
+            assertLooksLikePdf(head.subarray(0, bytesRead));
+          } finally {
+            await handle.close();
+          }
+          content = await extractTextFromPdfPath(uploadPath);
+        } else {
+          pdfBuffer = await readUploadedPdfBuffer(req.file);
+          assertLooksLikePdf(pdfBuffer);
+          content = await extractTextFromPdf(pdfBuffer);
+        }
+
+        const cloudinaryStoreMaxBytes = Math.min(
+          env.CLOUDINARY_MAX_PDF_BYTES,
+          7 * 1024 * 1024
+        );
+        let fileBytes = pdfBuffer?.length ?? req.file.size;
+        if (uploadPath && fileBytes > cloudinaryStoreMaxBytes) {
+          pdfBuffer = undefined;
+        } else if (uploadPath && !pdfBuffer) {
+          const stat = await fs.stat(uploadPath);
+          fileBytes = stat.size;
+          if (fileBytes <= cloudinaryStoreMaxBytes) {
+            pdfBuffer = await fs.readFile(uploadPath);
+          }
+        }
+
+        storePdfOnCloudinary = fileBytes <= cloudinaryStoreMaxBytes && pdfBuffer != null;
       } finally {
         await deleteUploadedPdfFile(req.file);
       }
 
-      // PDFs grandes: solo extraemos texto; no re-subimos a Cloudinary en generate (OOM en Render).
-      const cloudinaryStoreMaxBytes = Math.min(
-        env.CLOUDINARY_MAX_PDF_BYTES,
-        7 * 1024 * 1024
-      );
-      const storePdfOnCloudinary =
-        pdfBuffer != null && pdfBuffer.length <= cloudinaryStoreMaxBytes;
-
-      // Validate cardCount (moved logic below still needs parsed fields first)
       const parsedCardCountEarly = cardCount ? Number(cardCount) : undefined;
       if (
         parsedCardCountEarly !== undefined &&

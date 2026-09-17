@@ -74,6 +74,7 @@ app.get('/api/v1/health', (_req, res) => {
     ai: {
       groqFallback: isGroqConfigured(),
       groqModel: isGroqConfigured() ? env.GROQ_MODEL : undefined,
+      deckGeneration: 'groq-first-v3',
     },
     upload: {
       maxPdfBytes: env.MAX_PDF_UPLOAD_BYTES,

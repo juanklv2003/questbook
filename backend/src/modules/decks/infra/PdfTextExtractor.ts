@@ -22,14 +22,11 @@ function workerExecArgv(workerFile: string): string[] | undefined {
   return ['-r', 'ts-node/register'];
 }
 
-/**
- * Extrae el texto de un PDF en un worker thread (no bloquea el event loop).
- */
-export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
+function runPdfWorker(workerData: { buffer?: Buffer; filePath?: string }): Promise<string> {
   return new Promise((resolve, reject) => {
     const workerFile = workerScriptPath();
     const worker = new Worker(workerFile, {
-      workerData: { buffer },
+      workerData,
       execArgv: workerExecArgv(workerFile),
     });
 
@@ -84,4 +81,16 @@ export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
       }
     });
   });
+}
+
+/** Extrae texto leyendo el PDF desde disco (no duplica el archivo en el heap del proceso principal). */
+export async function extractTextFromPdfPath(filePath: string): Promise<string> {
+  return runPdfWorker({ filePath });
+}
+
+/**
+ * Extrae el texto de un PDF en un worker thread (no bloquea el event loop).
+ */
+export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
+  return runPdfWorker({ buffer });
 }
