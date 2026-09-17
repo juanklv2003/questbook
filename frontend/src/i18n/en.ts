@@ -195,6 +195,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "review.questionLabel": "Question {n} · {label}",
 
   "book.openAria": "Open book {name}",
+  "book.closeMenuAria": "Close book menu",
   "book.cardsOne": "{count} flashcard",
   "book.cardsOther": "{count} flashcards",
   "book.progressComplete": "{progress}% complete",

@@ -1,5 +1,6 @@
 import * as React from "react"
 import type { KeyboardEvent } from "react"
+import { createPortal } from "react-dom"
 import { cn } from "../../lib/utils"
 import { BookOpen, Play, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
 import { useLanguage } from "../../i18n/LanguageContext"
@@ -143,10 +144,41 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
   const hoverPanelClass = cn(
     "opacity-0 invisible pointer-events-none",
     "[transition:opacity_150ms_ease,visibility_0s_linear_200ms]",
-    touchMenuOpen && "opacity-100 visible pointer-events-auto [transition:opacity_150ms_ease,visibility_0s]",
+    touchMenuOpen && prefersHover && "opacity-100 visible pointer-events-auto [transition:opacity_150ms_ease,visibility_0s]",
     "group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto group-hover:[transition:opacity_150ms_ease,visibility_0s]",
     "group-focus-within:opacity-100 group-focus-within:visible group-focus-within:pointer-events-auto group-focus-within:[transition:opacity_150ms_ease,visibility_0s]"
   );
+
+  const closeTouchMenu = () => setTouchMenuOpen(false);
+
+  const openStudy = () => {
+    closeTouchMenu();
+    onSelect();
+  };
+
+  const hoverCard = (
+    <HoverCard
+      name={name}
+      flashcardsCount={flashcardsCount}
+      progressPercent={progress}
+      deckId={deckId}
+      onDeleteSuccess={handleDeleteSuccess}
+      onEdit={onEdit}
+      onSelect={openStudy}
+      badgeStyle={styles.badge}
+      {...moveProps}
+    />
+  );
+
+  const mobileActionsSheet =
+    !prefersHover &&
+    touchMenuOpen &&
+    createPortal(
+      <BookActionsMobileSheet onClose={closeTouchMenu} closeLabel={t("book.closeMenuAria")}>
+        {hoverCard}
+      </BookActionsMobileSheet>,
+      document.body
+    );
 
   const handleKeyDown = (e: KeyboardEvent) => {
     // Let the action buttons inside the hover card handle their own keys.
@@ -199,36 +231,31 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
           </div>
         </div>
 
-        {/* Hover card — fuera del botón del lomo para que borrar/editar no abra el libro */}
-        <div
-          aria-hidden="true"
-          className={cn(
-            "absolute left-1/2 -translate-x-1/2 z-40 hidden group-hover:block",
-            isFirstShelf ? "top-full h-2" : "bottom-full h-2",
-            "w-52"
-          )}
-        />
-        <div
-          className={cn(
-            "absolute left-1/2 -translate-x-1/2 w-56 max-w-[70vw] z-50",
-            hoverPanelClass,
-            isFirstShelf ? "top-full mt-2" : "bottom-full mb-2"
-          )}
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <HoverCard
-            name={name}
-            flashcardsCount={flashcardsCount}
-            progressPercent={progress}
-            deckId={deckId}
-            onDeleteSuccess={handleDeleteSuccess}
-            onEdit={onEdit}
-            onSelect={onSelect}
-            badgeStyle={styles.badge}
-            {...moveProps}
-          />
-        </div>
+        {/* Hover card — solo escritorio (hover); en móvil va en portal centrado */}
+        {prefersHover && (
+          <>
+            <div
+              aria-hidden="true"
+              className={cn(
+                "absolute left-1/2 -translate-x-1/2 z-40 hidden group-hover:block",
+                isFirstShelf ? "top-full h-2" : "bottom-full h-2",
+                "w-52"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute left-1/2 -translate-x-1/2 w-56 max-w-[70vw] z-50",
+                hoverPanelClass,
+                isFirstShelf ? "top-full mt-2" : "bottom-full mb-2"
+              )}
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {hoverCard}
+            </div>
+          </>
+        )}
+        {mobileActionsSheet}
       </div>
     );
   }
@@ -294,43 +321,77 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
         </div>
       </div>
 
-      {/* Hover card — hermano del lomo, no hijo del onClick de abrir */}
-      <div
-        aria-hidden="true"
-        className={cn(
-          "absolute z-40 hidden group-hover:block left-full w-3",
-          isLastShelf ? "bottom-0 h-44" : isFirstShelf ? "top-0 h-44" : "top-1/2 -translate-y-1/2 h-44"
-        )}
+      {/* Hover card — escritorio; móvil usa portal (no recortado por la estantería) */}
+      {prefersHover && (
+        <>
+          <div
+            aria-hidden="true"
+            className={cn(
+              "absolute z-40 hidden group-hover:block left-full w-3",
+              isLastShelf ? "bottom-0 h-44" : isFirstShelf ? "top-0 h-44" : "top-1/2 -translate-y-1/2 h-44"
+            )}
+          />
+          <div
+            className={cn(
+              "absolute left-1/2 -translate-x-1/2 w-52 max-w-[70vw] z-50",
+              hoverPanelClass,
+              isLastShelf ? "bottom-full mb-2" : "top-full mt-2",
+              "sm:left-full sm:translate-x-0 sm:ml-3 sm:w-56 sm:max-w-none",
+              isLastShelf
+                ? "sm:bottom-0 sm:mb-0"
+                : isFirstShelf
+                  ? "sm:top-0 sm:mt-0"
+                  : "sm:top-1/2 sm:-translate-y-1/2 sm:mt-0"
+            )}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {hoverCard}
+          </div>
+        </>
+      )}
+      {mobileActionsSheet}
+    </div>
+  )
+}
+
+/** Móvil / pantalla táctil: panel centrado fuera del `overflow-hidden` de la estantería. */
+function BookActionsMobileSheet({
+  onClose,
+  closeLabel,
+  children,
+}: {
+  onClose: () => void;
+  closeLabel: string;
+  children: React.ReactNode;
+}) {
+  React.useEffect(() => {
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[55] flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label={closeLabel}
+        className="absolute inset-0 bg-black/45"
+        onClick={onClose}
       />
       <div
-        className={cn(
-          "absolute left-1/2 -translate-x-1/2 w-52 max-w-[70vw] z-50",
-          hoverPanelClass,
-          isLastShelf ? "bottom-full mb-2" : "top-full mt-2",
-          "sm:left-full sm:translate-x-0 sm:ml-3 sm:w-56 sm:max-w-none",
-          isLastShelf
-            ? "sm:bottom-0 sm:mb-0"
-            : isFirstShelf
-              ? "sm:top-0 sm:mt-0"
-              : "sm:top-1/2 sm:-translate-y-1/2 sm:mt-0"
-        )}
+        role="dialog"
+        aria-modal="true"
+        className="relative z-10 w-full max-w-sm max-h-[min(85dvh,520px)] overflow-y-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <HoverCard
-          name={name}
-          flashcardsCount={flashcardsCount}
-          progressPercent={progress}
-          deckId={deckId}
-          onDeleteSuccess={handleDeleteSuccess}
-          onEdit={onEdit}
-          onSelect={onSelect}
-          badgeStyle={styles.badge}
-          {...moveProps}
-        />
+        {children}
       </div>
     </div>
-  )
+  );
 }
 
 // Mini hover card component

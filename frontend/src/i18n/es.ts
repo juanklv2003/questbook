@@ -193,6 +193,7 @@ export const es = {
   "review.questionLabel": "Pregunta {n} · {label}",
 
   "book.openAria": "Abrir libro {name}",
+  "book.closeMenuAria": "Cerrar menú del libro",
   "book.cardsOne": "{count} tarjeta",
   "book.cardsOther": "{count} tarjetas",
   "book.progressComplete": "{progress}% completo",
