@@ -74,7 +74,7 @@ services:
       - key: CLOUDINARY_MAX_PDF_MB
         sync: false
       - key: API_PUBLIC_BASE_URL
-        sync: false
+        value: https://flashcards-ia-api.onrender.com/api/v1
       - key: CLOUDINARY_UPLOAD_FOLDER_MODE
         sync: false
       - key: GOOGLE_CLIENT_ID

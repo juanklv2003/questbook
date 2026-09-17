@@ -185,7 +185,9 @@ export const env = {
   /** Base URL for browser → API multipart (must match Render/Railway public URL). */
   API_PUBLIC_BASE_URL:
     _env.data.API_PUBLIC_BASE_URL ??
-    (_env.data.NODE_ENV === 'production' ? undefined : `http://localhost:${_env.data.PORT}/api/v1`),
+    (_env.data.NODE_ENV === 'production'
+      ? 'https://flashcards-ia-api.onrender.com/api/v1'
+      : `http://localhost:${_env.data.PORT}/api/v1`),
   DB_POOL_MAX: clampInt(_env.data.DB_POOL_MAX, 10, 1, 30),
 };
 

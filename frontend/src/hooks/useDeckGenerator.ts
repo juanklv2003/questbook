@@ -7,7 +7,6 @@ import {
   loadUploadLimits,
   getMaxPdfBytes,
   getCloudinaryMaxPdfBytes,
-  getDirectUploadUrl,
   formatMaxPdfMb,
   formatCloudinaryMaxPdfMb,
 } from '../lib/uploadConfig';
@@ -52,21 +51,34 @@ export function useDeckGenerator() {
       const useDirectApi = file.size > cloudinaryMax;
 
       if (useDirectApi) {
-        const directUrl = getDirectUploadUrl();
-        if (!directUrl) {
-          const msg = t('gen.fileTooLargeCloudinary', {
-            maxMb: String(formatCloudinaryMaxPdfMb()),
-          });
-          setError(msg);
-          throw new Error(msg);
+        setProgress(5);
+        let tokenRes;
+        try {
+          tokenRes = await apiClient.post<DirectUploadTokenResponse>('/decks/generate/direct-upload-token');
+        } catch (tokenErr: unknown) {
+          const status =
+            tokenErr instanceof Object &&
+            tokenErr !== null &&
+            'response' in tokenErr &&
+            (tokenErr as { response?: { status?: number } }).response?.status;
+          if (status === 503) {
+            setError(t('gen.directUploadNotConfigured'));
+          } else {
+            setError(getApiErrorMessage(tokenErr, t, 'deckGenerate'));
+          }
+          throw tokenErr;
         }
 
-        setProgress(5);
-        const tokenRes = await apiClient.post<DirectUploadTokenResponse>('/decks/generate/direct-upload-token');
+        const uploadUrl = tokenRes.data.uploadUrl;
+        if (!uploadUrl) {
+          setError(t('gen.directUploadNotConfigured'));
+          throw new Error('direct_upload_not_configured');
+        }
+
         setProgress(10);
 
         const result = await generateDeckViaDirectUpload(
-          tokenRes.data.uploadUrl || directUrl,
+          uploadUrl,
           tokenRes.data.token,
           file,
           options,
