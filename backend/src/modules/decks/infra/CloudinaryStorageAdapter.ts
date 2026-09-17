@@ -7,19 +7,19 @@ const PDF_FOLDER = 'flashy_ai_pdfs';
 
 function browserUploadParamsToSign(): Record<string, string | number | boolean> {
   const timestamp = Math.round(Date.now() / 1000);
-  const resourceType = { resource_type: 'raw' as const };
+  // Browser POSTs to `/raw/upload`: resource type is implied by the URL, so it must
+  // NOT appear in the signed params (Cloudinary builds the string to sign without it).
   if (env.CLOUDINARY_PDF_UPLOAD_PRESET) {
-    return { timestamp, upload_preset: env.CLOUDINARY_PDF_UPLOAD_PRESET, ...resourceType };
+    return { timestamp, upload_preset: env.CLOUDINARY_PDF_UPLOAD_PRESET };
   }
   if (env.CLOUDINARY_UPLOAD_FOLDER_MODE === 'legacy') {
-    return { timestamp, folder: PDF_FOLDER, unique_filename: true, ...resourceType };
+    return { timestamp, folder: PDF_FOLDER, unique_filename: true };
   }
   return {
     timestamp,
     asset_folder: PDF_FOLDER,
     use_asset_folder_as_public_id_prefix: true,
     unique_filename: true,
-    ...resourceType,
   };
 }
 
