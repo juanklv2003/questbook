@@ -24,6 +24,8 @@ const envSchema = z.object({
   PDF_MAX_TEXT_CHARS: z.string().optional(),
   // Timeout (ms) de la llamada IA al generar un mazo desde PDF (default 120_000).
   AI_DECK_TIMEOUT_MS: z.string().optional(),
+  /** Wall-clock budget (ms) for all AI batches in one deck generation (default 300_000). */
+  AI_DECK_TOTAL_TIMEOUT_MS: z.string().optional(),
   // Tamaño máximo del PDF subido (MB). Default 100. Multer guarda el archivo en RAM.
   MAX_PDF_UPLOAD_MB: z.string().optional(),
   DB_POOL_MAX: z.string().optional(),
@@ -176,6 +178,8 @@ export const env = {
   PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 500_000, 5_000, 500_000),
   /** Tiempo máximo de espera (ms) al generar tarjetas desde un PDF. */
   AI_DECK_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TIMEOUT_MS, 120_000, 15_000, 300_000),
+  /** Tiempo máximo total (ms) para todas las tandas IA de un mismo mazo. */
+  AI_DECK_TOTAL_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TOTAL_TIMEOUT_MS, 300_000, 60_000, 600_000),
   /** Límite de subida PDF (bytes), configurable vía MAX_PDF_UPLOAD_MB (default 100). */
   MAX_PDF_UPLOAD_MB: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100),
   MAX_PDF_UPLOAD_BYTES: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100) * 1024 * 1024,

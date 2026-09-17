@@ -204,7 +204,18 @@ export function getApiErrorMessage(err: unknown, t: Translate, context: ApiError
     }
   }
 
-  const { status, serverMessage } = readPayload(err);
+  const { status, code, serverMessage } = readPayload(err);
+
+  if (code === 'AI_TIMEOUT' || status === 504) {
+    if (context === 'deckGenerate') {
+      return t('gen.aiTimeoutManyCards');
+    }
+    return t('errors.timeout');
+  }
+
+  if (code === 'AI_PROVIDER_ERROR' && context === 'deckGenerate') {
+    return t('gen.generic');
+  }
 
   if (status === 422 && context === 'deckGenerate') {
     const from422 = mapGenerate422(serverMessage, t);

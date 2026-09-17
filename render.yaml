@@ -54,6 +54,8 @@ services:
         sync: false
       - key: AI_DECK_TIMEOUT_MS
         sync: false
+      - key: AI_DECK_TOTAL_TIMEOUT_MS
+        sync: false
       # Aviso (plan free ≈ 512 MB de RAM): multer guarda el PDF en memoria, el
       # worker de pdf-parse lo clona y la subida a Cloudinary sale del mismo
       # buffer, así que un PDF muy grande puede agotar la instancia (OOM → 502).

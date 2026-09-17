@@ -133,6 +133,8 @@ export const es = {
   "gen.quota": "Has alcanzado el límite gratuito de la IA.",
   "gen.overloaded": "El modelo de IA está saturado. Inténtalo de nuevo en unos segundos.",
   "gen.timeout": "La IA está tardando demasiado. El documento es muy extenso; prueba con un PDF más corto o inténtalo de nuevo.",
+  "gen.aiTimeoutManyCards":
+    "La generación tardó demasiado (muchas tarjetas o documento largo). Prueba con menos tarjetas o inténtalo de nuevo.",
   "gen.fileTooLarge": "El PDF supera el tamaño máximo ({maxMb} MB). Comprímelo o súbelo en partes más pequeñas.",
   "gen.fileTooLargeCloudinary":
     "Este PDF supera {maxMb} MB (límite de almacenamiento en la nube). Probá comprimirlo o usá un archivo más pequeño para guardar el PDF en el libro.",

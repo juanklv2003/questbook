@@ -46,17 +46,23 @@ async function generateWithGemini(
   return readGeminiText(result);
 }
 
+export type DeckLlmOptions = {
+  maxTokens?: number;
+};
+
 /**
  * Generación de mazos: Groq primero (más rápido en PDFs grandes), Gemini como respaldo.
  */
 export async function generateDeckLlmText(
   gemini: GeminiFailover,
   prompt: string,
-  timeoutMs: number
+  timeoutMs: number,
+  options?: DeckLlmOptions
 ): Promise<string> {
+  const groqOpts = options?.maxTokens ? { maxTokens: options.maxTokens } : undefined;
   if (isGroqConfigured()) {
     try {
-      return await generateWithGroq(prompt, timeoutMs);
+      return await generateWithGroq(prompt, timeoutMs, groqOpts);
     } catch (groqErr) {
       if (groqErr instanceof QuotaExceededError) {
         throw groqErr;
@@ -77,7 +83,7 @@ export async function generateDeckLlmText(
       throw error;
     }
     console.warn('[AI] Gemini failed after Groq; retrying Groq once.');
-    return generateWithGroq(prompt, timeoutMs);
+    return generateWithGroq(prompt, timeoutMs, groqOpts);
   }
 }
 

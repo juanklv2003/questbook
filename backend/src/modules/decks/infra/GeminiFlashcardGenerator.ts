@@ -1,6 +1,8 @@
 import { IFlashcardGeneratorPort, GenerateOptions } from '../domain/IFlashcardGeneratorPort';
+import { DECK_PRACTICAL_TEXT_CAP } from '../domain/deckGenerationLimits';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
 import { generateDeckLlmText } from '../../../core/ai/generateLlmText';
+import { groqMaxTokensForDeckBatch } from '../../../core/ai/GroqClient';
 import { env } from '../../../config/env';
 import { AppError } from '../../../core/errors/AppError';
 import { QuotaExceededError } from '../../../core/errors/QuotaExceededError';
@@ -12,6 +14,17 @@ const responseCardSchema = z.object({
   question: z.string().trim().min(1),
   answer: z.string().trim().min(1),
 });
+
+type PassContext = {
+  deadlineMs: number;
+  batchIndex: number;
+  batchTotal: number;
+};
+
+function isAiTimeoutMessage(detail: string): boolean {
+  const d = detail.toLowerCase();
+  return d.includes('timed out') || d.includes('timeout');
+}
 
 export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
   private readonly gemini: GeminiFailover;
@@ -28,30 +41,62 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     return env.PDF_MAX_TEXT_CHARS;
   }
 
-  /** Menos texto en el prompt = respuestas más rápidas y menos 502 por timeout. */
-  private static readonly PRACTICAL_TEXT_CAP = 50_000;
-  private static readonly BATCH_CARD_LIMIT = 10;
+  /** Fewer round-trips for large decks (50 cards → 2 batches instead of 5). */
+  private batchLimitFor(totalCards: number): number {
+    if (totalCards <= 15) return totalCards;
+    if (totalCards > 30) return 25;
+    return 20;
+  }
 
-  private timeoutMsFor(cardCount: number): number {
-    const base = Math.min(env.AI_DECK_TIMEOUT_MS, 90_000);
-    const extra = Math.max(0, cardCount - 10) * 2_500;
-    return Math.min(120_000, base + extra);
+  private computeDeadlineMs(totalCards: number, batchLimit: number): number {
+    const batches = Math.max(1, Math.ceil(totalCards / batchLimit));
+    const perBatchMs = env.AI_DECK_TIMEOUT_MS;
+    const computed = perBatchMs * batches;
+    const cap = env.AI_DECK_TOTAL_TIMEOUT_MS;
+    return Date.now() + Math.min(cap, computed);
+  }
+
+  private remainingTimeoutMs(deadlineMs: number): number {
+    return Math.max(15_000, deadlineMs - Date.now());
+  }
+
+  private assertDeadline(deadlineMs: number): void {
+    if (deadlineMs - Date.now() <= 0) {
+      throw new AppError(
+        504,
+        'La generación de tarjetas tardó demasiado. Probá con menos tarjetas o un documento más corto.',
+        true,
+        'AI_TIMEOUT'
+      );
+    }
   }
 
   async generateFromText(text: string, options?: GenerateOptions): Promise<Array<{ question: string; answer: string }>> {
     const maxCards = options?.cardCount ?? this.DEFAULT_CARDS;
-    if (maxCards <= GeminiFlashcardGenerator.BATCH_CARD_LIMIT) {
-      return this.generatePass(text, options, maxCards, []);
+    const batchLimit = this.batchLimitFor(maxCards);
+    const batchTotal = Math.max(1, Math.ceil(maxCards / batchLimit));
+    const deadlineMs = this.computeDeadlineMs(maxCards, batchLimit);
+
+    if (maxCards <= batchLimit) {
+      return this.generatePass(text, options, maxCards, [], {
+        deadlineMs,
+        batchIndex: 1,
+        batchTotal: 1,
+      });
     }
 
     const cards: Array<{ question: string; answer: string }> = [];
+    let batchIndex = 0;
     while (cards.length < maxCards) {
-      const need = Math.min(GeminiFlashcardGenerator.BATCH_CARD_LIMIT, maxCards - cards.length);
+      batchIndex += 1;
+      this.assertDeadline(deadlineMs);
+      const need = Math.min(batchLimit, maxCards - cards.length);
       const batch = await this.generatePass(
         text,
         options,
         need,
-        cards.map((c) => c.question)
+        cards.map((c) => c.question),
+        { deadlineMs, batchIndex, batchTotal }
       );
       if (batch.length === 0) break;
       cards.push(...batch);
@@ -70,10 +115,11 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     text: string,
     options: GenerateOptions | undefined,
     maxCards: number,
-    existingQuestions: string[]
+    existingQuestions: string[],
+    passCtx: PassContext
   ): Promise<Array<{ question: string; answer: string }>> {
     const difficulty = options?.difficulty ?? 'medium';
-    const textCap = Math.min(this.maxTextChars, GeminiFlashcardGenerator.PRACTICAL_TEXT_CAP);
+    const textCap = Math.min(this.maxTextChars, DECK_PRACTICAL_TEXT_CAP);
 
     let truncated = false;
     let promptText = text;
@@ -148,7 +194,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
         difficultyLabel: `DIFICULTAD SOLICITADA:`,
         returnFormat: `Devuelve el resultado ESTRICTAMENTE como un array JSON de objetos con las claves exactas: 'question' y 'answer'.
 No incluyas bloques de markdown, saludos, o cualquier otro texto. SOLO el array JSON.`,
-        textToAnalyze: `Texto para analizar:`
+        textToAnalyze: `Texto para analizar:`,
       },
       en: {
         opening: `You are an expert educator. Your task is to analyze the provided text and generate high-quality flashcards for studying. Focus on key concepts, definitions, and relationships.`,
@@ -161,8 +207,8 @@ No incluyas bloques de markdown, saludos, o cualquier otro texto. SOLO el array 
         difficultyLabel: `REQUESTED DIFFICULTY:`,
         returnFormat: `Return the output STRICTLY as a JSON array of objects with the exact keys: 'question' and 'answer'.
 Do NOT include markdown blocks, greetings, or any other text. ONLY the JSON array.`,
-        textToAnalyze: `Text to analyze:`
-      }
+        textToAnalyze: `Text to analyze:`,
+      },
     };
 
     const texts = promptTexts[isSpanish ? 'es' : 'en'];
@@ -205,21 +251,49 @@ ${texts.textToAnalyze}
 ${promptText}${truncationNotice}${excludeNotice}
     `;
 
-    // Attempt to generate content and parse JSON safely
+    const timeoutMs = this.remainingTimeoutMs(passCtx.deadlineMs);
+    const maxTokens = groqMaxTokensForDeckBatch(maxCards);
+    const startedAt = Date.now();
+
     let responseText = '';
     try {
-      responseText = await generateDeckLlmText(this.gemini, prompt, this.timeoutMsFor(maxCards));
+      responseText = await generateDeckLlmText(this.gemini, prompt, timeoutMs, { maxTokens });
     } catch (apiErr) {
       if (apiErr instanceof QuotaExceededError || apiErr instanceof ModelOverloadedError) {
         throw apiErr;
       }
       const detail = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      console.error('Deck AI call failed:', detail);
+      const durationMs = Date.now() - startedAt;
+      console.error('[deck-gen] AI batch failed', {
+        batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
+        need: maxCards,
+        promptChars: prompt.length,
+        timeoutMs,
+        durationMs,
+        err: detail,
+      });
+      if (isAiTimeoutMessage(detail)) {
+        throw new AppError(
+          504,
+          'La generación de tarjetas tardó demasiado. Probá con menos tarjetas o un documento más corto.',
+          true,
+          'AI_TIMEOUT'
+        );
+      }
       throw new AppError(
         502,
-        'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.'
+        'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.',
+        true,
+        'AI_PROVIDER_ERROR'
       );
     }
+
+    console.info('[deck-gen] AI batch ok', {
+      batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
+      need: maxCards,
+      promptChars: prompt.length,
+      durationMs: Date.now() - startedAt,
+    });
 
     // Attempt to parse JSON safely, sometimes AI still wraps in markdown
     let jsonStr = responseText.trim();
@@ -235,9 +309,6 @@ ${promptText}${truncationNotice}${excludeNotice}
         throw new Error('Gemini response is not a JSON array.');
       }
 
-      // Validamos cada tarjeta y descartamos las que no tengan question/answer
-      // (evita insertar `undefined` en columnas NOT NULL). Además acotamos la
-      // respuesta al máximo pedido por si el modelo se excede.
       const cards = parsed
         .map((item) => responseCardSchema.safeParse(item))
         .filter((r): r is { success: true; data: { question: string; answer: string } } => r.success)

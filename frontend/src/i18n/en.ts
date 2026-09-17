@@ -135,6 +135,8 @@ export const en: { [K in keyof typeof es]: string } = {
   "gen.quota": "You have reached the free AI limit.",
   "gen.overloaded": "The AI model is overloaded. Try again in a few seconds.",
   "gen.timeout": "AI is taking too long. The document is very large; try a shorter PDF or try again.",
+  "gen.aiTimeoutManyCards":
+    "Generation took too long (many cards or a long document). Try fewer cards or try again.",
   "gen.fileTooLarge": "The PDF exceeds the maximum size ({maxMb} MB). Compress it or upload smaller parts.",
   "gen.fileTooLargeCloudinary":
     "This PDF is over {maxMb} MB (cloud storage limit). Compress it or use a smaller file to keep the PDF attached to the book.",

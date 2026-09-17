@@ -32,11 +32,16 @@ function isUnknownGroqModel(message: string | undefined): boolean {
   return m.includes('does not exist') || m.includes('decommissioned') || m.includes('not have access');
 }
 
+export type GroqGenerateOptions = {
+  maxTokens?: number;
+};
+
 async function callGroqModel(
   apiKey: string,
   model: string,
   safePrompt: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  maxTokens: number
 ): Promise<string> {
   const response = await fetch(GROQ_CHAT_URL, {
     method: 'POST',
@@ -48,7 +53,7 @@ async function callGroqModel(
       model,
       messages: [{ role: 'user', content: safePrompt }],
       temperature: 0.3,
-      max_tokens: 16_384,
+      max_tokens: maxTokens,
     }),
     signal,
   });
@@ -80,10 +85,18 @@ async function callGroqModel(
   return text;
 }
 
+export function groqMaxTokensForDeckBatch(cardCount: number): number {
+  return Math.min(32_768, 2_048 + cardCount * 900);
+}
+
 /**
  * Respaldo cuando Gemini no responde. Requiere GROQ_API_KEY en el entorno.
  */
-export async function generateWithGroq(prompt: string, timeoutMs: number): Promise<string> {
+export async function generateWithGroq(
+  prompt: string,
+  timeoutMs: number,
+  options?: GroqGenerateOptions
+): Promise<string> {
   const apiKey = env.GROQ_API_KEY;
   if (!apiKey) {
     throw new QuotaExceededError(
@@ -92,6 +105,8 @@ export async function generateWithGroq(prompt: string, timeoutMs: number): Promi
       'Has alcanzado el límite gratuito de la IA. Inténtalo de nuevo más tarde.'
     );
   }
+
+  const maxTokens = options?.maxTokens ?? 16_384;
 
   let safePrompt = prompt;
   if (safePrompt.length > GROQ_MAX_PROMPT_CHARS) {
@@ -109,7 +124,7 @@ export async function generateWithGroq(prompt: string, timeoutMs: number): Promi
   try {
     for (const model of models) {
       try {
-        const text = await callGroqModel(apiKey, model, safePrompt, controller.signal);
+        const text = await callGroqModel(apiKey, model, safePrompt, controller.signal, maxTokens);
         if (model !== models[0]) {
           console.warn(`[AI] Groq succeeded with fallback model "${model}".`);
         }

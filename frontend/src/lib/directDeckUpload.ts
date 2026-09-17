@@ -25,7 +25,12 @@ export async function generateDeckViaDirectUpload(
   formData.append('shelf_index', '0');
 
   const cards = options.cardCount ?? 15;
-  const aiBatches = Math.max(1, Math.ceil(cards / 10));
+  const aiBatches =
+    cards <= 15
+      ? 1
+      : cards > 30
+        ? Math.ceil(cards / 25)
+        : Math.ceil(cards / 20);
   const timeoutMs = Math.min(
     600_000,
     60_000 + aiBatches * 100_000 + Math.ceil(file.size / (512 * 1024)) * 5_000

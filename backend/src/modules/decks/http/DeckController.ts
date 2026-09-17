@@ -14,6 +14,7 @@ import { parseBody } from '../../../core/validation/parseBody';
 import { assertLooksLikePdf } from '../infra/pdfHeader';
 import { readUploadedPdfBuffer, deleteUploadedPdfFile } from '../infra/pdfUploadStorage';
 import { extractTextFromPdf, extractTextFromPdfPath } from '../infra/PdfTextExtractor';
+import { capDeckSourceText } from '../domain/deckGenerationLimits';
 import { fetchPdfBufferForDeck } from '../infra/fetchCloudinaryPdf';
 import fs from 'fs/promises';
 import type { ICloudStoragePort } from '../domain/ICloudStoragePort';
@@ -124,10 +125,12 @@ export class DeckController {
             await handle.close();
           }
           content = await extractTextFromPdfPath(uploadPath);
+          content = capDeckSourceText(content);
         } else {
           pdfBuffer = await readUploadedPdfBuffer(req.file);
           assertLooksLikePdf(pdfBuffer);
           content = await extractTextFromPdf(pdfBuffer);
+          content = capDeckSourceText(content);
         }
 
         const cloudinaryStoreMaxBytes = Math.min(
@@ -188,6 +191,7 @@ export class DeckController {
     } else if (typeof pdfUrl === 'string' && typeof pdfPublicId === 'string' && pdfUrl.trim() && pdfPublicId.trim()) {
       const buffer = await fetchPdfBufferForDeck(pdfPublicId.trim(), pdfUrl.trim());
       content = await extractTextFromPdf(buffer);
+      content = capDeckSourceText(content);
       uploadedPdfUrl = pdfUrl.trim();
       uploadedPdfPublicId = pdfPublicId.trim();
     }
