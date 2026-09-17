@@ -3,6 +3,9 @@ import { env } from './env';
 
 export const db = new Pool({
   connectionString: env.DATABASE_URL,
+  max: env.DB_POOL_MAX,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
 });
 
 db.on('connect', () => {

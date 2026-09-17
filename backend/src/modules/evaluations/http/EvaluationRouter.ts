@@ -5,6 +5,7 @@ import { PostgresFlashcardRepository } from '../../flashcards/infra/PostgresFlas
 import { PostgresDeckRepository } from '../../decks/infra/PostgresDeckRepository';
 import { EvaluationController } from './EvaluationController';
 import { db } from '../../../config/db';
+import { aiEvaluateLimiter } from '../../../core/middlewares/rateLimits';
 
 const evaluator = new GeminiEvaluator();
 const flashcardRepo = new PostgresFlashcardRepository(db);
@@ -15,6 +16,6 @@ const evaluationController = new EvaluationController(evaluateAnswerUseCase);
 
 const evaluationRouter = Router();
 
-evaluationRouter.post('/evaluate', evaluationController.evaluate);
+evaluationRouter.post('/evaluate', aiEvaluateLimiter, evaluationController.evaluate);
 
 export { evaluationRouter };

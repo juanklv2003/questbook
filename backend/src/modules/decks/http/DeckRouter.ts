@@ -15,10 +15,10 @@ import { PostgresFlashcardRepository } from '../../flashcards/infra/PostgresFlas
 import { CloudinaryStorageAdapter } from '../infra/CloudinaryStorageAdapter';
 import { DeckController } from './DeckController';
 import { db } from '../../../config/db';
-import { authMiddleware } from '../../auth/http/AuthRouter';
 import { env } from '../../../config/env';
+import { aiGenerateLimiter } from '../../../core/middlewares/rateLimits';
 
-// PDF en memoria (multer). Tamaño: MAX_PDF_UPLOAD_MB en .env (default 50 MB).
+// PDF en memoria (multer). Tamaño: MAX_PDF_UPLOAD_MB en .env (default 100 MB).
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: env.MAX_PDF_UPLOAD_BYTES },
@@ -56,13 +56,14 @@ const deckController = new DeckController(
 // 4. Wire Router
 const deckRouter = Router();
 
-deckRouter.post('/generate', authMiddleware.requireAuth, upload.single('file'), deckController.generate);
-deckRouter.get('/:deckId/flashcards', authMiddleware.requireAuth, deckController.getFlashcards);
-deckRouter.get('/', authMiddleware.requireAuth, deckController.listDecks);
-deckRouter.patch('/:id/shelf', authMiddleware.requireAuth, deckController.updateShelf);
-deckRouter.get('/:id/session', authMiddleware.requireAuth, deckController.getSession);
-deckRouter.patch('/:id/session', authMiddleware.requireAuth, deckController.saveSession);
-deckRouter.delete('/:id/session', authMiddleware.requireAuth, deckController.deleteSession);
-deckRouter.delete('/:id', authMiddleware.requireAuth, deckController.deleteDeck);
+// Auth: app.ts mounts requireAuth on /api/v1/decks (do not duplicate per route).
+deckRouter.post('/generate', aiGenerateLimiter, upload.single('file'), deckController.generate);
+deckRouter.get('/:deckId/flashcards', deckController.getFlashcards);
+deckRouter.get('/', deckController.listDecks);
+deckRouter.patch('/:id/shelf', deckController.updateShelf);
+deckRouter.get('/:id/session', deckController.getSession);
+deckRouter.patch('/:id/session', deckController.saveSession);
+deckRouter.delete('/:id/session', deckController.deleteSession);
+deckRouter.delete('/:id', deckController.deleteDeck);
 
 export { deckRouter };

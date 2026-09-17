@@ -8,7 +8,8 @@
     "dev": "ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "migrate:google-auth": "ts-node src/scripts/migrateGoogleAuth.ts"
+    "migrate:google-auth": "ts-node src/scripts/migrateGoogleAuth.ts",
+    "migrate:flashcards-index": "ts-node src/scripts/migrateFlashcardsDeckIdIndex.ts"
   },
   "keywords": [],
   "author": "",
@@ -19,10 +20,12 @@
     "@neondatabase/serverless": "^1.1.0",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.10.0",
+    "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "pdf-parse": "^2.4.5",
@@ -31,6 +34,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 import { env } from './config/env';
 import { isGroqConfigured } from './core/ai/GroqClient';
 import { errorHandler } from './core/middlewares/errorHandler';
@@ -26,6 +27,7 @@ app.use(cors({
   origin: env.FRONTEND_URL,
   credentials: true,
 }));
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

@@ -76,8 +76,11 @@ export class PostgresDeckRepository implements IDeckRepository {
         ${PostgresDeckRepository.progressFor('d')},
         d.created_at AS "createdAt", 
         d.updated_at AS "updatedAt",
-        (SELECT COUNT(*) FROM flashcards f WHERE f.deck_id = d.id)::int AS "flashcardsCount"
+        COALESCE(fc.cnt, 0) AS "flashcardsCount"
       FROM decks d
+      LEFT JOIN (
+        SELECT deck_id, COUNT(*)::int AS cnt FROM flashcards GROUP BY deck_id
+      ) fc ON fc.deck_id = d.id
       WHERE d.user_id = $1
       ORDER BY COALESCE(d.shelf_index, 0) ASC, COALESCE(d.position, 0) ASC, d.created_at DESC
     `;

@@ -44,6 +44,8 @@ npx ts-node src/scripts/migrateProgress.ts
 npx ts-node src/scripts/migrateShelf.ts
 npx ts-node src/scripts/migrateStudySessions.ts   # crea la tabla más reciente
 npx ts-node src/scripts/migratePasswordReset.ts   # tabla password_reset_tokens (recupero sin SMTP)
+npm run migrate:google-auth                       # OAuth Google (provider, oauth_exchange_codes)
+npm run migrate:flashcards-index                  # índice flashcards(deck_id) — rendimiento listado
 ```
 
 > Las migraciones son idempotentes (usan `IF NOT EXISTS`), así que re-ejecutarlas es seguro.
@@ -73,7 +75,11 @@ npx ts-node src/scripts/migratePasswordReset.ts   # tabla password_reset_tokens 
 | `GEMINI_API_KEY2` | opcional: clave de otro proyecto/cuenta; se usa al final cuando las anteriores agotan cuota |
 | `GROQ_API_KEY` | opcional: respaldo Groq cuando Gemini agota todas las claves |
 | `GROQ_MODEL` | opcional; default `llama-3.3-70b-versatile` |
+| `MAX_PDF_UPLOAD_MB` | opcional; default **100** (PDF en RAM durante generate) |
+| `DB_POOL_MAX` | opcional; default **10** conexiones al pool Neon |
 | `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | credenciales de Cloudinary |
+
+**Rendimiento / abuso:** el API aplica rate limits (auth, generación IA ~5/h, evaluaciones ~60/h por usuario) y compresión gzip en respuestas JSON. En Render free, evitá **varias subidas de PDF grandes a la vez** (hasta 100 MB en memoria por request).
 
 3. Deployá y verificá:
 

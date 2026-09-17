@@ -46,6 +46,8 @@ services:
         sync: false
       - key: MAX_PDF_UPLOAD_MB
         sync: false
+      - key: DB_POOL_MAX
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

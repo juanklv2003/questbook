@@ -26,6 +26,7 @@ const envSchema = z.object({
   AI_DECK_TIMEOUT_MS: z.string().optional(),
   // Tamaño máximo del PDF subido (MB). Default 100. Multer guarda el archivo en RAM.
   MAX_PDF_UPLOAD_MB: z.string().optional(),
+  DB_POOL_MAX: z.string().optional(),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
   // Secreto de Cloudflare Turnstile para verificar el registro humano.
   // Se consigue en https://dash.cloudflare.com/?to=/:account/turnstile
@@ -122,6 +123,7 @@ export const env = {
   /** Límite de subida PDF (bytes), configurable vía MAX_PDF_UPLOAD_MB (default 100). */
   MAX_PDF_UPLOAD_MB: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100),
   MAX_PDF_UPLOAD_BYTES: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100) * 1024 * 1024,
+  DB_POOL_MAX: clampInt(_env.data.DB_POOL_MAX, 10, 1, 30),
 };
 
 function clampInt(

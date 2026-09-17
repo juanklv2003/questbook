@@ -42,16 +42,17 @@ const authController = new AuthController(
   googleLoginUseCase
 );
 
+import { authLimiter } from '../../../core/middlewares/rateLimits';
+
 const authMiddleware = new AuthMiddleware(tokenService);
 
 // Routes
-authRouter.post('/register', authController.register);
-authRouter.post('/login', authController.login);
+authRouter.post('/register', authLimiter, authController.register);
+authRouter.post('/login', authLimiter, authController.login);
 authRouter.post('/logout', authMiddleware.requireAuth, authController.logout);
 authRouter.get('/me', authMiddleware.requireAuth, authController.me);
-// Sin SMTP: el paso 1 devuelve el token y el frontend muestra el paso 2.
-authRouter.post('/forgot-password', authController.forgotPassword);
-authRouter.post('/reset-password', authController.resetPassword);
+authRouter.post('/forgot-password', authLimiter, authController.forgotPassword);
+authRouter.post('/reset-password', authLimiter, authController.resetPassword);
 
 // Google OAuth routes
 authRouter.get('/google', authController.googleLogin);
