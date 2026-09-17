@@ -35,8 +35,8 @@ cd frontend && npm run build && npm run lint # tsc -b + vite build + eslint sin 
 ```bash
 cd backend
 # .env con DATABASE_URL apuntando a la DB de PRODUCCIÓN
-npx ts-node src/scripts/initDb.ts
-npx ts-node src/scripts/migrateAuth.ts
+npx ts-node src/scripts/migrateAuth.ts     # PRIMERO: crea la tabla `users`
+npx ts-node src/scripts/initDb.ts          # crea study_sessions con FK a users(id)
 npx ts-node src/scripts/migrateColor.ts
 npx ts-node src/scripts/migrateEmailCi.ts      # valida colisiones de email; aborta si hay duplicados
 npx ts-node src/scripts/migratePdfStorage.ts
@@ -49,6 +49,9 @@ npm run migrate:flashcards-index                  # índice flashcards(deck_id) 
 ```
 
 > Las migraciones son idempotentes (usan `IF NOT EXISTS`), así que re-ejecutarlas es seguro.
+> **`migrateAuth` va antes que `initDb`**: `initDb` crea `study_sessions` con FK a `users(id)`
+> y esa tabla la crea `migrateAuth`; en una base nueva el orden inverso falla con
+> `relation "users" does not exist`.
 > `migrateEmailCi` es la única que puede abortar a propósito: si detecta emails duplicados
 > que sólo difieren en mayúsculas, resolvelos a mano (conservá la cuenta más antigua) y volvé a correr.
 
@@ -59,7 +62,10 @@ npm run migrate:flashcards-index                  # índice flashcards(deck_id) 
 1. **New → Blueprint** y elegí este repo: Render lee `render.yaml` de la raíz (servicio `andel-api`,
    `rootDir: backend`, health check en `/api/v1/health`).
    - Alternativa manual: **New → Web Service**, Root Directory = `backend`,
-     Build Command = `npm install && npm run build`, Start Command = `npm start`.
+     Build Command = `npm ci --include=dev && npm run build`, Start Command = `npm start`.
+     - **`--include=dev` no es opcional**: con `NODE_ENV=production` (que este blueprint define)
+       npm omite `devDependencies`, y como `typescript` vive ahí el build falla con
+       `tsc no se reconoce`. Verificado localmente con `npm ls typescript` en ambos modos.
 2. Completá las variables marcadas como secretas en el dashboard:
 
 | Variable | Valor |
@@ -91,10 +97,16 @@ curl https://andel-api.onrender.com/api/v1/health      # {"status":"ok"}
 > tarda ~30-60 s en despertar. Si el frontend muestra un error de red al entrar, es esto:
 > recargá y entrá. Con plan pago o un ping periódico se evita.
 
+> **Versión de Node:** el runtime se fija con `.node-version` (raíz del repo → `24`) y con
+> `engines.node: "24.x"` en `backend/package.json` y `frontend/package.json`. No lo bajes a 20:
+> el backend necesita Node ≥ 22.3 (`pdf-parse`) y ≥ 21 (WebSocket global que usa el driver de
+> Neon vía `Pool`); con Node 20 habría que agregar el paquete `ws`. El frontend necesita
+> ≥ 22.13 o 24 (`vite@8`, `eslint@10`).
+
 ### Railway (alternativa)
 
 1. **New Project → Deploy from GitHub repo**.
-2. Settings → Root Directory = `backend`; Build = `npm install && npm run build`; Start = `npm start`.
+2. Settings → Root Directory = `backend`; Build = `npm ci --include=dev && npm run build`; Start = `npm start`.
 3. Cargá las mismas variables de la tabla y generá el dominio público.
 4. Copiá ese dominio para el paso 3 (`VITE_API_URL`).
 
@@ -115,7 +127,7 @@ revisá que `FRONTEND_URL` sea exactamente el origen del frontend, que `COOKIE_S
 
 | Variable | Valor |
 | --- | --- |
-| `VITE_API_URL` | `https://andel-api.onrender.com/api/v1` |
+| `VITE_API_URL` | `https://andel-api.onrender.com/api/v1` (el build **falla a propósito** si falta o apunta a `localhost`: guard en `vite.config.ts`) |
 | `VITE_TURNSTILE_SITE_KEY` | Site Key pública del mismo sitio de Turnstile. Sin esto el form de registro muestra un aviso y el botón queda deshabilitado |
 
 4. Deployá, copiá la URL final (`https://andel.vercel.app`) y **volvé al paso 2** para fijarla como

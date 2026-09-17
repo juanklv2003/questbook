@@ -1,4 +1,4 @@
-# Render Blueprint — API de Andel (Express + TypeScript).
+# Render Blueprint — API de QuestBook (Express + TypeScript).
 #
 # Crear en Render → New → Blueprint → elegir este repo. Los valores marcados con
 # `sync: false` se cargan a mano en el dashboard (secretos: no van al repo).
@@ -6,13 +6,20 @@
 # OJO con las cookies: con el frontend en Vercel/Netlify (otro dominio), el
 # backend debe emitir la cookie con SameSite=None + Secure, o el login no
 # persiste sesión. Ver docs/DEPLOYMENT.md.
+#
+# Node: el runtime se fija con `.node-version` (raíz del repo, 24) y con
+# `engines.node` en backend/package.json. No lo bajes sin revisar los engines de
+# pdf-parse (>=22.3) y del driver de Neon (WebSocket global, Node >=21).
 services:
   - type: web
-    name: andel-api
+    name: andel-api # nombre histórico del servicio: define la URL *.onrender.com
     runtime: node
     rootDir: backend
     plan: free
-    buildCommand: npm install && npm run build
+    # `--include=dev` es OBLIGATORIO: con NODE_ENV=production (abajo) npm omite
+    # devDependencies y el build fallaría con "tsc no se reconoce" porque
+    # typescript vive en devDependencies. Verificado con npm ls en ambos modos.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/v1/health
     envVars:
@@ -44,6 +51,11 @@ services:
         sync: false
       - key: AI_DECK_TIMEOUT_MS
         sync: false
+      # Aviso (plan free ≈ 512 MB de RAM): multer guarda el PDF en memoria, el
+      # worker de pdf-parse lo clona y la subida a Cloudinary sale del mismo
+      # buffer, así que un PDF muy grande puede agotar la instancia (OOM → 502).
+      # Si ves OOM en los logs de Render, bajá este valor (ej. 25) o pasá a un
+      # plan pago. El frontend lee el tope real desde GET /api/v1/health.
       - key: MAX_PDF_UPLOAD_MB
         sync: false
       - key: DB_POOL_MAX
