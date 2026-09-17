@@ -9,7 +9,8 @@ export interface SignedPdfUploadParams {
   apiKey: string;
   timestamp: number;
   signature: string;
-  folder: string;
+  /** Form fields covered by the signature (excluding file, api_key, timestamp, signature). */
+  signedFields: Record<string, string>;
 }
 
 export interface ICloudStoragePort {

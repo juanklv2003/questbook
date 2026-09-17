@@ -5,7 +5,7 @@ export type CloudinaryPdfUploadParams = {
   apiKey: string;
   timestamp: number;
   signature: string;
-  folder: string;
+  signedFields: Record<string, string>;
 };
 
 export type CloudinaryPdfUploadResult = {
@@ -16,6 +16,17 @@ export type CloudinaryPdfUploadResult = {
 export async function fetchPdfUploadParams(): Promise<CloudinaryPdfUploadParams> {
   const response = await apiClient.post<CloudinaryPdfUploadParams>('/decks/generate/pdf-upload-params');
   return response.data;
+}
+
+function parseCloudinaryErrorBody(responseText: string): string {
+  try {
+    const body = JSON.parse(responseText) as { error?: { message?: string } | string };
+    if (typeof body.error === 'string') return body.error;
+    if (body.error?.message) return body.error.message;
+  } catch {
+    // ignore
+  }
+  return responseText.slice(0, 200);
 }
 
 /** Upload PDF directly to Cloudinary (avoids Vercel ~4.5 MB proxy limit). */
@@ -29,7 +40,9 @@ export async function uploadPdfToCloudinary(
   form.append('api_key', params.apiKey);
   form.append('timestamp', String(params.timestamp));
   form.append('signature', params.signature);
-  form.append('folder', params.folder);
+  for (const [key, value] of Object.entries(params.signedFields ?? {})) {
+    form.append(key, value);
+  }
 
   const endpoint = `https://api.cloudinary.com/v1_1/${params.cloudName}/auto/upload`;
 
@@ -42,7 +55,9 @@ export async function uploadPdfToCloudinary(
     };
     xhr.onload = () => {
       if (xhr.status < 200 || xhr.status >= 300) {
-        reject(new Error('cloudinary_upload_failed'));
+        const detail = parseCloudinaryErrorBody(xhr.responseText);
+        console.warn('[cloudinary] upload failed', xhr.status, detail);
+        reject(new Error(`cloudinary_upload_failed:${detail}`));
         return;
       }
       try {

@@ -5,6 +5,36 @@ import { env } from '../../../config/env';
 
 const PDF_FOLDER = 'flashy_ai_pdfs';
 
+function browserUploadParamsToSign(): Record<string, string | number | boolean> {
+  const timestamp = Math.round(Date.now() / 1000);
+  if (env.CLOUDINARY_PDF_UPLOAD_PRESET) {
+    return { timestamp, upload_preset: env.CLOUDINARY_PDF_UPLOAD_PRESET };
+  }
+  if (env.CLOUDINARY_UPLOAD_FOLDER_MODE === 'legacy') {
+    return { timestamp, folder: PDF_FOLDER, unique_filename: true };
+  }
+  return {
+    timestamp,
+    asset_folder: PDF_FOLDER,
+    use_asset_folder_as_public_id_prefix: true,
+    unique_filename: true,
+  };
+}
+
+function serverSideUploadOptions(filename?: string): Record<string, unknown> {
+  const base =
+    env.CLOUDINARY_UPLOAD_FOLDER_MODE === 'legacy'
+      ? { resource_type: 'auto' as const, folder: PDF_FOLDER, unique_filename: true }
+      : {
+          resource_type: 'auto' as const,
+          asset_folder: PDF_FOLDER,
+          use_asset_folder_as_public_id_prefix: true,
+          unique_filename: true,
+        };
+  if (!filename) return base;
+  return { ...base, public_id: toSafePublicId(filename) };
+}
+
 // Initialize Cloudinary
 cloudinary.config({
   cloud_name: env.CLOUDINARY_CLOUD_NAME,
@@ -14,36 +44,34 @@ cloudinary.config({
 
 export class CloudinaryStorageAdapter implements ICloudStoragePort {
   getSignedPdfUploadParams(): SignedPdfUploadParams {
-    const timestamp = Math.round(Date.now() / 1000);
-    const paramsToSign = {
-      timestamp,
-      folder: PDF_FOLDER,
-    };
+    const paramsToSign = browserUploadParamsToSign();
     const signature = cloudinary.utils.api_sign_request(paramsToSign, env.CLOUDINARY_API_SECRET);
+    const timestamp = Number(paramsToSign.timestamp);
+    const signedFields: Record<string, string> = {};
+    for (const [key, value] of Object.entries(paramsToSign)) {
+      if (key === 'timestamp') continue;
+      signedFields[key] = String(value);
+    }
     return {
       cloudName: env.CLOUDINARY_CLOUD_NAME,
       apiKey: env.CLOUDINARY_API_KEY,
       timestamp,
       signature,
-      folder: PDF_FOLDER,
+      signedFields,
     };
   }
 
   async uploadPdf(fileBuffer: Buffer, filename?: string): Promise<UploadResult> {
     return new Promise((resolve, reject) => {
+      const options = serverSideUploadOptions(filename);
       const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          // `auto` detects PDFs as image-type assets (`.../image/upload/...pdf`),
-          // which Cloudinary serves with `Content-Type: application/pdf` and an
-          // inline disposition. Uploading as `raw` without the original extension
-          // produced extensionless URLs (`.../raw/upload/...`) that browsers
-          // download as attachments instead of rendering inline.
-          resource_type: 'auto',
-          folder: PDF_FOLDER,
-          // Image-type public_ids must NOT include the extension; Cloudinary
-          // appends `.pdf` to the delivery URL itself.
-          ...(filename ? { public_id: toSafePublicId(filename) } : {}),
-          unique_filename: true,
+        options as {
+          resource_type: 'auto';
+          folder?: string;
+          asset_folder?: string;
+          use_asset_folder_as_public_id_prefix?: boolean;
+          unique_filename?: boolean;
+          public_id?: string;
         },
         (error, result) => {
           if (error) {

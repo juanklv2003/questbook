@@ -69,6 +69,10 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: CLOUDINARY_PDF_UPLOAD_PRESET
+        sync: false
+      - key: CLOUDINARY_UPLOAD_FOLDER_MODE
+        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

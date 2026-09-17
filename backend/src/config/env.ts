@@ -72,6 +72,16 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().min(1, 'CLOUDINARY_CLOUD_NAME is required'),
   CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY is required'),
   CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET is required'),
+  /** Signed upload preset for browser PDF uploads (Settings → Upload → Add preset, Signing: Signed). */
+  CLOUDINARY_PDF_UPLOAD_PRESET: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : undefined)),
+  /** `legacy` = fixed folder mode (`folder` param). Default = dynamic folders (`asset_folder`). */
+  CLOUDINARY_UPLOAD_FOLDER_MODE: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim().toLowerCase() === 'legacy' ? 'legacy' : 'dynamic')),
 });
 
 const _env = envSchema.safeParse(process.env);
