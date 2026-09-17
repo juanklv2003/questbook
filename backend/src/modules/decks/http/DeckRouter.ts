@@ -16,13 +16,12 @@ import { CloudinaryStorageAdapter } from '../infra/CloudinaryStorageAdapter';
 import { DeckController } from './DeckController';
 import { db } from '../../../config/db';
 import { authMiddleware } from '../../auth/http/AuthRouter';
+import { env } from '../../../config/env';
 
-// Límite de subida: suficiente para PDFs de estudio típicos y evita cargar
-// buffers enormes en memoria. Multer responde LIMIT_FILE_SIZE al excederlo.
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+// PDF en memoria (multer). Tamaño: MAX_PDF_UPLOAD_MB en .env (default 50 MB).
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_FILE_BYTES },
+  limits: { fileSize: env.MAX_PDF_UPLOAD_BYTES },
 });
 
 // 1. Instantiate Adapters

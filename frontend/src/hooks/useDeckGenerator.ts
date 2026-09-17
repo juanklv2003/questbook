@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
+import { loadUploadLimits, getMaxPdfBytes, formatMaxPdfMb } from '../lib/uploadConfig';
 import { parseOverloaded, parseQuotaExceeded } from '../lib/quota';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { DeckGenerationOptions, ModelOverloadedInfo, QuotaExceededInfo } from '../types';
@@ -32,6 +33,14 @@ export function useDeckGenerator() {
     setOverloaded(null);
 
     try {
+      await loadUploadLimits();
+      const maxBytes = getMaxPdfBytes();
+      if (file.size > maxBytes) {
+        const msg = t('gen.fileTooLarge', { maxMb: String(formatMaxPdfMb()) });
+        setError(msg);
+        throw new Error(msg);
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('name', options.name);
@@ -47,9 +56,8 @@ export function useDeckGenerator() {
       const response = await apiClient.post(`/decks/generate`, formData, {
         // Let axios/browser set the multipart boundary automatically — do NOT set Content-Type manually
         // (forcing 'multipart/form-data' without boundary breaks the upload)
-        // The AI can be slow to respond: allow a wide margin (90s) instead
-        // of hanging forever, and show a clear error when exceeded.
-        timeout: 90000,
+        // Subida grande + IA con hasta 500k caracteres puede tardar varios minutos.
+        timeout: 240000,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 100));
           // File upload covers 20 -> 50 of the bar.

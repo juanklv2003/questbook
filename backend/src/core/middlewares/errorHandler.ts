@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/AppError';
 import { QuotaExceededError } from '../errors/QuotaExceededError';
 import { ModelOverloadedError } from '../errors/ModelOverloadedError';
+import { formatMaxPdfUploadSize } from '../../config/uploadLimits';
 
 export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
   // Gemini free-tier quota: serialize retry hints, never raw dumps or keys.
@@ -44,7 +45,7 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     const status = code === 'LIMIT_FILE_SIZE' ? 413 : 400;
     const message =
       code === 'LIMIT_FILE_SIZE'
-        ? 'El archivo supera el tamaño máximo permitido (10 MB).'
+        ? `El archivo supera el tamaño máximo permitido (${formatMaxPdfUploadSize()}).`
         : 'No se pudo procesar el archivo subido.';
     return res.status(status).json({ error: message });
   }

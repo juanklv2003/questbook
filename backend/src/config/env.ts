@@ -24,6 +24,8 @@ const envSchema = z.object({
   PDF_MAX_TEXT_CHARS: z.string().optional(),
   // Timeout (ms) de la llamada IA al generar un mazo desde PDF (default 120_000).
   AI_DECK_TIMEOUT_MS: z.string().optional(),
+  // Tamaño máximo del PDF subido (MB). Default 100. Multer guarda el archivo en RAM.
+  MAX_PDF_UPLOAD_MB: z.string().optional(),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
   // Secreto de Cloudflare Turnstile para verificar el registro humano.
   // Se consigue en https://dash.cloudflare.com/?to=/:account/turnstile
@@ -117,6 +119,9 @@ export const env = {
   PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 500_000, 5_000, 500_000),
   /** Tiempo máximo de espera (ms) al generar tarjetas desde un PDF. */
   AI_DECK_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TIMEOUT_MS, 120_000, 15_000, 300_000),
+  /** Límite de subida PDF (bytes), configurable vía MAX_PDF_UPLOAD_MB (default 100). */
+  MAX_PDF_UPLOAD_MB: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100),
+  MAX_PDF_UPLOAD_BYTES: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100) * 1024 * 1024,
 };
 
 function clampInt(

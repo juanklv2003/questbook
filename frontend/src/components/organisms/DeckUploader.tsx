@@ -10,14 +10,14 @@ export interface DeckUploaderProps {
   isAiProcessing?: boolean;
 }
 
-const CARD_COUNT_OPTIONS = [5, 10, 15, 20, 30];
+const CARD_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
 export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing = false }: DeckUploaderProps) {
   const { t } = useLanguage();
   const [dragActive, setDragActive] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [deckName, setDeckName] = React.useState('');
-  const [cardCount, setCardCount] = React.useState<number>(15);
+  const [cardCount, setCardCount] = React.useState<number>(10);
   const [difficulty, setDifficulty] = React.useState<Difficulty>('medium');
   const [color, setColor] = React.useState<string>('primary');
   const [language, setLanguage] = React.useState<'en' | 'es'>('en');

@@ -49,6 +49,10 @@ app.get('/api/v1/health', (_req, res) => {
       groqFallback: isGroqConfigured(),
       groqModel: isGroqConfigured() ? env.GROQ_MODEL : undefined,
     },
+    upload: {
+      maxPdfBytes: env.MAX_PDF_UPLOAD_BYTES,
+      maxPdfMb: env.MAX_PDF_UPLOAD_MB,
+    },
   });
 });
 
