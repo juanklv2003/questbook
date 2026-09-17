@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import multer from 'multer';
 import { GenerateDeckUseCase } from '../useCases/GenerateDeckUseCase';
 import { GetDeckFlashcardsUseCase } from '../useCases/GetDeckFlashcardsUseCase';
 import { ListDecksUseCase } from '../useCases/ListDecksUseCase';
@@ -18,20 +17,9 @@ import { db } from '../../../config/db';
 import { env } from '../../../config/env';
 import { aiGenerateLimiter } from '../../../core/middlewares/rateLimits';
 import { JwtTokenService } from '../../auth/infra/JwtTokenService';
+import { pdfUpload } from '../infra/pdfUploadStorage';
 
-// PDF en memoria (multer). Tamaño: MAX_PDF_UPLOAD_MB en .env (default 100 MB).
-// `limits` acota también la cantidad de archivos/campos aceptados: un solo
-// archivo y los ~7 campos de texto que manda el frontend. El contenido se valida
-// como PDF real en el controller antes de gastar IA o Cloudinary.
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: env.MAX_PDF_UPLOAD_BYTES,
-    files: 1,
-    fields: 12,
-    parts: 24,
-  },
-});
+// PDF en disco temporal (multer). Tamaño: MAX_PDF_UPLOAD_MB en .env (default 100 MB).
 
 // 1. Instantiate Adapters
 const deckRepo = new PostgresDeckRepository(db);
@@ -71,7 +59,7 @@ const deckRouter = Router();
 // Auth: app.ts mounts requireAuth on /api/v1/decks (do not duplicate per route).
 deckRouter.post('/generate/pdf-upload-params', deckController.getPdfUploadParams);
 deckRouter.post('/generate/direct-upload-token', deckController.createDirectUploadToken);
-deckRouter.post('/generate', aiGenerateLimiter, upload.single('file'), deckController.generate);
+deckRouter.post('/generate', aiGenerateLimiter, pdfUpload.single('file'), deckController.generate);
 deckRouter.get('/:deckId/flashcards', deckController.getFlashcards);
 deckRouter.get('/', deckController.listDecks);
 deckRouter.patch('/:id/shelf', deckController.updateShelf);

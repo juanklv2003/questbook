@@ -164,7 +164,7 @@ ${promptText}${truncationNotice}
       }
       console.error('Gemini API call failed:', apiErr);
       throw new AppError(
-        503,
+        502,
         'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.'
       );
     }

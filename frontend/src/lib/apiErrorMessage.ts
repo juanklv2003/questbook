@@ -138,6 +138,12 @@ function mapKnownServerMessage(
     return t('gen.pdfStorage');
   }
 
+  if (m.includes('servicio de ia') || m.includes('ai service')) {
+    if (context === 'deckGenerate' || context === 'eval') {
+      return t('gen.generic');
+    }
+  }
+
   return null;
 }
 
@@ -195,6 +201,16 @@ export function getApiErrorMessage(err: unknown, t: Translate, context: ApiError
     return t('errors.network');
   }
 
+  if (serverMessage && !/^\d{3}\b/.test(serverMessage) && !serverMessage.includes('HTTP')) {
+    const looksTechnical =
+      /^[A-Za-z_]+:/.test(serverMessage) ||
+      serverMessage.includes('ECONN') ||
+      serverMessage.includes('Unexpected');
+    if (!looksTechnical) {
+      return serverMessage;
+    }
+  }
+
   if (status === 502 || status === 503) {
     return t('errors.serverBusy');
   }
@@ -204,18 +220,6 @@ export function getApiErrorMessage(err: unknown, t: Translate, context: ApiError
 
   if (status === 403) {
     return t('errors.forbidden');
-  }
-
-  if (serverMessage && !/^\d{3}\b/.test(serverMessage) && !serverMessage.includes('HTTP')) {
-    // Backend already sent readable Spanish for some auth paths; show it only in Spanish UI
-    // when we did not map it — avoid raw English tech strings.
-    const looksTechnical =
-      /^[A-Za-z_]+:/.test(serverMessage) ||
-      serverMessage.includes('ECONN') ||
-      serverMessage.includes('Unexpected');
-    if (!looksTechnical) {
-      return serverMessage;
-    }
   }
 
   return t(fallbackKey(context));

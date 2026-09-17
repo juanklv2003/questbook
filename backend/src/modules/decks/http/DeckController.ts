@@ -13,6 +13,7 @@ import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
 import { extractTextFromPdf } from '../infra/PdfTextExtractor';
 import { fetchPdfBufferFromUrl } from '../infra/fetchCloudinaryPdf';
+import { readUploadedPdfBuffer, deleteUploadedPdfFile } from '../infra/pdfUploadStorage';
 import type { ICloudStoragePort } from '../domain/ICloudStoragePort';
 import type { ITokenServicePort } from '../../auth/domain/ITokenServicePort';
 import { env } from '../../../config/env';
@@ -107,12 +108,53 @@ export class DeckController {
     }
 
     if (req.file) {
-      // Real PDF parsing: PDFs are binary — passing the buffer as utf-8 corrupts
-      // the text and makes Gemini fail. Extract the readable text instead.
-      // Falla rápido si el archivo no es un PDF: evita spawnear el worker, subir
-      // basura a Cloudinary y gastar cuota de IA.
-      assertLooksLikePdf(req.file.buffer);
-      content = await extractTextFromPdf(req.file.buffer);
+      let pdfBuffer: Buffer | undefined;
+      try {
+        pdfBuffer = await readUploadedPdfBuffer(req.file);
+        assertLooksLikePdf(pdfBuffer);
+        content = await extractTextFromPdf(pdfBuffer);
+      } finally {
+        await deleteUploadedPdfFile(req.file);
+      }
+
+      const storePdfOnCloudinary = pdfBuffer != null && pdfBuffer.length <= env.CLOUDINARY_MAX_PDF_BYTES;
+
+      // Validate cardCount (moved logic below still needs parsed fields first)
+      const parsedCardCountEarly = cardCount ? Number(cardCount) : undefined;
+      if (
+        parsedCardCountEarly !== undefined &&
+        (isNaN(parsedCardCountEarly) || parsedCardCountEarly < 1 || parsedCardCountEarly > 50)
+      ) {
+        throw new AppError(400, 'cardCount must be between 1 and 50');
+      }
+
+      const validDifficulties = ['easy', 'medium', 'hard'];
+      const parsedDifficultyEarly = difficulty || undefined;
+      if (parsedDifficultyEarly && !validDifficulties.includes(parsedDifficultyEarly)) {
+        throw new AppError(400, 'difficulty must be easy, medium, or hard');
+      }
+
+      const parsedLanguageEarly = language || 'en';
+      if (parsedLanguageEarly !== 'en' && parsedLanguageEarly !== 'es') {
+        throw new AppError(400, 'language must be either "en" or "es"');
+      }
+
+      const result = await this.generateDeckUseCase.execute({
+        name,
+        userId,
+        folderId,
+        content,
+        fileBuffer: storePdfOnCloudinary ? pdfBuffer : undefined,
+        fileName: req.file.originalname,
+        cardCount: parsedCardCountEarly,
+        difficulty: parsedDifficultyEarly as 'easy' | 'medium' | 'hard' | undefined,
+        shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),
+        color: parseDeckColor(color),
+        language: parsedLanguageEarly,
+      });
+
+      res.status(201).json(result);
+      return;
     } else if (typeof pdfUrl === 'string' && typeof pdfPublicId === 'string' && pdfUrl.trim() && pdfPublicId.trim()) {
       const buffer = await fetchPdfBufferFromUrl(pdfUrl.trim());
       assertLooksLikePdf(buffer);
@@ -144,17 +186,11 @@ export class DeckController {
       throw new AppError(400, 'language must be either "en" or "es"');
     }
 
-    const storePdfOnCloudinary =
-      Boolean(uploadedPdfPublicId) ||
-      (req.file != null && req.file.buffer.length <= env.CLOUDINARY_MAX_PDF_BYTES);
-
     const result = await this.generateDeckUseCase.execute({
       name,
       userId,
       folderId,
       content,
-      fileBuffer: storePdfOnCloudinary ? req.file?.buffer : undefined,
-      fileName: req.file?.originalname,
       pdfUrl: uploadedPdfUrl,
       pdfPublicId: uploadedPdfPublicId,
       cardCount: parsedCardCount,
