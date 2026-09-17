@@ -1,6 +1,11 @@
 import rateLimit from 'express-rate-limit';
 import type { Request } from 'express';
 
+// Nota: el store por defecto es en memoria. Con una sola instancia (plan free de
+// Render) alcanza; los contadores se reinician al reiniciar el servicio y no se
+// comparten entre instancias. Si algún día se escala horizontalmente, migrar a
+// un store compartido (por ejemplo @rate-limit/redis).
+
 const rateLimitJsonHandler = (
   _req: Request,
   res: import('express').Response,

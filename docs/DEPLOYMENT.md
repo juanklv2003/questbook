@@ -82,11 +82,11 @@ npm run migrate:flashcards-index                  # índice flashcards(deck_id) 
 | `GEMINI_API_KEY2` | opcional: clave de otro proyecto/cuenta; se usa al final cuando las anteriores agotan cuota |
 | `GROQ_API_KEY` | opcional: respaldo Groq cuando Gemini agota todas las claves |
 | `GROQ_MODEL` | opcional; default `llama-3.3-70b-versatile` |
-| `MAX_PDF_UPLOAD_MB` | opcional; default **100** (PDF en RAM durante generate) |
+| `MAX_PDF_UPLOAD_MB` | opcional; default **100**. El PDF vive en RAM durante `POST /decks/generate` (multer + copia del worker de pdf-parse + subida a Cloudinary): en el plan free (≈512 MB) un PDF de 100 MB puede provocar OOM/502. Si pasa, bajalo (ej. `25`) o pasá a un plan pago |
 | `DB_POOL_MAX` | opcional; default **10** conexiones al pool Neon |
 | `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | credenciales de Cloudinary |
 
-**Rendimiento / abuso:** el API aplica rate limits (auth, generación IA ~5/h, evaluaciones ~60/h por usuario) y compresión gzip en respuestas JSON. En Render free, evitá **varias subidas de PDF grandes a la vez** (hasta 100 MB en memoria por request).
+**Rendimiento / abuso:** el API aplica rate limits (auth, generación IA ~5/h, evaluaciones ~60/h por usuario), compresión gzip y `helmet` en respuestas JSON. En Render free, evitá **varias subidas de PDF grandes a la vez** (hasta 100 MB en memoria por request) y revisá los logs por OOM si subís archivos muy pesados.
 
 3. Deployá y verificá:
 
