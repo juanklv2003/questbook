@@ -165,6 +165,7 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
       onDeleteSuccess={handleDeleteSuccess}
       onEdit={onEdit}
       onSelect={openStudy}
+      showEdit={prefersHover}
       badgeStyle={styles.badge}
       {...moveProps}
     />
@@ -403,6 +404,7 @@ function HoverCard({
   onDeleteSuccess,
   onEdit,
   onSelect,
+  showEdit = true,
   badgeStyle,
   shelfIndex,
   shelfCount,
@@ -419,6 +421,8 @@ function HoverCard({
   onDeleteSuccess: () => void;
   onEdit?: () => void;
   onSelect: () => void;
+  /** Escritorio (hover); oculto en el sheet móvil. */
+  showEdit?: boolean;
   badgeStyle: string;
   shelfIndex?: number;
   shelfCount?: number;
@@ -482,17 +486,20 @@ function HoverCard({
           <Play className="w-3 h-3" />
           {t("book.study")}
         </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-          aria-label={t("book.edit")}
-          className={cn(
-            "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg",
-            "bg-secondary text-secondary-foreground text-xs font-medium",
-            "hover:bg-secondary/80 transition-colors cursor-pointer"
-          )}
-        >
-          <Pencil className="w-3 h-3" />
-        </button>
+        {showEdit && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+            aria-label={t("book.edit")}
+            className={cn(
+              "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg",
+              "bg-secondary text-secondary-foreground text-xs font-medium",
+              "hover:bg-secondary/80 transition-colors cursor-pointer"
+            )}
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
+        )}
         <DeckDeleteButton
           deckId={deckId}
           onDeleteSuccess={onDeleteSuccess}
