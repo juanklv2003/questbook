@@ -1,5 +1,6 @@
 import { Button } from "../atoms/Button"
-import { BrainCircuit, LogOut, Plus, Settings, TrendingUp, User } from "lucide-react"
+import { LogOut, Plus, Settings, TrendingUp, User } from "lucide-react"
+import magicBook from "../../assets/libro.png"
 import { useLanguage } from "../../i18n/LanguageContext"
 
 export type TopbarRoute = "progress" | "settings";
@@ -43,8 +44,13 @@ export function Navbar({ onGoHome, onLogout, onOpenCreator, onNavigate }: Navbar
           aria-label={t("nav.home")}
           className="-ml-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-1.5 py-1 transition-colors duration-200 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <BrainCircuit className="h-4 w-4" aria-hidden="true" />
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+            <img
+              src={magicBook}
+              alt=""
+              aria-hidden="true"
+              className="h-7 w-7 object-cover"
+            />
           </span>
           <span className="text-[15px] font-semibold tracking-tight">QuestBook</span>
         </button>
