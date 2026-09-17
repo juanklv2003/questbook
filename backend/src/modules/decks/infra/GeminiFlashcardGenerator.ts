@@ -36,6 +36,11 @@ function minPartialCards(requested: number): number {
   return Math.max(8, Math.ceil(requested * 0.25));
 }
 
+function sanitizeAiHint(detail: string): string {
+  const trimmed = detail.replace(/\s+/g, ' ').trim().slice(0, 160);
+  return trimmed.replace(/sk-[a-zA-Z0-9]+/g, '[redacted]');
+}
+
 function isAiTimeoutMessage(detail: string): boolean {
   const d = detail.toLowerCase();
   return d.includes('timed out') || d.includes('timeout');
@@ -389,7 +394,8 @@ ${promptText}${truncationNotice}${excludeNotice}
             502,
             'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.',
             true,
-            'AI_PROVIDER_ERROR'
+            'AI_PROVIDER_ERROR',
+            sanitizeAiHint(lastAiError)
           );
         }
       }

@@ -88,7 +88,7 @@ export type DeckLlmOptions = {
 };
 
 /**
- * Generación de mazos: Groq primero, Gemini (JSON mode) como respaldo.
+ * Generación de mazos: Gemini (JSON) primero — más fiable para arrays grandes; Groq como respaldo.
  */
 export async function generateDeckLlmText(
   gemini: GeminiFailover,
@@ -98,30 +98,22 @@ export async function generateDeckLlmText(
 ): Promise<string> {
   const groqOpts = options?.maxTokens ? { maxTokens: options.maxTokens } : undefined;
 
-  if (isGroqConfigured()) {
-    try {
-      return await generateWithGroq(prompt, timeoutMs, groqOpts);
-    } catch (groqErr) {
-      if (groqErr instanceof QuotaExceededError) {
-        throw groqErr;
-      }
-      console.warn(
-        '[AI] Groq failed for deck generation; trying Gemini.',
-        groqErr instanceof Error ? groqErr.message : groqErr
-      );
-    }
-  }
-
   try {
     return await generateWithGeminiForDeck(gemini, prompt, timeoutMs);
-  } catch (error) {
+  } catch (geminiErr) {
+    if (
+      geminiErr instanceof QuotaExceededError ||
+      geminiErr instanceof ModelOverloadedError
+    ) {
+      throw geminiErr;
+    }
+    console.warn(
+      '[AI] Gemini failed for deck generation; trying Groq.',
+      geminiErr instanceof Error ? geminiErr.message : geminiErr
+    );
     if (!isGroqConfigured()) {
-      throw error;
+      throw geminiErr;
     }
-    if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
-      throw error;
-    }
-    console.warn('[AI] Gemini failed after Groq; retrying Groq once.');
     return generateWithGroq(prompt, timeoutMs, groqOpts);
   }
 }

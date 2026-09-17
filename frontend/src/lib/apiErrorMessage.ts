@@ -21,6 +21,7 @@ type ErrorPayload = {
   status?: number;
   code?: string;
   serverMessage?: string;
+  hint?: string;
 };
 
 function readPayload(err: unknown): ErrorPayload {
@@ -42,7 +43,8 @@ function readPayload(err: unknown): ErrorPayload {
   const record = data as Record<string, unknown>;
   const code = typeof record.code === 'string' ? record.code : undefined;
   const serverMessage = typeof record.error === 'string' ? record.error.trim() : undefined;
-  return { status, code, serverMessage };
+  const hint = typeof record.hint === 'string' ? record.hint.trim() : undefined;
+  return { status, code, serverMessage, hint };
 }
 
 function isNetworkFailure(err: unknown): boolean {
@@ -204,7 +206,11 @@ export function getApiErrorMessage(err: unknown, t: Translate, context: ApiError
     }
   }
 
-  const { status, code, serverMessage } = readPayload(err);
+  const { status, code, serverMessage, hint } = readPayload(err);
+
+  if (code === 'AI_PROVIDER_ERROR' && context === 'deckGenerate' && hint) {
+    return `${t('gen.generic')} (${hint})`;
+  }
 
   if (code === 'AI_TIMEOUT' || status === 504) {
     if (context === 'deckGenerate') {

@@ -3,14 +3,14 @@ import { QuotaExceededError } from '../errors/QuotaExceededError';
 import { isQuotaExhausted, parseRetryDelay } from './GeminiFailover';
 
 const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
-/** Groq: gpt-oss suele llenar `reasoning` y dejar `content` vacío; qwen devuelve JSON usable. */
-export const DEFAULT_GROQ_MODEL = 'qwen/qwen3.8-27b';
-const GROQ_MODEL_FALLBACKS = ['qwen/qwen3.8-27b', 'openai/gpt-oss-20b'] as const;
-/** Groq context is smaller than Gemini; truncate fallback prompts. */
+/** Groq max output tokens for Qwen models on GroqCloud. */
+const GROQ_MAX_OUTPUT_TOKENS = 16_384;
+export const DEFAULT_GROQ_MODEL = 'qwen/qwen3.6-27b';
+const GROQ_MODEL_FALLBACKS = ['qwen/qwen3.6-27b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'] as const;
 const GROQ_MAX_PROMPT_CHARS = 96_000;
 
 type GroqChatResponse = {
-  choices?: Array<{ message?: { content?: string } }>;
+  choices?: Array<{ message?: { content?: string; reasoning?: string } }>;
   error?: { message?: string };
 };
 
@@ -18,18 +18,28 @@ function groqModelCandidates(): string[] {
   const configured = env.GROQ_MODEL?.trim();
   const base = [...GROQ_MODEL_FALLBACKS];
   const list = configured ? [configured, ...base] : base;
-  const unique = [...new Set(list)];
-  const qwen = 'qwen/qwen3.8-27b';
-  if (unique.includes(qwen)) {
-    return [qwen, ...unique.filter((m) => m !== qwen)];
-  }
-  return unique;
+  return [...new Set(list)];
 }
 
 function isUnknownGroqModel(message: string | undefined): boolean {
   if (!message) return false;
   const m = message.toLowerCase();
   return m.includes('does not exist') || m.includes('decommissioned') || m.includes('not have access');
+}
+
+function isQwenModel(model: string): boolean {
+  return model.toLowerCase().includes('qwen');
+}
+
+function pickGroqMessageText(content: string, reasoning: string): string {
+  if (content.includes('[')) return content;
+  if (reasoning.includes('[')) {
+    const start = reasoning.indexOf('[');
+    const end = reasoning.lastIndexOf(']');
+    if (end > start) return reasoning.slice(start, end + 1);
+    return reasoning.slice(start);
+  }
+  return content || reasoning;
 }
 
 export type GroqGenerateOptions = {
@@ -43,18 +53,23 @@ async function callGroqModel(
   signal: AbortSignal,
   maxTokens: number
 ): Promise<string> {
+  const payload: Record<string, unknown> = {
+    model,
+    messages: [{ role: 'user', content: safePrompt }],
+    temperature: 0.3,
+    max_tokens: Math.min(GROQ_MAX_OUTPUT_TOKENS, maxTokens),
+  };
+  if (isQwenModel(model)) {
+    payload.reasoning_effort = 'none';
+  }
+
   const response = await fetch(GROQ_CHAT_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: safePrompt }],
-      temperature: 0.3,
-      max_tokens: maxTokens,
-    }),
+    body: JSON.stringify(payload),
     signal,
   });
 
@@ -75,11 +90,8 @@ async function callGroqModel(
 
   const message = body.choices?.[0]?.message;
   const content = message?.content?.trim() ?? '';
-  const reasoning =
-    message && typeof message === 'object' && 'reasoning' in message
-      ? String((message as { reasoning?: string }).reasoning ?? '').trim()
-      : '';
-  const text = content.includes('[') ? content : content || reasoning;
+  const reasoning = message?.reasoning?.trim() ?? '';
+  const text = pickGroqMessageText(content, reasoning);
   if (!text) {
     throw new Error('Groq returned an empty response.');
   }
@@ -88,12 +100,9 @@ async function callGroqModel(
 
 export function groqMaxTokensForDeckBatch(cardCount: number, difficulty?: 'easy' | 'medium' | 'hard'): number {
   const perCard = difficulty === 'hard' ? 1_100 : difficulty === 'easy' ? 650 : 850;
-  return Math.min(32_768, 2_048 + cardCount * perCard);
+  return Math.min(GROQ_MAX_OUTPUT_TOKENS, 2_048 + cardCount * perCard);
 }
 
-/**
- * Respaldo cuando Gemini no responde. Requiere GROQ_API_KEY en el entorno.
- */
 export async function generateWithGroq(
   prompt: string,
   timeoutMs: number,
@@ -108,7 +117,7 @@ export async function generateWithGroq(
     );
   }
 
-  const maxTokens = options?.maxTokens ?? 16_384;
+  const maxTokens = options?.maxTokens ?? GROQ_MAX_OUTPUT_TOKENS;
 
   let safePrompt = prompt;
   if (safePrompt.length > GROQ_MAX_PROMPT_CHARS) {
