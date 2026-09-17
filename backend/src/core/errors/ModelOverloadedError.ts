@@ -13,7 +13,9 @@ export class ModelOverloadedError extends AppError {
   constructor(retryAfterSeconds = 25, resetAt?: string, message?: string) {
     super(
       503,
-      message ?? 'El modelo de IA está saturado. Inténtalo de nuevo en unos segundos.'
+      message ?? 'El modelo de IA está saturado. Inténtalo de nuevo en unos segundos.',
+      true,
+      'MODEL_OVERLOADED'
     );
     this.retryAfterSeconds = retryAfterSeconds;
     this.resetAt =

@@ -41,6 +41,10 @@ function sanitizeAiHint(detail: string): string {
   return trimmed.replace(/sk-[a-zA-Z0-9]+/g, '[redacted]');
 }
 
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function isAiTimeoutMessage(detail: string): boolean {
   const d = detail.toLowerCase();
   return d.includes('timed out') || d.includes('timeout');
@@ -367,7 +371,19 @@ ${promptText}${truncationNotice}${excludeNotice}
         lastAiError = '';
         break;
       } catch (apiErr) {
-        if (apiErr instanceof QuotaExceededError || apiErr instanceof ModelOverloadedError) {
+        if (apiErr instanceof QuotaExceededError) {
+          throw apiErr;
+        }
+        if (apiErr instanceof ModelOverloadedError) {
+          if (attempt < 2) {
+            const waitMs = Math.min(apiErr.retryAfterSeconds, 45) * 1000;
+            console.warn('[deck-gen] Gemini saturated; waiting before retry', {
+              batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
+              waitMs,
+            });
+            await sleepMs(waitMs);
+            continue;
+          }
           throw apiErr;
         }
         lastAiError = apiErr instanceof Error ? apiErr.message : String(apiErr);

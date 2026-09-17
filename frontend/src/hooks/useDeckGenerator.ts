@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
-import { fetchPdfUploadParams, uploadPdfToCloudinary } from '../lib/cloudinaryUpload';
 import { generateDeckViaDirectUpload } from '../lib/directDeckUpload';
 import { getApiErrorMessage } from '../lib/apiErrorMessage';
 import {
   loadUploadLimits,
   getMaxPdfBytes,
-  getCloudinaryMaxPdfBytes,
   formatMaxPdfMb,
   formatCloudinaryMaxPdfMb,
 } from '../lib/uploadConfig';
@@ -53,9 +51,6 @@ export function useDeckGenerator() {
         throw new Error(msg);
       }
 
-      const cloudinaryMax = getCloudinaryMaxPdfBytes();
-      const mustUseDirect = file.size > cloudinaryMax;
-
       const runDirectUpload = async (): Promise<GenerateDeckResult> => {
         setProgress(5);
         const tokenRes = await apiClient.post<DirectUploadTokenResponse>(
@@ -86,53 +81,9 @@ export function useDeckGenerator() {
         return result;
       };
 
-      const runCloudinaryFlow = async (): Promise<GenerateDeckResult> => {
-        setProgress(5);
-        const uploadParams = await fetchPdfUploadParams();
-        const uploaded = await uploadPdfToCloudinary(file, uploadParams, (pct) => {
-          setProgress(5 + Math.round(pct * 0.45));
-        });
-
-        setProgress(55);
-        setIsAiProcessing(true);
-
-        const response = await apiClient.post(
-          `/decks/generate`,
-          {
-            name: options.name,
-            cardCount: options.cardCount,
-            difficulty: options.difficulty,
-            color: options.color ?? 'primary',
-            language: options.language ?? 'es',
-            shelf_index: 0,
-            pdfUrl: uploaded.url,
-            pdfPublicId: uploaded.publicId,
-          },
-          {
-            timeout: 240000,
-            onUploadProgress: () => {
-              setProgress((p) => Math.max(p, 60));
-            },
-          }
-        );
-
-        setProgress(100);
-        setIsAiProcessing(false);
-        return response.data;
-      };
-
-      // POST directo a Render. No reintentar vía Cloudinary tras un fallo (evita 422 confuso tras 502).
       try {
         return await runDirectUpload();
       } catch (directErr: unknown) {
-        const directStatus = readHttpStatus(directErr);
-        if (directStatus === 503) {
-          if (mustUseDirect) {
-            setError(t('gen.directUploadNotConfigured'));
-            throw directErr;
-          }
-          return await runCloudinaryFlow();
-        }
         if (!error) {
           setError(getApiErrorMessage(directErr, t, 'deckGenerate'));
         }
