@@ -141,6 +141,14 @@ export const en: { [K in keyof typeof es]: string } = {
   "gen.directUploadNotConfigured":
     "PDFs over 10 MB cannot be processed yet. Redeploy the Render backend with the latest release or contact the administrator.",
   "gen.pdfStorage": "Could not upload the PDF to storage. Check your connection and try again.",
+  "gen.pdfNoText":
+    "Could not extract text from this PDF. Scanned pages or image-only PDFs need OCR or a text-based export.",
+  "gen.pdfInvalid": "The file is not a valid PDF or is corrupted. Re-export it from your editor or PDF viewer.",
+  "gen.pdfReadFailed":
+    "The server could not download or open your uploaded PDF. Try uploading again or use a smaller file.",
+  "gen.pdfExtractTimeout": "Reading the PDF took too long. Try a smaller file or fewer pages.",
+  "gen.aiNoCards":
+    "The AI could not build useful flashcards from this content. Try another PDF, fewer cards, or a different difficulty.",
   "gen.generic": "Failed to generate the book",
 
   "eval.quota": "You have reached the free AI limit.",

@@ -7,26 +7,28 @@ const PDF_FOLDER = 'flashy_ai_pdfs';
 
 function browserUploadParamsToSign(): Record<string, string | number | boolean> {
   const timestamp = Math.round(Date.now() / 1000);
+  const resourceType = { resource_type: 'raw' as const };
   if (env.CLOUDINARY_PDF_UPLOAD_PRESET) {
-    return { timestamp, upload_preset: env.CLOUDINARY_PDF_UPLOAD_PRESET };
+    return { timestamp, upload_preset: env.CLOUDINARY_PDF_UPLOAD_PRESET, ...resourceType };
   }
   if (env.CLOUDINARY_UPLOAD_FOLDER_MODE === 'legacy') {
-    return { timestamp, folder: PDF_FOLDER, unique_filename: true };
+    return { timestamp, folder: PDF_FOLDER, unique_filename: true, ...resourceType };
   }
   return {
     timestamp,
     asset_folder: PDF_FOLDER,
     use_asset_folder_as_public_id_prefix: true,
     unique_filename: true,
+    ...resourceType,
   };
 }
 
 function serverSideUploadOptions(filename?: string): Record<string, unknown> {
   const base =
     env.CLOUDINARY_UPLOAD_FOLDER_MODE === 'legacy'
-      ? { resource_type: 'auto' as const, folder: PDF_FOLDER, unique_filename: true }
+      ? { resource_type: 'raw' as const, folder: PDF_FOLDER, unique_filename: true }
       : {
-          resource_type: 'auto' as const,
+          resource_type: 'raw' as const,
           asset_folder: PDF_FOLDER,
           use_asset_folder_as_public_id_prefix: true,
           unique_filename: true,
@@ -66,7 +68,7 @@ export class CloudinaryStorageAdapter implements ICloudStoragePort {
       const options = serverSideUploadOptions(filename);
       const uploadStream = cloudinary.uploader.upload_stream(
         options as {
-          resource_type: 'auto';
+          resource_type: 'raw';
           folder?: string;
           asset_folder?: string;
           use_asset_folder_as_public_id_prefix?: boolean;
@@ -101,11 +103,9 @@ export class CloudinaryStorageAdapter implements ICloudStoragePort {
   }
 
   async deletePdf(publicId: string): Promise<void> {
-    // New uploads are image-type; decks stored before the inline-display fix
-    // are raw-type. Try image first, fall back to raw for legacy records.
-    const result = await this.destroy(publicId, 'image');
+    const result = await this.destroy(publicId, 'raw');
     if (result === 'not found') {
-      await this.destroy(publicId, 'raw');
+      await this.destroy(publicId, 'image');
     }
   }
 

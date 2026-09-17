@@ -139,6 +139,15 @@ export const es = {
   "gen.directUploadNotConfigured":
     "Los PDF de más de 10 MB aún no pueden procesarse. Redeploy del backend en Render con la última versión o contactá al administrador.",
   "gen.pdfStorage": "No se pudo subir el PDF al almacenamiento. Comprobá tu conexión e intentá de nuevo.",
+  "gen.pdfNoText":
+    "No se pudo extraer texto de este PDF. Suele pasar con escaneos o fotos: usá un PDF con texto seleccionable o pasalo por OCR.",
+  "gen.pdfInvalid": "El archivo no es un PDF válido o está dañado. Probá exportarlo de nuevo desde Word o el visor de PDF.",
+  "gen.pdfReadFailed":
+    "El servidor no pudo descargar o abrir el PDF que subiste. Volvé a subirlo; si sigue fallando, probá un archivo más pequeño.",
+  "gen.pdfExtractTimeout":
+    "Leer el PDF tardó demasiado. Probá un archivo más pequeño o con menos páginas.",
+  "gen.aiNoCards":
+    "La IA no pudo crear tarjetas útiles con este contenido. Probá otro PDF, menos tarjetas o otra dificultad.",
   "gen.generic": "Error al generar el libro",
 
   "eval.quota": "Has alcanzado el límite gratuito de la IA.",

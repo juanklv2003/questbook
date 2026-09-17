@@ -44,7 +44,7 @@ export async function uploadPdfToCloudinary(
     form.append(key, value);
   }
 
-  const endpoint = `https://api.cloudinary.com/v1_1/${params.cloudName}/auto/upload`;
+  const endpoint = `https://api.cloudinary.com/v1_1/${params.cloudName}/raw/upload`;
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();

@@ -100,6 +100,32 @@ function fallbackKey(context: ApiErrorContext): TranslationKey {
   }
 }
 
+function mapGenerate422(message: string | undefined, t: Translate): string | null {
+  if (!message) return null;
+  const m = message.toLowerCase();
+  if (
+    m.includes('extraer texto') ||
+    m.includes('extract text') ||
+    m.includes('imágenes escaneadas') ||
+    m.includes('scanned')
+  ) {
+    return t('gen.pdfNoText');
+  }
+  if (m.includes('pdf válido') || m.includes('valid pdf') || m.includes('dañado') || m.includes('corrupted')) {
+    return t('gen.pdfInvalid');
+  }
+  if (m.includes('extracción del pdf') || (m.includes('extract') && m.includes('tardó'))) {
+    return t('gen.pdfExtractTimeout');
+  }
+  if (m.includes('descarga del pdf') || m.includes('no se pudo leer el pdf') || m.includes('could not read')) {
+    return t('gen.pdfReadFailed');
+  }
+  if (m.includes('ia no pudo') || m.includes('tarjetas') || m.includes('flashcard') || m.includes('documento')) {
+    return t('gen.aiNoCards');
+  }
+  return null;
+}
+
 function mapKnownServerMessage(
   message: string | undefined,
   context: ApiErrorContext,
@@ -132,9 +158,6 @@ function mapKnownServerMessage(
   }
 
   if (m.includes('no se pudo guardar el pdf') || m.includes('could not save the pdf')) {
-    return t('gen.pdfStorage');
-  }
-  if (m.includes('no se pudo leer el pdf') || m.includes('could not read the pdf')) {
     return t('gen.pdfStorage');
   }
 
@@ -182,6 +205,13 @@ export function getApiErrorMessage(err: unknown, t: Translate, context: ApiError
   }
 
   const { status, serverMessage } = readPayload(err);
+
+  if (status === 422 && context === 'deckGenerate') {
+    const from422 = mapGenerate422(serverMessage, t);
+    if (from422) return from422;
+    if (serverMessage) return serverMessage;
+  }
+
   const known = mapKnownServerMessage(serverMessage, context, t);
   if (known) {
     return known;

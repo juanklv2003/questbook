@@ -12,7 +12,8 @@ import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
 import { extractTextFromPdf } from '../infra/PdfTextExtractor';
-import { fetchPdfBufferFromUrl } from '../infra/fetchCloudinaryPdf';
+import { fetchPdfBufferForDeck } from '../infra/fetchCloudinaryPdf';
+import { assertLooksLikePdf } from '../infra/pdfHeader';
 import { readUploadedPdfBuffer, deleteUploadedPdfFile } from '../infra/pdfUploadStorage';
 import type { ICloudStoragePort } from '../domain/ICloudStoragePort';
 import type { ITokenServicePort } from '../../auth/domain/ITokenServicePort';
@@ -156,8 +157,7 @@ export class DeckController {
       res.status(201).json(result);
       return;
     } else if (typeof pdfUrl === 'string' && typeof pdfPublicId === 'string' && pdfUrl.trim() && pdfPublicId.trim()) {
-      const buffer = await fetchPdfBufferFromUrl(pdfUrl.trim());
-      assertLooksLikePdf(buffer);
+      const buffer = await fetchPdfBufferForDeck(pdfPublicId.trim(), pdfUrl.trim());
       content = await extractTextFromPdf(buffer);
       uploadedPdfUrl = pdfUrl.trim();
       uploadedPdfPublicId = pdfPublicId.trim();
@@ -302,17 +302,6 @@ export class DeckController {
     // Explicit user action only. Finishing a session never deletes the row.
     await this.deleteStudySessionUseCase.execute(deckId, userId);
     res.status(204).send();
-  }
-}
-
-/**
- * La cabecera `%PDF-` identifica a un PDF. La spec permite bytes basura antes de
- * la cabecera, así que la buscamos en el primer KB en vez de exigir el offset 0.
- */
-function assertLooksLikePdf(buffer: Buffer): void {
-  const head = buffer.subarray(0, 1024).toString('latin1');
-  if (!head.includes('%PDF-')) {
-    throw new AppError(422, 'El archivo no es un PDF válido. Subí un archivo PDF.');
   }
 }
 
