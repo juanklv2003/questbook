@@ -138,7 +138,7 @@ revisá que `FRONTEND_URL` sea exactamente el origen del frontend, que `COOKIE_S
 
 | Variable | Valor |
 | --- | --- |
-| `VITE_API_URL` | `https://flashcards-ia-api.onrender.com/api/v1` (el build **falla a propósito** si falta o apunta a `localhost`: guard en `vite.config.ts`) |
+| `VITE_API_URL` | **`/api/v1`** (recomendado: proxy en `vercel.json` → Render; cookies en el mismo origen). Alternativa directa: `https://flashcards-ia-api.onrender.com/api/v1` (requiere `COOKIE_SAME_SITE=none` y el navegador puede bloquear la cookie) |
 | `VITE_TURNSTILE_SITE_KEY` | Site Key pública del mismo sitio de Turnstile. Sin esto el form de registro muestra un aviso y el botón queda deshabilitado |
 
 4. Deployá, copiá la URL final (`https://flashcards-ia.vercel.app`, o la que te asigne Vercel) y

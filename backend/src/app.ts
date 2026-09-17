@@ -64,7 +64,10 @@ app.get('/api/v1/health', (_req, res) => {
     status: 'ok',
     node: process.version,
     uptimeSeconds: Math.round(process.uptime()),
-    corsOrigins: env.CORS_ORIGINS.length,
+    cors: {
+      frontendUrl: env.FRONTEND_URL,
+      allowedOrigins: env.CORS_ORIGINS,
+    },
     auth: {
       googleOAuth: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
     },

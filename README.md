@@ -140,7 +140,7 @@ curl http://localhost:3000/api/v1/no-existe   # 404 en JSON
 
 | Variable | Notas |
 | --- | --- |
-| `VITE_API_URL` | dev: `/api/v1` (proxy). **Prod: URL absoluta** `https://<tu-api>/api/v1`; el build falla si falta o apunta a localhost |
+| `VITE_API_URL` | dev: `/api/v1` (proxy Vite). **Prod en Vercel:** **`/api/v1`** + rewrite en [`frontend/vercel.json`](frontend/vercel.json) hacia Render (cookies en el mismo origen). Alternativa: URL absoluta `https://<tu-api>/api/v1` (CORS + `SameSite=None`, menos fiable) |
 | `VITE_TURNSTILE_SITE_KEY` | Site Key pública de Turnstile; sin ella el registro queda deshabilitado |
 
 ## Scripts
@@ -193,14 +193,14 @@ problema; sin sesión → `401`; mazo ajeno → `403`; cuota de IA agotada → `
 | Build | `backend`: `npm run build` · `frontend`: `tsc -b`, `vite build`, `eslint` sin errores |
 | Backend hosting | [`render.yaml`](render.yaml): build con devDeps, health `/api/v1/health`, env placeholders |
 | Frontend hosting | [`frontend/vercel.json`](frontend/vercel.json): rewrite SPA, cache de assets, headers |
-| Prod guard | [`frontend/vite.config.ts`](frontend/vite.config.ts) exige `VITE_API_URL` absoluta en Vercel/Netlify/Render/Railway |
+| Prod guard | [`frontend/vite.config.ts`](frontend/vite.config.ts) exige `VITE_API_URL` en el build de hosting; en Vercel preferí **`/api/v1`** con proxy |
 | Seguridad / carga | CORS, cookies cross-origin, rate limits, compresión, validación `%PDF-`, worker PDF |
 
 **Pendiente manual (todavía no hay nada en Vercel ni Render):**
 
 - [ ] Neon de **producción** + migraciones en el orden de [Arranque local](#1-base-de-datos-neon).
 - [ ] Render: Blueprint → secretos del backend (`DATABASE_URL`, `JWT_SECRET`, Turnstile, Gemini, Cloudinary, etc.).
-- [ ] Vercel: root `frontend`, `VITE_API_URL` + `VITE_TURNSTILE_SITE_KEY` **antes** del primer build.
+- [ ] Vercel: root `frontend`, `VITE_API_URL=/api/v1` + `VITE_TURNSTILE_SITE_KEY` **antes** del primer build (proxy en `vercel.json`).
 - [ ] Render: `FRONTEND_URL` = URL final de Vercel (sin `/` final); opcional `CORS_ORIGINS` para previews.
 - [ ] Google OAuth (opcional pero recomendado): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` en Render + redirect en Google Console.
 - [ ] Turnstile: dominio del frontend en el widget de Cloudflare.
@@ -218,7 +218,7 @@ Runbook completo con troubleshooting: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
    `npm ci --include=dev && npm run build`, health check `/api/v1/health`). Cargar los secretos
    (incluidas `GOOGLE_*` si querés el botón de Google).
 3. **Vercel** (frontend): importar el repo, **Root Directory = `frontend`** (preset Vite) y definir
-   `VITE_API_URL` + `VITE_TURNSTILE_SITE_KEY` **antes** del build.
+   `VITE_API_URL=/api/v1` + `VITE_TURNSTILE_SITE_KEY` **antes** del build.
 4. Volver a Render y fijar `FRONTEND_URL` con la URL final de Vercel (si no, CORS bloquea todo).
 5. **Google Console**: registrar el redirect `https://<tu-api>/api/v1/auth/google/callback` y el
    origen JS del frontend. **Turnstile**: incluir el dominio del frontend.
@@ -263,7 +263,7 @@ Runbook completo con troubleshooting: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 | Síntoma | Causa probable | Solución |
 | --- | --- | --- |
 | Build de Render falla con `tsc: not found` | `NODE_ENV=production` + `npm install` (omite devDeps) | usar `npm ci --include=dev && npm run build` (ya está en `render.yaml`) |
-| Build de Vercel falla pidiendo `VITE_API_URL` | falta la env var (guard en `vite.config.ts`) | definirla absoluta: `https://<tu-api>/api/v1` |
+| Build de Vercel falla pidiendo `VITE_API_URL` | falta la env var (guard en `vite.config.ts`) | definir **`/api/v1`** (con rewrite en `vercel.json`) o `https://<tu-api>/api/v1` |
 | Login "funciona" pero al recargar vuelve al login | cookie `SameSite`/`Secure` o `FRONTEND_URL` distinto | `COOKIE_SAME_SITE=none` + HTTPS y `FRONTEND_URL` exacto, sin barra final |
 | CORS bloqueado (también en previews de Vercel) | el origen no está en la allowlist | agregarlo a `CORS_ORIGINS` |
 | 500 al subir PDF | credenciales de Cloudinary | revisar las 3 claves |

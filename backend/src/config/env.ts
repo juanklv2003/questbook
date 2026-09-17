@@ -49,13 +49,11 @@ const envSchema = z.object({
   FRONTEND_URL: z
     .string()
     .optional()
-    // Normaliza para que CORS no falle por un detalle de tipeo: quita espacios
-    // y barras finales (el navegador compara el origen SIN barra, así que
-    // "https://x.app/" nunca coincide con "https://x.app") y cae al localhost
-    // de desarrollo si queda vacío.
+    // Normaliza trim + sin barra final. El default localhost sólo se aplica en dev
+    // (ver resolveFrontendUrl abajo); en producción vacío rompe CORS silenciosamente.
     .transform((value) => {
       const normalized = (value ?? '').trim().replace(/\/+$/, '');
-      return normalized || 'http://localhost:5173';
+      return normalized.length > 0 ? normalized : undefined;
     }),
   // Orígenes extra permitidos por CORS, separados por comas. Útil para los
   // preview deployments de Vercel (https://mi-app-git-rama-usuario.vercel.app)
@@ -83,8 +81,32 @@ if (!_env.success) {
   process.exit(1);
 }
 
+function resolveFrontendUrl(
+  nodeEnv: 'development' | 'test' | 'production',
+  configured: string | undefined
+): string {
+  if (nodeEnv === 'production') {
+    if (!configured) {
+      console.error(
+        '❌ FRONTEND_URL is required in production (HTTPS URL of Vercel, no trailing slash). ' +
+          'Without it CORS blocks login from the real frontend.'
+      );
+      process.exit(1);
+    }
+    if (/^http:\/\/(localhost|127\.0\.0\.1)/i.test(configured)) {
+      console.error('❌ FRONTEND_URL cannot be localhost in production.');
+      process.exit(1);
+    }
+    return configured;
+  }
+  return configured ?? 'http://localhost:5173';
+}
+
+const FRONTEND_URL = resolveFrontendUrl(_env.data.NODE_ENV, _env.data.FRONTEND_URL);
+
 export const env = {
   ..._env.data,
+  FRONTEND_URL,
   /**
    * Lista ordenada de API keys de Gemini para failover (429 / cuota).
    * 1) GEMINI_API_KEY + GEMINI_API_KEYS (misma cuenta, deduplicadas)
@@ -129,7 +151,7 @@ export const env = {
       .split(',')
       .map((origin) => origin.trim().replace(/\/+$/, ''))
       .filter(Boolean);
-    return [...new Set([_env.data.FRONTEND_URL, ...extra])];
+    return [...new Set([FRONTEND_URL, ...extra])];
   })(),
   /** Modelo Groq para fallback (OpenAI-compatible chat/completions). */
   GROQ_MODEL: _env.data.GROQ_MODEL ?? 'llama-3.3-70b-versatile',

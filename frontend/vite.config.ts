@@ -39,7 +39,7 @@ function assertProductionApiUrl(mode: string): void {
     if (onHostingPlatform) {
       throw new Error(
         'VITE_API_URL is required for production builds. Set it in the hosting ' +
-          'environment (e.g. https://tu-api.onrender.com/api/v1) before building.'
+          'environment (e.g. /api/v1 with Vercel rewrite proxy, or https://tu-api.onrender.com/api/v1).'
       )
     }
     console.warn(
