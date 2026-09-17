@@ -109,6 +109,13 @@ export function parseFlashcardJsonArray(raw: string): unknown[] | null {
   try {
     const parsed = JSON.parse(jsonSlice);
     if (Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === 'object') {
+      const record = parsed as Record<string, unknown>;
+      for (const key of ['cards', 'flashcards', 'items']) {
+        const nested = record[key];
+        if (Array.isArray(nested)) return nested;
+      }
+    }
   } catch {
     const salvaged = salvageTruncatedArray(jsonSlice);
     if (salvaged.length > 0) return salvaged;

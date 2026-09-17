@@ -98,6 +98,13 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     const batchLimit = this.batchLimitFor(maxCards, options?.difficulty);
     const batchTotal = Math.max(1, Math.ceil(maxCards / batchLimit));
     const deadlineMs = this.computeDeadlineMs(maxCards, batchLimit);
+    console.info('[deck-gen] start', {
+      cardCount: maxCards,
+      difficulty: options?.difficulty ?? 'medium',
+      contentChars: text.length,
+      batchLimit,
+      batchTotal,
+    });
 
     if (maxCards <= batchLimit) {
       return this.generatePass(text, options, maxCards, [], {
@@ -345,43 +352,47 @@ ${promptText}${truncationNotice}${excludeNotice}
       );
     }
     const maxTokens = groqMaxTokensForDeckBatch(maxCards, options?.difficulty);
-    const preferGemini = difficulty === 'hard' || maxCards >= 10;
     const startedAt = Date.now();
 
     let responseText = '';
-    try {
-      responseText = await generateDeckLlmText(this.gemini, prompt, timeoutMs, {
-        maxTokens,
-        preferGemini,
-      });
-    } catch (apiErr) {
-      if (apiErr instanceof QuotaExceededError || apiErr instanceof ModelOverloadedError) {
-        throw apiErr;
+    let lastAiError = '';
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        responseText = await generateDeckLlmText(this.gemini, prompt, timeoutMs, { maxTokens });
+        lastAiError = '';
+        break;
+      } catch (apiErr) {
+        if (apiErr instanceof QuotaExceededError || apiErr instanceof ModelOverloadedError) {
+          throw apiErr;
+        }
+        lastAiError = apiErr instanceof Error ? apiErr.message : String(apiErr);
+        const durationMs = Date.now() - startedAt;
+        console.error('[deck-gen] AI batch failed', {
+          batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
+          need: maxCards,
+          attempt,
+          promptChars: prompt.length,
+          timeoutMs,
+          durationMs,
+          err: lastAiError,
+        });
+        if (attempt >= 2) {
+          if (isAiTimeoutMessage(lastAiError)) {
+            throw new AppError(
+              504,
+              'La generación de tarjetas tardó demasiado. Probá con menos tarjetas o un documento más corto.',
+              true,
+              'AI_TIMEOUT'
+            );
+          }
+          throw new AppError(
+            502,
+            'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.',
+            true,
+            'AI_PROVIDER_ERROR'
+          );
+        }
       }
-      const detail = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      const durationMs = Date.now() - startedAt;
-      console.error('[deck-gen] AI batch failed', {
-        batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
-        need: maxCards,
-        promptChars: prompt.length,
-        timeoutMs,
-        durationMs,
-        err: detail,
-      });
-      if (isAiTimeoutMessage(detail)) {
-        throw new AppError(
-          504,
-          'La generación de tarjetas tardó demasiado. Probá con menos tarjetas o un documento más corto.',
-          true,
-          'AI_TIMEOUT'
-        );
-      }
-      throw new AppError(
-        502,
-        'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.',
-        true,
-        'AI_PROVIDER_ERROR'
-      );
     }
 
     console.info('[deck-gen] AI batch ok', {

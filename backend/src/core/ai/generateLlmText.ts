@@ -31,6 +31,27 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   });
 }
 
+async function generateWithGeminiDeck(
+  gemini: GeminiFailover,
+  prompt: string,
+  timeoutMs: number
+): Promise<string> {
+  const result = await withTimeout(
+    gemini.withFailover((client: GoogleGenerativeAI) =>
+      client.getGenerativeModel({
+        model: GEMINI_MODEL,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.3,
+        },
+      }).generateContent(prompt)
+    ),
+    timeoutMs,
+    'Gemini'
+  );
+  return readGeminiText(result);
+}
+
 async function generateWithGemini(
   gemini: GeminiFailover,
   prompt: string,
@@ -46,15 +67,28 @@ async function generateWithGemini(
   return readGeminiText(result);
 }
 
+async function generateWithGeminiForDeck(
+  gemini: GeminiFailover,
+  prompt: string,
+  timeoutMs: number
+): Promise<string> {
+  try {
+    return await generateWithGeminiDeck(gemini, prompt, timeoutMs);
+  } catch (jsonModeErr) {
+    console.warn(
+      '[AI] Gemini JSON mode failed for deck; retrying plain text.',
+      jsonModeErr instanceof Error ? jsonModeErr.message : jsonModeErr
+    );
+    return generateWithGemini(gemini, prompt, timeoutMs);
+  }
+}
+
 export type DeckLlmOptions = {
   maxTokens?: number;
-  /** Hard / large batches: Gemini JSON is more reliable than Groq. */
-  preferGemini?: boolean;
 };
 
 /**
- * Generación de mazos: Groq primero (rápido), Gemini como respaldo.
- * Con preferGemini (p. ej. dificultad hard) se invierte el orden.
+ * Generación de mazos: Groq primero, Gemini (JSON mode) como respaldo.
  */
 export async function generateDeckLlmText(
   gemini: GeminiFailover,
@@ -64,59 +98,32 @@ export async function generateDeckLlmText(
 ): Promise<string> {
   const groqOpts = options?.maxTokens ? { maxTokens: options.maxTokens } : undefined;
 
-  const tryGroqFirst = async (): Promise<string> => {
-    if (isGroqConfigured()) {
-      try {
-        return await generateWithGroq(prompt, timeoutMs, groqOpts);
-      } catch (groqErr) {
-        if (groqErr instanceof QuotaExceededError) {
-          throw groqErr;
-        }
-        console.warn(
-          '[AI] Groq failed for deck generation; trying Gemini.',
-          groqErr instanceof Error ? groqErr.message : groqErr
-        );
-      }
-    }
+  if (isGroqConfigured()) {
     try {
-      return await generateWithGemini(gemini, prompt, timeoutMs);
-    } catch (error) {
-      if (!isGroqConfigured()) {
-        throw error;
-      }
-      if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
-        throw error;
-      }
-      console.warn('[AI] Gemini failed after Groq; retrying Groq once.');
-      return generateWithGroq(prompt, timeoutMs, groqOpts);
-    }
-  };
-
-  const tryGeminiFirst = async (): Promise<string> => {
-    try {
-      return await generateWithGemini(gemini, prompt, timeoutMs);
-    } catch (geminiErr) {
-      if (
-        geminiErr instanceof QuotaExceededError ||
-        geminiErr instanceof ModelOverloadedError
-      ) {
-        throw geminiErr;
+      return await generateWithGroq(prompt, timeoutMs, groqOpts);
+    } catch (groqErr) {
+      if (groqErr instanceof QuotaExceededError) {
+        throw groqErr;
       }
       console.warn(
-        '[AI] Gemini failed for deck generation; trying Groq.',
-        geminiErr instanceof Error ? geminiErr.message : geminiErr
+        '[AI] Groq failed for deck generation; trying Gemini.',
+        groqErr instanceof Error ? groqErr.message : groqErr
       );
-      if (!isGroqConfigured()) {
-        throw geminiErr;
-      }
-      return generateWithGroq(prompt, timeoutMs, groqOpts);
     }
-  };
-
-  if (options?.preferGemini) {
-    return tryGeminiFirst();
   }
-  return tryGroqFirst();
+
+  try {
+    return await generateWithGeminiForDeck(gemini, prompt, timeoutMs);
+  } catch (error) {
+    if (!isGroqConfigured()) {
+      throw error;
+    }
+    if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
+      throw error;
+    }
+    console.warn('[AI] Gemini failed after Groq; retrying Groq once.');
+    return generateWithGroq(prompt, timeoutMs, groqOpts);
+  }
 }
 
 /**
