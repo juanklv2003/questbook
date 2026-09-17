@@ -28,8 +28,8 @@ const startServer = async () => {
     // Render documenta timeouts y "Connection reset by peer" en servicios Node
     // con requests largos (aquí una generación con IA puede tardar minutos).
     // Los defaults de Node (5s keep-alive) cortan conexiones reutilizadas.
-    server.keepAliveTimeout = 120_000;
-    server.headersTimeout = 125_000;
+    server.keepAliveTimeout = 480_000;
+    server.headersTimeout = 485_000;
 
     server.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {

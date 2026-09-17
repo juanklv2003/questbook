@@ -21,7 +21,20 @@ type PassContext = {
   deadlineMs: number;
   batchIndex: number;
   batchTotal: number;
+  batchesRemaining: number;
 };
+
+function isRecoverableAiError(err: unknown): err is AppError {
+  return (
+    err instanceof AppError &&
+    (err.statusCode === 502 || err.statusCode === 504) &&
+    Boolean(err.code?.startsWith('AI_'))
+  );
+}
+
+function minPartialCards(requested: number): number {
+  return Math.max(8, Math.ceil(requested * 0.25));
+}
 
 function isAiTimeoutMessage(detail: string): boolean {
   const d = detail.toLowerCase();
@@ -47,22 +60,26 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
   private batchLimitFor(totalCards: number, difficulty?: Difficulty): number {
     if (totalCards <= 15) return totalCards;
     if (difficulty === 'hard') {
-      return totalCards > 30 ? 15 : 12;
+      return totalCards > 30 ? 10 : 12;
     }
-    if (totalCards > 30) return 25;
+    if (totalCards > 30) return 20;
     return 20;
   }
 
   private computeDeadlineMs(totalCards: number, batchLimit: number): number {
     const batches = Math.max(1, Math.ceil(totalCards / batchLimit));
     const perBatchMs = env.AI_DECK_TIMEOUT_MS;
-    const computed = perBatchMs * batches;
+    // +50% slack: empty-batch splits can double LLM calls within a batch.
+    const computed = Math.ceil(perBatchMs * batches * 1.5);
     const cap = env.AI_DECK_TOTAL_TIMEOUT_MS;
     return Date.now() + Math.min(cap, computed);
   }
 
-  private remainingTimeoutMs(deadlineMs: number): number {
-    return Math.max(15_000, deadlineMs - Date.now());
+  private timeoutForBatch(deadlineMs: number, batchesRemaining: number): number {
+    const remaining = deadlineMs - Date.now();
+    if (remaining <= 0) return 0;
+    const fairShare = Math.floor(remaining / Math.max(1, batchesRemaining));
+    return Math.max(15_000, Math.min(env.AI_DECK_TIMEOUT_MS, fairShare));
   }
 
   private assertDeadline(deadlineMs: number): void {
@@ -87,6 +104,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
         deadlineMs,
         batchIndex: 1,
         batchTotal: 1,
+        batchesRemaining: 1,
       });
     }
 
@@ -96,15 +114,28 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
       batchIndex += 1;
       this.assertDeadline(deadlineMs);
       const need = Math.min(batchLimit, maxCards - cards.length);
-      const batch = await this.generatePass(
-        text,
-        options,
-        need,
-        cards.map((c) => c.question),
-        { deadlineMs, batchIndex, batchTotal }
-      );
-      if (batch.length === 0) break;
-      cards.push(...batch);
+      const batchesRemaining = batchTotal - batchIndex + 1;
+      try {
+        const batch = await this.generatePass(
+          text,
+          options,
+          need,
+          cards.map((c) => c.question),
+          { deadlineMs, batchIndex, batchTotal, batchesRemaining }
+        );
+        if (batch.length === 0) break;
+        cards.push(...batch);
+      } catch (err) {
+        if (isRecoverableAiError(err) && cards.length >= minPartialCards(maxCards)) {
+          console.warn('[deck-gen] partial deck after AI failure', {
+            have: cards.length,
+            want: maxCards,
+            batch: `${batchIndex}/${batchTotal}`,
+          });
+          return cards.slice(0, maxCards);
+        }
+        throw err;
+      }
     }
 
     if (cards.length === 0) {
@@ -136,13 +167,25 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
         secondHalf,
       });
       const first = await this.generatePassOnce(text, options, firstHalf, existingQuestions, passCtx);
-      const second = await this.generatePassOnce(
-        text,
-        options,
-        secondHalf,
-        [...existingQuestions, ...first.map((c) => c.question)],
-        passCtx
-      );
+      let second: Array<{ question: string; answer: string }> = [];
+      try {
+        second = await this.generatePassOnce(
+          text,
+          options,
+          secondHalf,
+          [...existingQuestions, ...first.map((c) => c.question)],
+          passCtx
+        );
+      } catch (err) {
+        if (first.length > 0 && isRecoverableAiError(err)) {
+          console.warn('[deck-gen] split batch: second half failed; keeping first', {
+            first: first.length,
+            secondHalf,
+          });
+          return first;
+        }
+        throw err;
+      }
       return [...first, ...second].slice(0, maxCards);
     }
 
@@ -264,11 +307,11 @@ Do NOT include markdown blocks, greetings, or any other text. ONLY the JSON arra
       existingQuestions.length > 0
         ? isSpanish
           ? `\n\nNO repitas ni parafrasees estas preguntas ya generadas (generá otras distintas del mismo texto):\n${existingQuestions
-              .slice(-35)
+              .slice(-20)
               .map((q) => `- ${q.slice(0, 140)}`)
               .join('\n')}\n`
           : `\n\nDO NOT repeat or paraphrase these questions already generated (create different ones from the same text):\n${existingQuestions
-              .slice(-35)
+              .slice(-20)
               .map((q) => `- ${q.slice(0, 140)}`)
               .join('\n')}\n`
         : '';
@@ -292,13 +335,25 @@ ${texts.textToAnalyze}
 ${promptText}${truncationNotice}${excludeNotice}
     `;
 
-    const timeoutMs = this.remainingTimeoutMs(passCtx.deadlineMs);
+    const timeoutMs = this.timeoutForBatch(passCtx.deadlineMs, passCtx.batchesRemaining);
+    if (timeoutMs <= 0) {
+      throw new AppError(
+        504,
+        'La generación de tarjetas tardó demasiado. Probá con menos tarjetas o un documento más corto.',
+        true,
+        'AI_TIMEOUT'
+      );
+    }
     const maxTokens = groqMaxTokensForDeckBatch(maxCards, options?.difficulty);
+    const preferGemini = difficulty === 'hard' || maxCards >= 10;
     const startedAt = Date.now();
 
     let responseText = '';
     try {
-      responseText = await generateDeckLlmText(this.gemini, prompt, timeoutMs, { maxTokens });
+      responseText = await generateDeckLlmText(this.gemini, prompt, timeoutMs, {
+        maxTokens,
+        preferGemini,
+      });
     } catch (apiErr) {
       if (apiErr instanceof QuotaExceededError || apiErr instanceof ModelOverloadedError) {
         throw apiErr;

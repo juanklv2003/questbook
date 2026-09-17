@@ -11,10 +11,10 @@ export type DirectUploadTokenResponse = {
 function estimateDeckAiBatches(cardCount: number, difficulty: DeckGenerationOptions['difficulty']): number {
   if (cardCount <= 15) return 1;
   if (difficulty === 'hard') {
-    const limit = cardCount > 30 ? 15 : 12;
+    const limit = cardCount > 30 ? 10 : 12;
     return Math.ceil(cardCount / limit);
   }
-  if (cardCount > 30) return Math.ceil(cardCount / 25);
+  if (cardCount > 30) return Math.ceil(cardCount / 20);
   return Math.ceil(cardCount / 20);
 }
 
@@ -37,8 +37,8 @@ export async function generateDeckViaDirectUpload(
   const cards = options.cardCount ?? 15;
   const aiBatches = estimateDeckAiBatches(cards, options.difficulty);
   const timeoutMs = Math.min(
-    600_000,
-    60_000 + aiBatches * 100_000 + Math.ceil(file.size / (512 * 1024)) * 5_000
+    720_000,
+    90_000 + aiBatches * 110_000 + Math.ceil(file.size / (512 * 1024)) * 5_000
   );
 
   const response = await axios.post(uploadUrl, formData, {

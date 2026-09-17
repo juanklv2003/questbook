@@ -179,7 +179,7 @@ export const env = {
   /** Tiempo máximo de espera (ms) al generar tarjetas desde un PDF. */
   AI_DECK_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TIMEOUT_MS, 120_000, 15_000, 300_000),
   /** Tiempo máximo total (ms) para todas las tandas IA de un mismo mazo. */
-  AI_DECK_TOTAL_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TOTAL_TIMEOUT_MS, 300_000, 60_000, 600_000),
+  AI_DECK_TOTAL_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TOTAL_TIMEOUT_MS, 480_000, 60_000, 600_000),
   /** Límite de subida PDF (bytes), configurable vía MAX_PDF_UPLOAD_MB (default 100). */
   MAX_PDF_UPLOAD_MB: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100),
   MAX_PDF_UPLOAD_BYTES: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100) * 1024 * 1024,
