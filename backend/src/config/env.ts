@@ -5,6 +5,11 @@ const envSchema = z.object({
   PORT: z.string().default('3000'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
+  /** Optional primary Gemini model id (default: try 2.5-flash then fallbacks). */
+  GEMINI_MODEL: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : undefined)),
   // Opcional: claves adicionales de Gemini separadas por comas para failover.
   // Ej.: GEMINI_API_KEYS=clave2,clave3
   GEMINI_API_KEYS: z.string().optional(),

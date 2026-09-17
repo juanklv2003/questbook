@@ -1,10 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GeminiFailover } from './GeminiFailover';
+import { geminiModelCandidates, isGeminiModelNotFoundError } from './geminiModels';
 import { generateWithGroq, isGroqConfigured } from './GroqClient';
 import { QuotaExceededError } from '../errors/QuotaExceededError';
 import { ModelOverloadedError } from '../errors/ModelOverloadedError';
-
-const GEMINI_MODEL = 'gemini-2.5-flash';
 
 function readGeminiText(result: { response: { text: () => string } }): string {
   const text = result.response.text()?.trim();
@@ -36,20 +35,44 @@ async function generateWithGeminiDeck(
   prompt: string,
   timeoutMs: number
 ): Promise<string> {
-  const result = await withTimeout(
-    gemini.withFailover((client: GoogleGenerativeAI) =>
-      client.getGenerativeModel({
-        model: GEMINI_MODEL,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.3,
-        },
-      }).generateContent(prompt)
-    ),
-    timeoutMs,
-    'Gemini'
-  );
-  return readGeminiText(result);
+  const models = geminiModelCandidates();
+  let lastError: unknown;
+
+  for (const model of models) {
+    try {
+      const result = await withTimeout(
+        gemini.withFailover((client: GoogleGenerativeAI) =>
+          client
+            .getGenerativeModel({
+              model,
+              generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0.3,
+              },
+            })
+            .generateContent(prompt)
+        ),
+        timeoutMs,
+        'Gemini'
+      );
+      if (model !== models[0]) {
+        console.warn(`[AI] Gemini deck generation used fallback model "${model}".`);
+      }
+      return readGeminiText(result);
+    } catch (error) {
+      lastError = error;
+      if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
+        throw error;
+      }
+      if (isGeminiModelNotFoundError(error)) {
+        console.warn(`[AI] Gemini model "${model}" not found; trying next.`);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('No Gemini model available for deck generation.');
 }
 
 async function generateWithGemini(
@@ -57,14 +80,36 @@ async function generateWithGemini(
   prompt: string,
   timeoutMs: number
 ): Promise<string> {
-  const result = await withTimeout(
-    gemini.withFailover((client: GoogleGenerativeAI) =>
-      client.getGenerativeModel({ model: GEMINI_MODEL }).generateContent(prompt)
-    ),
-    timeoutMs,
-    'Gemini'
-  );
-  return readGeminiText(result);
+  const models = geminiModelCandidates();
+  let lastError: unknown;
+
+  for (const model of models) {
+    try {
+      const result = await withTimeout(
+        gemini.withFailover((client: GoogleGenerativeAI) =>
+          client.getGenerativeModel({ model }).generateContent(prompt)
+        ),
+        timeoutMs,
+        'Gemini'
+      );
+      if (model !== models[0]) {
+        console.warn(`[AI] Gemini used fallback model "${model}".`);
+      }
+      return readGeminiText(result);
+    } catch (error) {
+      lastError = error;
+      if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
+        throw error;
+      }
+      if (isGeminiModelNotFoundError(error)) {
+        console.warn(`[AI] Gemini model "${model}" not found; trying next.`);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('No Gemini model available.');
 }
 
 async function generateWithGeminiForDeck(
@@ -75,6 +120,9 @@ async function generateWithGeminiForDeck(
   try {
     return await generateWithGeminiDeck(gemini, prompt, timeoutMs);
   } catch (jsonModeErr) {
+    if (jsonModeErr instanceof QuotaExceededError || jsonModeErr instanceof ModelOverloadedError) {
+      throw jsonModeErr;
+    }
     console.warn(
       '[AI] Gemini JSON mode failed for deck; retrying plain text.',
       jsonModeErr instanceof Error ? jsonModeErr.message : jsonModeErr

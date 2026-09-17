@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import helmet from 'helmet';
 import { env } from './config/env';
+import { geminiModelCandidates } from './core/ai/geminiModels';
 import { isGroqConfigured } from './core/ai/GroqClient';
 import { errorHandler } from './core/middlewares/errorHandler';
 
@@ -74,7 +75,8 @@ app.get('/api/v1/health', (_req, res) => {
     ai: {
       groqFallback: isGroqConfigured(),
       groqModel: isGroqConfigured() ? env.GROQ_MODEL : undefined,
-      deckGeneration: 'gemini-only-v5-no-groq-decks',
+      geminiModels: geminiModelCandidates(),
+      deckGeneration: 'gemini-only-v6-model-fallback',
     },
     upload: {
       maxPdfBytes: env.MAX_PDF_UPLOAD_BYTES,
