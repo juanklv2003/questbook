@@ -1,21 +1,46 @@
 import * as React from 'react'
 import { DeckDashboardContainer } from './components/containers/DeckDashboardContainer'
-import { StudySessionContainer } from './components/containers/StudySessionContainer'
 import { Navbar, type TopbarRoute } from './components/organisms/Navbar'
 import { CreateDeckDrawer } from './components/organisms/CreateDeckDrawer'
-import { ProgressPanel, type ProgressBook } from './components/organisms/ProgressPanel'
-import { SettingsPanel } from './components/organisms/SettingsPanel'
 import { useDecks } from './hooks/useDecks'
 import type { Deck } from './types'
 import magicBook from './assets/libro.png'
 import { useAuth } from './contexts/AuthContext'
-import { AuthContainer } from './components/containers/AuthContainer'
 import { BrandBackground } from './components/atoms/BrandBackground'
 import { AmbientGlow } from './components/atoms/AmbientGlow'
 import { PatternLayer } from './components/atoms/PatternLayer'
 import { LanguageSwitch } from './components/atoms/LanguageSwitch'
 import { useThemeSettings } from './hooks/useThemeSettings'
 import { useLanguage } from './i18n/LanguageContext'
+import type { ProgressBook } from './components/organisms/ProgressPanel'
+
+const StudySessionContainer = React.lazy(() =>
+  import('./components/containers/StudySessionContainer').then((m) => ({
+    default: m.StudySessionContainer,
+  }))
+)
+const AuthContainer = React.lazy(() =>
+  import('./components/containers/AuthContainer').then((m) => ({
+    default: m.AuthContainer,
+  }))
+)
+const ProgressPanel = React.lazy(() =>
+  import('./components/organisms/ProgressPanel').then((m) => ({
+    default: m.ProgressPanel,
+  }))
+)
+const SettingsPanel = React.lazy(() =>
+  import('./components/organisms/SettingsPanel').then((m) => ({
+    default: m.SettingsPanel,
+  }))
+)
+
+function PanelFallback() {
+  const { t } = useLanguage()
+  return (
+    <p className="text-sm text-muted-foreground animate-pulse py-8 text-center">{t('app.loading')}</p>
+  )
+}
 
 function App() {
   const { t } = useLanguage();
@@ -97,7 +122,13 @@ function App() {
           </div>
         </header>
         <div className="relative z-10 flex flex-1 flex-col overflow-y-auto">
-          <AuthContainer />
+          <React.Suspense
+            fallback={
+              <p className="text-muted-foreground animate-pulse text-center py-12">{t('app.loading')}</p>
+            }
+          >
+            <AuthContainer />
+          </React.Suspense>
         </div>
       </div>
     );
@@ -127,10 +158,18 @@ function App() {
         <main className="flex w-full flex-1 flex-col overflow-x-clip overflow-y-auto px-4">
           <div className="container mx-auto w-full max-w-6xl flex-1 flex flex-col">
             {activeDeckId ? (
-              <StudySessionContainer
-                deckId={activeDeckId}
-                onBack={() => setActiveDeckId(null)}
-              />
+              <React.Suspense
+                fallback={
+                  <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                    <p className="text-muted-foreground animate-pulse">{t('study.loading')}</p>
+                  </div>
+                }
+              >
+                <StudySessionContainer
+                  deckId={activeDeckId}
+                  onBack={() => setActiveDeckId(null)}
+                />
+              </React.Suspense>
             ) : (
               <DeckDashboardContainer
                 onSelectDeck={setActiveDeckId}
@@ -205,27 +244,31 @@ function GlobalPanels({ route, onClose }: { route: TopbarRoute | null; onClose: 
       description={meta ? t(meta.descKey) : ""}
     >
       {route === "progress" && (
-        <ProgressPanel
-          totalBooks={decks.length}
-          totalCards={totalCards}
-          averageProgress={averageProgress}
-          books={progressBooks}
-        />
+        <React.Suspense fallback={<PanelFallback />}>
+          <ProgressPanel
+            totalBooks={decks.length}
+            totalCards={totalCards}
+            averageProgress={averageProgress}
+            books={progressBooks}
+          />
+        </React.Suspense>
       )}
       {route === "settings" && (
-        <SettingsPanel
-          themeId={settings.themeId}
-          customColor={settings.customColor}
-          savedColors={settings.savedColors}
-          pattern={settings.pattern}
-          onPickTheme={settings.pickTheme}
-          onCustomColorChange={settings.changeCustomColor}
-          onRemoveSavedColor={settings.removeColor}
-          hiddenThemes={settings.hiddenThemes}
-          onHidePreset={settings.hidePreset}
-          onRestorePresets={settings.restorePresets}
-          onPatternChange={settings.changePattern}
-        />
+        <React.Suspense fallback={<PanelFallback />}>
+          <SettingsPanel
+            themeId={settings.themeId}
+            customColor={settings.customColor}
+            savedColors={settings.savedColors}
+            pattern={settings.pattern}
+            onPickTheme={settings.pickTheme}
+            onCustomColorChange={settings.changeCustomColor}
+            onRemoveSavedColor={settings.removeColor}
+            hiddenThemes={settings.hiddenThemes}
+            onHidePreset={settings.hidePreset}
+            onRestorePresets={settings.restorePresets}
+            onPatternChange={settings.changePattern}
+          />
+        </React.Suspense>
       )}
     </CreateDeckDrawer>
   );
