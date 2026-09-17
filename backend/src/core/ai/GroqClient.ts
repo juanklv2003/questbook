@@ -3,9 +3,9 @@ import { QuotaExceededError } from '../errors/QuotaExceededError';
 import { isQuotaExhausted, parseRetryDelay } from './GeminiFailover';
 
 const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
-/** Groq retiró llama-3.3-70b-versatile; modelos actuales en free tier (mar 2026). */
-export const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-20b';
-const GROQ_MODEL_FALLBACKS = ['openai/gpt-oss-20b', 'qwen/qwen3.8-27b'] as const;
+/** Groq: gpt-oss suele llenar `reasoning` y dejar `content` vacío; qwen devuelve JSON usable. */
+export const DEFAULT_GROQ_MODEL = 'qwen/qwen3.8-27b';
+const GROQ_MODEL_FALLBACKS = ['qwen/qwen3.8-27b', 'openai/gpt-oss-20b'] as const;
 /** Groq context is smaller than Gemini; truncate fallback prompts. */
 const GROQ_MAX_PROMPT_CHARS = 96_000;
 
@@ -16,8 +16,14 @@ type GroqChatResponse = {
 
 function groqModelCandidates(): string[] {
   const configured = env.GROQ_MODEL?.trim();
-  const list = configured ? [configured, ...GROQ_MODEL_FALLBACKS] : [...GROQ_MODEL_FALLBACKS];
-  return [...new Set(list)];
+  const base = [...GROQ_MODEL_FALLBACKS];
+  const list = configured ? [configured, ...base] : base;
+  const unique = [...new Set(list)];
+  const qwen = 'qwen/qwen3.8-27b';
+  if (unique.includes(qwen)) {
+    return [qwen, ...unique.filter((m) => m !== qwen)];
+  }
+  return unique;
 }
 
 function isUnknownGroqModel(message: string | undefined): boolean {
@@ -62,7 +68,12 @@ async function callGroqModel(
     throw new Error(body.error?.message ?? `Groq HTTP ${response.status}`);
   }
 
-  const text = body.choices?.[0]?.message?.content?.trim();
+  const message = body.choices?.[0]?.message;
+  const reasoning =
+    message && typeof message === 'object' && 'reasoning' in message
+      ? String((message as { reasoning?: string }).reasoning ?? '').trim()
+      : '';
+  const text = message?.content?.trim() || reasoning;
   if (!text) {
     throw new Error('Groq returned an empty response.');
   }
