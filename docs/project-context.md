@@ -8,13 +8,24 @@ QuestBook is an AI-powered flashcard generation and study application. It allows
 ## 2. Tech Stack
 
 ### Backend (`backend`)
-- **Runtime**: Node.js
-- **Framework**: Express.js
+- **Runtime**: Node.js 24 (fijado en `.node-version` y `engines.node`; `pdf-parse` exige ≥ 22.3 y el driver de Neon ≥ 21 por el WebSocket global)
+- **Framework**: Express.js 5
 - **Language**: TypeScript
-- **Database**: PostgreSQL (using `pg` driver)
-- **AI Integration**: Google Generative AI (`@google/generative-ai`)
-- **PDF parsing**: `pdf-parse` (extracción de texto real desde archivos PDF binarios)
-- **Other tools**: `multer` for file uploads, `zod` for validation.
+- **Database**: PostgreSQL (Neon) vía `@neondatabase/serverless` (`Pool` sobre WebSocket, queries SQL a mano)
+- **AI Integration**: Google Generative AI (`@google/generative-ai`) con failover de claves y respaldo Groq
+- **PDF parsing**: `pdf-parse` dentro de un `worker_threads` (no bloquea el event loop)
+- **Other tools**: `multer` (upload en memoria), `zod` (validación), `helmet` (headers), `compression` (gzip), `express-rate-limit`.
+
+### Hardening y despliegue
+- Node 24 en ambos paquetes; no bajarlo (ver arriba) y recordar que el build de Render necesita
+  `npm ci --include=dev` porque `NODE_ENV=production` hace que npm omita `devDependencies` (typescript).
+- Frontend: `VITE_API_URL` es obligatoria en builds de producción (guard en `frontend/vite.config.ts`);
+  `frontend/vercel.json` define cache inmutable de `/assets/*` y headers de seguridad.
+- API: `helmet`, CORS con allowlist (`FRONTEND_URL` + `CORS_ORIGINS`), body limit de 1 MB, 404 en JSON,
+  `keepAliveTimeout`/`headersTimeout` en 120 s/125 s y cierre ordenado ante `SIGTERM`.
+- Bundle: vendor separado por `manualChunks` (react / motion / icons) para que el chunk de la app
+  (≈48 KB gzip) se invalide solo cuando cambia código propio.
+- Checklist y pasos: [`DEPLOYMENT.md`](./DEPLOYMENT.md).
 
 ### Frontend (`frontend`)
 - **Framework**: React 19 + Vite
@@ -134,7 +145,7 @@ The API is served at `/api/v1`.
 - `GET /me`: Returns the current user's info based on the HttpOnly cookie.
 - `POST /forgot-password`: Step 1 of password recovery (no SMTP in the project). Expects JSON `{ email, turnstileToken }`. Verifies Turnstile with the same `TURNSTILE_SECRET_KEY` as register (fail-closed 400 on human-verification failure), then returns `404` when the email does not exist (enumeration accepted in this version). On success returns `{ resetToken, expiresAt }` — `crypto.randomBytes(32)` hex, stored as SHA-256 with 15 min TTL, single use — and the frontend shows the new-password form directly.
 - `POST /reset-password`: Step 2 of password recovery (no Turnstile here). Expects JSON `{ token, newPassword }` (`newPassword` length ≥ 8, same message as register). Validates the token is known, unused and unexpired (all three fail as generic `400 { error }` so internal state is not leaked), hashes the new password with the existing `BcryptPasswordHasher`, saves it and marks the token used. Returns `{ message }`.
-- Cookie `auth_token` (`backend/src/modules/auth/http/AuthController.ts`): `HttpOnly`, `path=/`, `maxAge` alineado con la expiración del JWT (registro 7d, login 30d con `rememberMe` / 1d sin él), `secure` sólo con `NODE_ENV=production` y `sameSite` desde `COOKIE_SAME_SITE`. Default de esa variable: `none` en producción (frontend y backend en dominios distintos, ej. Vercel + Render — `strict`/`lax` harían que el login "funcione" pero `/me` devuelva 401 al recargar) y `lax` en desarrollo. Con subdominios del mismo dominio alcanza `lax`. `FRONTEND_URL` se normaliza (trim + sin barra final) para que CORS no falle por tipeo. Detalle de despliegue en [`DEPLOYMENT.md`](./DEPLOYMENT.md).
+- Cookie `auth_token` (`backend/src/modules/auth/http/AuthController.ts`): `HttpOnly`, `path=/`, `maxAge` alineado con la expiración del JWT (registro 7d, login 30d con `rememberMe` / 1d sin él), `secure` sólo con `NODE_ENV=production` y `sameSite` desde `COOKIE_SAME_SITE`. Default de esa variable: `none` en producción (frontend y backend en dominios distintos, ej. Vercel + Render — `strict`/`lax` harían que el login "funcione" pero `/me` devuelva 401 al recargar) y `lax` en desarrollo. Con subdominios del mismo dominio alcanza `lax`. `FRONTEND_URL` se normaliza (trim + sin barra final) para que CORS no falle por tipeo y `CORS_ORIGINS` (opcional, lista separada por comas) suma orígenes extra — por ejemplo los preview deployments de Vercel. Detalle de despliegue en [`DEPLOYMENT.md`](./DEPLOYMENT.md).
 - Validation contract (controller-level zod via `parseBody`): any invalid body or route param returns `400 { error: string }` describing **only the first issue** as `"<path>: <message>"` (one problem per round trip); syntactically malformed JSON is also `400 { error }` via the `errorHandler` SyntaxError branch (it never reaches `parseBody`). Emails are trimmed + lowercased before format check on register and login. Passwords: register requires length ≥ 8, login requires non-empty. Re-registering an existing email — including a case variant (`User@x` vs `user@x`) — returns `409`.
 
 ### Decks (`/api/v1/decks`)

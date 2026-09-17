@@ -4,8 +4,12 @@ Subí un PDF y generá tarjetas de estudio con IA. Repasá con sesiones guiadas,
 
 ## Stack
 
-- **Backend** (`backend/`): Node.js + Express 5 + TypeScript, PostgreSQL (Neon), Gemini AI (con failover de claves), Cloudinary (PDFs), JWT HttpOnly-cookie, validación con Zod.
+- **Backend** (`backend/`): Node.js 24 + Express 5 + TypeScript, PostgreSQL (Neon) con `@neondatabase/serverless`, Gemini AI (con failover de claves y respaldo Groq), Cloudinary (PDFs), JWT HttpOnly-cookie, validación con Zod.
 - **Frontend** (`frontend/`): React 19 + Vite + Tailwind CSS v4, Atomic Design + Container/Presentational, `axios`, `lucide-react`, `framer-motion`.
+
+> **Requisito:** Node 24 (`.node-version` y `engines.node` en ambos paquetes). El backend necesita ≥ 22.3
+> (`pdf-parse`) y ≥ 21 (WebSocket global del driver de Neon); el frontend ≥ 22.13 o 24 (`vite`/`eslint`).
+
 
 ## Arranque local
 

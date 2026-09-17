@@ -34,6 +34,11 @@ metalgearsolid.pdf
 # Local agent tooling (skill registry, caches)
 .atl/
 
+# Artefactos locales de agentes (Playwright MCP, skills generados): no aportan
+# al build ni al deploy y ensucian el repo con MBs de snapshots.
+.playwright-mcp/
+.cursor/skills/
+
 # Cursor MCP browser profiles / Impeccable local config
 .cursor/data/
 .impeccable/

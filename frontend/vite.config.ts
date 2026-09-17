@@ -65,6 +65,31 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    build: {
+      rollupOptions: {
+        output: {
+          // Separa el vendor del código de la app: react/motion/icons cambian muy
+          // poco entre deploys, así el navegador reusa el chunk cacheado cuando
+          // sólo se toca código propio (antes todo iba en un único index-*.js).
+          // Vite 8 tipa `manualChunks` sólo como función (no acepta el objeto).
+          manualChunks(id: string): string | undefined {
+            if (!id.includes('node_modules')) return undefined
+            if (
+              id.includes('node_modules/react-dom') ||
+              id.includes('node_modules/react/') ||
+              id.includes('node_modules/scheduler')
+            ) {
+              return 'react'
+            }
+            if (id.includes('node_modules/framer-motion') || id.includes('node_modules/motion-')) {
+              return 'motion'
+            }
+            if (id.includes('node_modules/lucide-react')) return 'icons'
+            return undefined
+          },
+        },
+      },
+    },
     server: {
       // Same-origin API in dev: OAuth callback sets auth_token on localhost:5173
       // (via Set-Cookie on proxied responses). Avoids cross-port cookie issues.
