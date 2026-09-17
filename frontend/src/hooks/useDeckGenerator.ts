@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import apiClient from '../lib/axios';
+import { fetchPdfUploadParams, uploadPdfToCloudinary } from '../lib/cloudinaryUpload';
 import { getApiErrorMessage } from '../lib/apiErrorMessage';
 import { loadUploadLimits, getMaxPdfBytes, formatMaxPdfMb } from '../lib/uploadConfig';
 import { parseOverloaded, parseQuotaExceeded } from '../lib/quota';
@@ -42,33 +43,34 @@ export function useDeckGenerator() {
         throw new Error(msg);
       }
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', options.name);
-      formData.append('cardCount', String(options.cardCount));
-      formData.append('difficulty', options.difficulty);
-      formData.append('color', options.color ?? 'primary');
-      formData.append('language', options.language ?? 'en');
-      // New books land on the first shelf; the backend stores it on create.
-      formData.append('shelf_index', '0');
-
-      setProgress(20);
-
-      const response = await apiClient.post(`/decks/generate`, formData, {
-        // Let axios/browser set the multipart boundary automatically — do NOT set Content-Type manually
-        // (forcing 'multipart/form-data' without boundary breaks the upload)
-        // Subida grande + IA con hasta 500k caracteres puede tardar varios minutos.
-        timeout: 240000,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 100));
-          // File upload covers 20 -> 50 of the bar.
-          setProgress(20 + percentCompleted * 0.3); // up to 50
-          if (percentCompleted >= 100) {
-            setIsAiProcessing(true);
-            setProgress(60); // upload done, now the AI creates the cards
-          }
-        }
+      setProgress(5);
+      const uploadParams = await fetchPdfUploadParams();
+      const uploaded = await uploadPdfToCloudinary(file, uploadParams, (pct) => {
+        setProgress(5 + Math.round(pct * 0.45));
       });
+
+      setProgress(55);
+      setIsAiProcessing(true);
+
+      const response = await apiClient.post(
+        `/decks/generate`,
+        {
+          name: options.name,
+          cardCount: options.cardCount,
+          difficulty: options.difficulty,
+          color: options.color ?? 'primary',
+          language: options.language ?? 'en',
+          shelf_index: 0,
+          pdfUrl: uploaded.url,
+          pdfPublicId: uploaded.publicId,
+        },
+        {
+          timeout: 240000,
+          onUploadProgress: () => {
+            setProgress((p) => Math.max(p, 60));
+          },
+        }
+      );
 
       setProgress(100);
       setIsAiProcessing(false);
@@ -92,6 +94,8 @@ export function useDeckGenerator() {
         (err as { response?: { status?: number } }).response?.status;
       if (status === 413) {
         setError(t('gen.fileTooLarge', { maxMb: String(formatMaxPdfMb()) }));
+      } else if (err instanceof Error && err.message.startsWith('cloudinary_upload')) {
+        setError(t('gen.pdfStorage'));
       } else {
         setError(getApiErrorMessage(err, t, 'deckGenerate'));
       }

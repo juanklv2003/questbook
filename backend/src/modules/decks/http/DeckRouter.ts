@@ -58,13 +58,15 @@ const deckController = new DeckController(
   updateDeckShelfUseCase,
   getStudySessionUseCase,
   saveStudySessionUseCase,
-  deleteStudySessionUseCase
+  deleteStudySessionUseCase,
+  cloudStorage
 );
 
 // 4. Wire Router
 const deckRouter = Router();
 
 // Auth: app.ts mounts requireAuth on /api/v1/decks (do not duplicate per route).
+deckRouter.post('/generate/pdf-upload-params', deckController.getPdfUploadParams);
 deckRouter.post('/generate', aiGenerateLimiter, upload.single('file'), deckController.generate);
 deckRouter.get('/:deckId/flashcards', deckController.getFlashcards);
 deckRouter.get('/', deckController.listDecks);

@@ -4,6 +4,8 @@ import { isQuotaExhausted, parseRetryDelay } from './GeminiFailover';
 
 const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
+/** Groq context is smaller than Gemini; truncate fallback prompts. */
+const GROQ_MAX_PROMPT_CHARS = 96_000;
 
 type GroqChatResponse = {
   choices?: Array<{ message?: { content?: string } }>;
@@ -24,6 +26,13 @@ export async function generateWithGroq(prompt: string, timeoutMs: number): Promi
     );
   }
 
+  let safePrompt = prompt;
+  if (safePrompt.length > GROQ_MAX_PROMPT_CHARS) {
+    safePrompt =
+      safePrompt.slice(0, GROQ_MAX_PROMPT_CHARS) +
+      '\n\n[Nota: el documento se truncó para el respaldo de IA.]';
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -36,7 +45,7 @@ export async function generateWithGroq(prompt: string, timeoutMs: number): Promi
       },
       body: JSON.stringify({
         model: env.GROQ_MODEL,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{ role: 'user', content: safePrompt }],
         temperature: 0.3,
       }),
       signal: controller.signal,

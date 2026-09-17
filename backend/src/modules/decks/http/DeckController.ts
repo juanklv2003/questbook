@@ -12,6 +12,8 @@ import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
 import { extractTextFromPdf } from '../infra/PdfTextExtractor';
+import { fetchPdfBufferFromUrl } from '../infra/fetchCloudinaryPdf';
+import type { ICloudStoragePort } from '../domain/ICloudStoragePort';
 
 // Todos los IDs de la app son UUID v4 generados por Postgres (gen_random_uuid).
 // Validar el formato en el router evita 500 por IDs malformados y da un 400
@@ -37,9 +39,11 @@ export class DeckController {
     private readonly updateDeckShelfUseCase: UpdateDeckShelfUseCase,
     private readonly getStudySessionUseCase: GetStudySessionUseCase,
     private readonly saveStudySessionUseCase: SaveStudySessionUseCase,
-    private readonly deleteStudySessionUseCase: DeleteStudySessionUseCase
+    private readonly deleteStudySessionUseCase: DeleteStudySessionUseCase,
+    private readonly cloudStorage: ICloudStoragePort
   ) {
     this.generate = catchAsync(this.generate.bind(this));
+    this.getPdfUploadParams = catchAsync(this.getPdfUploadParams.bind(this));
     this.getFlashcards = catchAsync(this.getFlashcards.bind(this));
     this.listDecks = catchAsync(this.listDecks.bind(this));
     this.deleteDeck = catchAsync(this.deleteDeck.bind(this));
@@ -49,9 +53,20 @@ export class DeckController {
     this.deleteSession = catchAsync(this.deleteSession.bind(this));
   }
 
+  async getPdfUploadParams(req: Request, res: Response) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(401, 'Unauthorized');
+    }
+    res.status(200).json(this.cloudStorage.getSignedPdfUploadParams());
+  }
+
   async generate(req: Request, res: Response) {
-    const { name, folderId, content: reqContent, cardCount, difficulty, shelf_index, shelfIndex, color, language } = req.body;
+    const { name, folderId, content: reqContent, cardCount, difficulty, shelf_index, shelfIndex, color, language, pdfUrl, pdfPublicId } =
+      req.body;
     let content = reqContent;
+    let uploadedPdfUrl: string | undefined;
+    let uploadedPdfPublicId: string | undefined;
 
     const userId = req.user?.userId;
     if (!userId) {
@@ -69,6 +84,12 @@ export class DeckController {
       // basura a Cloudinary y gastar cuota de IA.
       assertLooksLikePdf(req.file.buffer);
       content = await extractTextFromPdf(req.file.buffer);
+    } else if (typeof pdfUrl === 'string' && typeof pdfPublicId === 'string' && pdfUrl.trim() && pdfPublicId.trim()) {
+      const buffer = await fetchPdfBufferFromUrl(pdfUrl.trim());
+      assertLooksLikePdf(buffer);
+      content = await extractTextFromPdf(buffer);
+      uploadedPdfUrl = pdfUrl.trim();
+      uploadedPdfPublicId = pdfPublicId.trim();
     }
 
     if (!content) {
@@ -101,6 +122,8 @@ export class DeckController {
       content,
       fileBuffer: req.file?.buffer,
       fileName: req.file?.originalname,
+      pdfUrl: uploadedPdfUrl,
+      pdfPublicId: uploadedPdfPublicId,
       cardCount: parsedCardCount,
       difficulty: parsedDifficulty as 'easy' | 'medium' | 'hard' | undefined,
       shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),

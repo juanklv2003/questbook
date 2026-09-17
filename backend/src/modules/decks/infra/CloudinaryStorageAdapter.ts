@@ -1,6 +1,9 @@
 import { v2 as cloudinary } from 'cloudinary';
-import { ICloudStoragePort, UploadResult } from '../domain/ICloudStoragePort';
+import { ICloudStoragePort, SignedPdfUploadParams, UploadResult } from '../domain/ICloudStoragePort';
+import { AppError } from '../../../core/errors/AppError';
 import { env } from '../../../config/env';
+
+const PDF_FOLDER = 'flashy_ai_pdfs';
 
 // Initialize Cloudinary
 cloudinary.config({
@@ -10,6 +13,22 @@ cloudinary.config({
 });
 
 export class CloudinaryStorageAdapter implements ICloudStoragePort {
+  getSignedPdfUploadParams(): SignedPdfUploadParams {
+    const timestamp = Math.round(Date.now() / 1000);
+    const paramsToSign = {
+      timestamp,
+      folder: PDF_FOLDER,
+    };
+    const signature = cloudinary.utils.api_sign_request(paramsToSign, env.CLOUDINARY_API_SECRET);
+    return {
+      cloudName: env.CLOUDINARY_CLOUD_NAME,
+      apiKey: env.CLOUDINARY_API_KEY,
+      timestamp,
+      signature,
+      folder: PDF_FOLDER,
+    };
+  }
+
   async uploadPdf(fileBuffer: Buffer, filename?: string): Promise<UploadResult> {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -20,7 +39,7 @@ export class CloudinaryStorageAdapter implements ICloudStoragePort {
           // produced extensionless URLs (`.../raw/upload/...`) that browsers
           // download as attachments instead of rendering inline.
           resource_type: 'auto',
-          folder: 'flashy_ai_pdfs',
+          folder: PDF_FOLDER,
           // Image-type public_ids must NOT include the extension; Cloudinary
           // appends `.pdf` to the delivery URL itself.
           ...(filename ? { public_id: toSafePublicId(filename) } : {}),
@@ -28,10 +47,18 @@ export class CloudinaryStorageAdapter implements ICloudStoragePort {
         },
         (error, result) => {
           if (error) {
-            return reject(error);
+            console.error('Cloudinary upload failed:', error);
+            return reject(
+              new AppError(
+                502,
+                'No se pudo guardar el PDF en el almacenamiento. Probá de nuevo en unos minutos.'
+              )
+            );
           }
           if (!result) {
-            return reject(new Error('No result from Cloudinary upload'));
+            return reject(
+              new AppError(502, 'No se pudo guardar el PDF en el almacenamiento. Probá de nuevo.')
+            );
           }
 
           resolve({

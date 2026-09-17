@@ -131,6 +131,13 @@ function mapKnownServerMessage(
     }
   }
 
+  if (m.includes('no se pudo guardar el pdf') || m.includes('could not save the pdf')) {
+    return t('gen.pdfStorage');
+  }
+  if (m.includes('no se pudo leer el pdf') || m.includes('could not read the pdf')) {
+    return t('gen.pdfStorage');
+  }
+
   return null;
 }
 

@@ -3,6 +3,8 @@ import { GeminiFailover } from '../../../core/ai/GeminiFailover';
 import { generateLlmText } from '../../../core/ai/generateLlmText';
 import { env } from '../../../config/env';
 import { AppError } from '../../../core/errors/AppError';
+import { QuotaExceededError } from '../../../core/errors/QuotaExceededError';
+import { ModelOverloadedError } from '../../../core/errors/ModelOverloadedError';
 import { z } from 'zod';
 
 /** Cada tarjeta debe traer pregunta y respuesta no vacías; el resto se descarta. */
@@ -157,9 +159,12 @@ ${promptText}${truncationNotice}
     try {
       responseText = await generateLlmText(this.gemini, prompt, this.timeoutMs);
     } catch (apiErr) {
+      if (apiErr instanceof QuotaExceededError || apiErr instanceof ModelOverloadedError) {
+        throw apiErr;
+      }
       console.error('Gemini API call failed:', apiErr);
       throw new AppError(
-        500,
+        503,
         'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.'
       );
     }

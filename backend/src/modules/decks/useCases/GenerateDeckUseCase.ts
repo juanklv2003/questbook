@@ -11,6 +11,9 @@ interface GenerateDeckDTO {
   content: string;
   fileBuffer?: Buffer;
   fileName?: string;
+  /** PDF already on Cloudinary (browser upload). Skips server-side upload. */
+  pdfUrl?: string;
+  pdfPublicId?: string;
   cardCount?: number;
   difficulty?: Difficulty;
   shelfIndex?: number;
@@ -27,19 +30,21 @@ export class GenerateDeckUseCase {
   ) {}
 
   async execute(dto: GenerateDeckDTO) {
-    let pdfUrl: string | undefined;
-    let pdfPublicId: string | undefined;
+    let pdfUrl: string | undefined = dto.pdfUrl;
+    let pdfPublicId: string | undefined = dto.pdfPublicId;
 
     const uploadPromise: Promise<{ url: string; publicId: string } | null> =
-      dto.fileBuffer != null
-        ? this.cloudStorage
-            .uploadPdf(dto.fileBuffer, dto.fileName)
-            .then((uploadResult) => {
-              pdfUrl = uploadResult.url;
-              pdfPublicId = uploadResult.publicId;
-              return uploadResult;
-            })
-        : Promise.resolve(null);
+      dto.pdfPublicId && dto.pdfUrl
+        ? Promise.resolve({ url: dto.pdfUrl, publicId: dto.pdfPublicId })
+        : dto.fileBuffer != null
+          ? this.cloudStorage
+              .uploadPdf(dto.fileBuffer, dto.fileName)
+              .then((uploadResult) => {
+                pdfUrl = uploadResult.url;
+                pdfPublicId = uploadResult.publicId;
+                return uploadResult;
+              })
+          : Promise.resolve(null);
 
     let generatedCards;
     try {
