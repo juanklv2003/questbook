@@ -206,16 +206,18 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
       } catch (err: unknown) {
         if (cancelled) return;
         const status = (err as { response?: { status?: number }; config?: { url?: string } })?.response?.status;
-        const url = (err as { config?: { url?: string } })?.config?.url ?? `/decks/${deckId}/session`;
-        console.warn(`[study-session] GET ${url} failed`, { status });
         if (status === 404) {
-          // No saved session (or old backend without session routes): normal, not offline.
-        } else if (status === undefined) {
-          // Network Error: no response from server.
-          setIsOffline(true);
+          // No saved session yet (or deck gone): expected, not an outage.
         } else {
-          // 401/403/500...: server reachable, sync failed.
-          setSessionError(true);
+          const url = (err as { config?: { url?: string } })?.config?.url ?? `/decks/${deckId}/session`;
+          console.warn(`[study-session] GET ${url} failed`, { status });
+          if (status === undefined) {
+            // Network Error: no response from server.
+            setIsOffline(true);
+          } else {
+            // 401/403/500...: server reachable, sync failed.
+            setSessionError(true);
+          }
         }
         remoteCache.current = null;
       } finally {

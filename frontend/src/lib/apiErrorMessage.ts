@@ -143,6 +143,16 @@ function mapKnownServerMessage(
       return t('gen.generic');
     }
   }
+  if (
+    m.includes('interpretar la evaluación') ||
+    m.includes('evaluación de la ia') ||
+    m.includes('respuesta vacía') ||
+    m.includes('no respondió')
+  ) {
+    if (context === 'eval') {
+      return t('eval.generic');
+    }
+  }
 
   return null;
 }

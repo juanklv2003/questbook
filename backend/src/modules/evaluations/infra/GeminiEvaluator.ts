@@ -1,6 +1,9 @@
 import { IEvaluatorPort } from '../domain/IEvaluatorPort';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
 import { generateLlmText } from '../../../core/ai/generateLlmText';
+import { AppError } from '../../../core/errors/AppError';
+import { ModelOverloadedError } from '../../../core/errors/ModelOverloadedError';
+import { QuotaExceededError } from '../../../core/errors/QuotaExceededError';
 import { z } from 'zod';
 
 /**
@@ -11,11 +14,33 @@ import { z } from 'zod';
  */
 const evaluationSchema = z
   .object({
-    score: z.union([z.number(), z.string()]).transform((v) => Number(v)),
+    score: z.union([z.number(), z.string()]).transform((v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.round(Math.min(100, Math.max(0, n))) : 0;
+    }),
     isCorrect: z.boolean().optional(),
     feedback: z.string().optional(),
   })
   .passthrough();
+
+function stripMarkdownFences(text: string): string {
+  let s = text.trim();
+  if (s.startsWith('```')) {
+    s = s.replace(/^```(?:json)?\s*\r?\n?/i, '').replace(/\r?\n?```\s*$/, '');
+  }
+  return s.trim();
+}
+
+/** First JSON object in the model output (tolerates prose before/after). */
+function extractJsonObject(text: string): string {
+  const stripped = stripMarkdownFences(text);
+  const start = stripped.indexOf('{');
+  const end = stripped.lastIndexOf('}');
+  if (start !== -1 && end > start) {
+    return stripped.slice(start, end + 1);
+  }
+  return stripped;
+}
 
 export class GeminiEvaluator implements IEvaluatorPort {
   private readonly gemini: GeminiFailover;
@@ -58,14 +83,31 @@ IMPORTANTE: El campo 'feedback' debe escribirse SIEMPRE EN ESPAÑOL, nunca en in
 No incluyas bloques de markdown, saludos ni ningún otro texto. SOLO el objeto JSON.
     `;
 
-    const responseText = await generateLlmText(this.gemini, prompt, this.TIMEOUT_MS);
-    
-    let jsonStr = responseText.trim();
-    if (jsonStr.startsWith('\`\`\`json')) {
-      jsonStr = jsonStr.replace(/^\`\`\`json\n/, '').replace(/\n\`\`\`$/, '');
-    } else if (jsonStr.startsWith('\`\`\`')) {
-      jsonStr = jsonStr.replace(/^\`\`\`\n/, '').replace(/\n\`\`\`$/, '');
+    let responseText: string;
+    try {
+      responseText = await generateLlmText(this.gemini, prompt, this.TIMEOUT_MS);
+    } catch (err) {
+      if (
+        err instanceof QuotaExceededError ||
+        err instanceof ModelOverloadedError
+      ) {
+        throw err;
+      }
+      console.error('[evaluate] LLM request failed:', err);
+      throw new AppError(
+        502,
+        'El servicio de IA no respondió. Inténtalo de nuevo en unos segundos.'
+      );
     }
+
+    if (!responseText?.trim()) {
+      throw new AppError(
+        502,
+        'El servicio de IA devolvió una respuesta vacía. Inténtalo de nuevo.'
+      );
+    }
+
+    const jsonStr = extractJsonObject(responseText);
 
     try {
       const parsed = evaluationSchema.parse(JSON.parse(jsonStr));
@@ -75,8 +117,11 @@ No incluyas bloques de markdown, saludos ni ningún otro texto. SOLO el objeto J
         feedback: parsed.feedback ?? '',
       };
     } catch (err) {
-      console.error('Failed to parse Gemini output:', jsonStr);
-      throw new Error('Failed to evaluate answer. Invalid format.');
+      console.error('Failed to parse evaluation LLM output:', jsonStr.slice(0, 500));
+      throw new AppError(
+        502,
+        'No se pudo interpretar la evaluación de la IA. Vuelve a enviar tu respuesta.'
+      );
     }
   }
 }
