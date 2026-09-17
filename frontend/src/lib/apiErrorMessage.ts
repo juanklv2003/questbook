@@ -251,6 +251,14 @@ export function getApiErrorMessage(err: unknown, t: Translate, context: ApiError
     }
   }
 
+  if (status === 502 && context === 'deckGenerate') {
+    if (serverMessage) {
+      const aiMsg = mapKnownServerMessage(serverMessage, context, t);
+      if (aiMsg) return aiMsg;
+      if (!/^\d{3}\b/.test(serverMessage)) return serverMessage;
+    }
+    return t('gen.timeout');
+  }
   if (status === 502 || status === 503) {
     return t('errors.serverBusy');
   }

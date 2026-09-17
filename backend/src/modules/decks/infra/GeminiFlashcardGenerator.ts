@@ -28,8 +28,10 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     return env.PDF_MAX_TEXT_CHARS;
   }
 
-  private get timeoutMs(): number {
-    return env.AI_DECK_TIMEOUT_MS;
+  private timeoutMsFor(cardCount: number): number {
+    const base = env.AI_DECK_TIMEOUT_MS;
+    const extra = Math.max(0, cardCount - 15) * 4_000;
+    return Math.min(300_000, base + extra);
   }
 
   async generateFromText(text: string, options?: GenerateOptions): Promise<Array<{ question: string; answer: string }>> {
@@ -157,7 +159,7 @@ ${promptText}${truncationNotice}
     // Attempt to generate content and parse JSON safely
     let responseText = '';
     try {
-      responseText = await generateLlmText(this.gemini, prompt, this.timeoutMs);
+      responseText = await generateLlmText(this.gemini, prompt, this.timeoutMsFor(maxCards));
     } catch (apiErr) {
       if (apiErr instanceof QuotaExceededError || apiErr instanceof ModelOverloadedError) {
         throw apiErr;

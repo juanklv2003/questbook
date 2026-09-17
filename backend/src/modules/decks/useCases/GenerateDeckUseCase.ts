@@ -33,40 +33,26 @@ export class GenerateDeckUseCase {
     let pdfUrl: string | undefined = dto.pdfUrl;
     let pdfPublicId: string | undefined = dto.pdfPublicId;
 
-    const uploadPromise: Promise<{ url: string; publicId: string } | null> =
-      dto.pdfPublicId && dto.pdfUrl
-        ? Promise.resolve({ url: dto.pdfUrl, publicId: dto.pdfPublicId })
-        : dto.fileBuffer != null
-          ? this.cloudStorage
-              .uploadPdf(dto.fileBuffer, dto.fileName)
-              .then((uploadResult) => {
-                pdfUrl = uploadResult.url;
-                pdfPublicId = uploadResult.publicId;
-                return uploadResult;
-              })
-          : Promise.resolve(null);
-
+    // IA primero, Cloudinary después: en Render free evita pico de RAM (PDF + subida + prompt).
     let generatedCards;
     try {
-      const [cards] = await Promise.all([
-        this.aiGenerator.generateFromText(dto.content, {
-          cardCount: dto.cardCount,
-          difficulty: dto.difficulty,
-          language: dto.language,
-        }),
-        uploadPromise,
-      ]);
-      generatedCards = cards;
+      generatedCards = await this.aiGenerator.generateFromText(dto.content, {
+        cardCount: dto.cardCount,
+        difficulty: dto.difficulty,
+        language: dto.language,
+      });
     } catch (error) {
-      try {
-        const uploaded = await uploadPromise;
-        if (uploaded?.publicId) {
-          await this.cloudStorage.deletePdf(uploaded.publicId);
-        }
-      } catch (cleanupError) {
-        console.error('No se pudo limpiar el PDF huérfano en Cloudinary:', cleanupError);
-      }
       throw error;
+    }
+
+    if (!dto.pdfUrl && !dto.pdfPublicId && dto.fileBuffer != null) {
+      try {
+        const uploadResult = await this.cloudStorage.uploadPdf(dto.fileBuffer, dto.fileName);
+        pdfUrl = uploadResult.url;
+        pdfPublicId = uploadResult.publicId;
+      } catch (uploadError) {
+        console.error('PDF generado sin guardar en Cloudinary (subida fallida):', uploadError);
+      }
     }
 
     if (!generatedCards || generatedCards.length === 0) {

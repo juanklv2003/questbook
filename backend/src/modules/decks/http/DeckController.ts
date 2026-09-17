@@ -118,7 +118,13 @@ export class DeckController {
         await deleteUploadedPdfFile(req.file);
       }
 
-      const storePdfOnCloudinary = pdfBuffer != null && pdfBuffer.length <= env.CLOUDINARY_MAX_PDF_BYTES;
+      // PDFs grandes: solo extraemos texto; no re-subimos a Cloudinary en generate (OOM en Render).
+      const cloudinaryStoreMaxBytes = Math.min(
+        env.CLOUDINARY_MAX_PDF_BYTES,
+        7 * 1024 * 1024
+      );
+      const storePdfOnCloudinary =
+        pdfBuffer != null && pdfBuffer.length <= cloudinaryStoreMaxBytes;
 
       // Validate cardCount (moved logic below still needs parsed fields first)
       const parsedCardCountEarly = cardCount ? Number(cardCount) : undefined;

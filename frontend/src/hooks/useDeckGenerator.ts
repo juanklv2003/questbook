@@ -121,22 +121,23 @@ export function useDeckGenerator() {
         return response.data;
       };
 
-      // Prefer POST directo a Render: el PDF se procesa en el servidor sin re-descargarlo de Cloudinary.
+      // POST directo a Render. No reintentar vía Cloudinary tras un fallo (evita 422 confuso tras 502).
       try {
         return await runDirectUpload();
       } catch (directErr: unknown) {
         const directStatus = readHttpStatus(directErr);
-        if (mustUseDirect || directStatus === 503) {
-          if (directStatus === 503) {
+        if (directStatus === 503) {
+          if (mustUseDirect) {
             setError(t('gen.directUploadNotConfigured'));
-          } else if (!error) {
-            setError(getApiErrorMessage(directErr, t, 'deckGenerate'));
+            throw directErr;
           }
-          throw directErr;
+          return await runCloudinaryFlow();
         }
+        if (!error) {
+          setError(getApiErrorMessage(directErr, t, 'deckGenerate'));
+        }
+        throw directErr;
       }
-
-      return await runCloudinaryFlow();
     } catch (err: unknown) {
       setIsAiProcessing(false);
       const quota = parseQuotaExceeded(err);
