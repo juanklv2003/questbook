@@ -127,7 +127,9 @@ function App() {
               <p className="text-muted-foreground animate-pulse text-center py-12">{t('app.loading')}</p>
             }
           >
-            <AuthContainer />
+            <div className="flex min-h-[calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] flex-1 flex-col">
+              <AuthContainer />
+            </div>
           </React.Suspense>
         </div>
       </div>

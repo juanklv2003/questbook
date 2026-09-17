@@ -41,8 +41,8 @@ type AuthView = 'login' | 'register' | 'forgot';
   const activeTab: Exclude<AuthView, 'forgot'> = view === 'forgot' ? 'login' : view;
 
   return (
-    <div className="flex w-full min-h-full flex-col items-center px-3 py-4 sm:px-4 sm:py-8 md:py-10">
-      <div className="my-auto flex w-full max-w-4xl flex-col items-center gap-4 md:flex-row md:gap-12">
+    <div className="flex w-full flex-1 flex-col items-center justify-center px-3 py-4 sm:px-4 sm:py-6 md:py-10">
+      <div className="flex w-full max-w-4xl shrink-0 flex-col items-center gap-4 md:flex-row md:gap-12">
         {/* Marca grande solo en tablet/escritorio (en móvil ya está en el header). */}
         <div className="hidden flex-col items-center gap-4 text-center md:flex md:w-1/2">
           <img
