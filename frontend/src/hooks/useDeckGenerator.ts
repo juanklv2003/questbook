@@ -12,8 +12,14 @@ import {
 } from '../lib/uploadConfig';
 import { parseOverloaded, parseQuotaExceeded } from '../lib/quota';
 import { useLanguage } from '../i18n/LanguageContext';
-import type { DeckGenerationOptions, ModelOverloadedInfo, QuotaExceededInfo } from '../types';
+import type { DeckGenerationOptions, GenerateDeckResult, ModelOverloadedInfo, QuotaExceededInfo } from '../types';
 import type { DirectUploadTokenResponse } from '../lib/directDeckUpload';
+
+function readHttpStatus(err: unknown): number | undefined {
+  if (!err || typeof err !== 'object' || !('response' in err)) return undefined;
+  const response = (err as { response?: { status?: number } }).response;
+  return response?.status;
+}
 
 export function useDeckGenerator() {
   const { t } = useLanguage();
@@ -48,27 +54,13 @@ export function useDeckGenerator() {
       }
 
       const cloudinaryMax = getCloudinaryMaxPdfBytes();
-      const useDirectApi = file.size > cloudinaryMax;
+      const mustUseDirect = file.size > cloudinaryMax;
 
-      if (useDirectApi) {
+      const runDirectUpload = async (): Promise<GenerateDeckResult> => {
         setProgress(5);
-        let tokenRes;
-        try {
-          tokenRes = await apiClient.post<DirectUploadTokenResponse>('/decks/generate/direct-upload-token');
-        } catch (tokenErr: unknown) {
-          const status =
-            tokenErr instanceof Object &&
-            tokenErr !== null &&
-            'response' in tokenErr &&
-            (tokenErr as { response?: { status?: number } }).response?.status;
-          if (status === 503) {
-            setError(t('gen.directUploadNotConfigured'));
-          } else {
-            setError(getApiErrorMessage(tokenErr, t, 'deckGenerate'));
-          }
-          throw tokenErr;
-        }
-
+        const tokenRes = await apiClient.post<DirectUploadTokenResponse>(
+          '/decks/generate/direct-upload-token'
+        );
         const uploadUrl = tokenRes.data.uploadUrl;
         if (!uploadUrl) {
           setError(t('gen.directUploadNotConfigured'));
@@ -76,7 +68,6 @@ export function useDeckGenerator() {
         }
 
         setProgress(10);
-
         const result = await generateDeckViaDirectUpload(
           uploadUrl,
           tokenRes.data.token,
@@ -90,45 +81,62 @@ export function useDeckGenerator() {
             }
           }
         );
-
         setProgress(100);
         setIsAiProcessing(false);
         return result;
+      };
+
+      const runCloudinaryFlow = async (): Promise<GenerateDeckResult> => {
+        setProgress(5);
+        const uploadParams = await fetchPdfUploadParams();
+        const uploaded = await uploadPdfToCloudinary(file, uploadParams, (pct) => {
+          setProgress(5 + Math.round(pct * 0.45));
+        });
+
+        setProgress(55);
+        setIsAiProcessing(true);
+
+        const response = await apiClient.post(
+          `/decks/generate`,
+          {
+            name: options.name,
+            cardCount: options.cardCount,
+            difficulty: options.difficulty,
+            color: options.color ?? 'primary',
+            language: options.language ?? 'en',
+            shelf_index: 0,
+            pdfUrl: uploaded.url,
+            pdfPublicId: uploaded.publicId,
+          },
+          {
+            timeout: 240000,
+            onUploadProgress: () => {
+              setProgress((p) => Math.max(p, 60));
+            },
+          }
+        );
+
+        setProgress(100);
+        setIsAiProcessing(false);
+        return response.data;
+      };
+
+      // Prefer POST directo a Render: el PDF se procesa en el servidor sin re-descargarlo de Cloudinary.
+      try {
+        return await runDirectUpload();
+      } catch (directErr: unknown) {
+        const directStatus = readHttpStatus(directErr);
+        if (mustUseDirect || directStatus === 503) {
+          if (directStatus === 503) {
+            setError(t('gen.directUploadNotConfigured'));
+          } else if (!error) {
+            setError(getApiErrorMessage(directErr, t, 'deckGenerate'));
+          }
+          throw directErr;
+        }
       }
 
-      setProgress(5);
-      const uploadParams = await fetchPdfUploadParams();
-      const uploaded = await uploadPdfToCloudinary(file, uploadParams, (pct) => {
-        setProgress(5 + Math.round(pct * 0.45));
-      });
-
-      setProgress(55);
-      setIsAiProcessing(true);
-
-      const response = await apiClient.post(
-        `/decks/generate`,
-        {
-          name: options.name,
-          cardCount: options.cardCount,
-          difficulty: options.difficulty,
-          color: options.color ?? 'primary',
-          language: options.language ?? 'en',
-          shelf_index: 0,
-          pdfUrl: uploaded.url,
-          pdfPublicId: uploaded.publicId,
-        },
-        {
-          timeout: 240000,
-          onUploadProgress: () => {
-            setProgress((p) => Math.max(p, 60));
-          },
-        }
-      );
-
-      setProgress(100);
-      setIsAiProcessing(false);
-
-      return response.data;
+      return await runCloudinaryFlow();
     } catch (err: unknown) {
       setIsAiProcessing(false);
       const quota = parseQuotaExceeded(err);
@@ -140,11 +148,7 @@ export function useDeckGenerator() {
           setOverloaded(saturation);
         }
       }
-      const status =
-        err instanceof Object &&
-        err !== null &&
-        'response' in err &&
-        (err as { response?: { status?: number } }).response?.status;
+      const status = readHttpStatus(err);
       if (status === 413) {
         setError(t('gen.fileTooLarge', { maxMb: String(formatMaxPdfMb()) }));
       } else if (err instanceof Error && err.message.startsWith('cloudinary_upload')) {
@@ -156,7 +160,7 @@ export function useDeckGenerator() {
         } else {
           setError(t('gen.pdfStorage'));
         }
-      } else {
+      } else if (!error) {
         setError(getApiErrorMessage(err, t, 'deckGenerate'));
       }
       throw err;

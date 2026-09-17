@@ -88,3 +88,10 @@ export interface DeckGenerationOptions {
   color?: string;
   language?: 'en' | 'es';
 }
+
+export interface GenerateDeckResult {
+  deckId: string;
+  name: string;
+  flashcardsCount: number;
+  color?: string;
+}
