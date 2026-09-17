@@ -163,6 +163,16 @@ export async function generateWithGroq(
   }
 }
 
+export function isGroqInputLimitError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('request too large') ||
+    m.includes('itpm') ||
+    m.includes('tokens per minute') ||
+    m.includes('tpm')
+  );
+}
+
 export function isGroqConfigured(): boolean {
   return Boolean(env.GROQ_API_KEY);
 }

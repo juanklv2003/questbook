@@ -88,34 +88,16 @@ export type DeckLlmOptions = {
 };
 
 /**
- * Generación de mazos: Gemini (JSON) primero — más fiable para arrays grandes; Groq como respaldo.
+ * Generación de mazos: solo Gemini (JSON + texto). No usamos Groq aquí: prompts con
+ * decenas de miles de caracteres superan ITPM de Qwen en tier on_demand.
  */
 export async function generateDeckLlmText(
   gemini: GeminiFailover,
   prompt: string,
   timeoutMs: number,
-  options?: DeckLlmOptions
+  _options?: DeckLlmOptions
 ): Promise<string> {
-  const groqOpts = options?.maxTokens ? { maxTokens: options.maxTokens } : undefined;
-
-  try {
-    return await generateWithGeminiForDeck(gemini, prompt, timeoutMs);
-  } catch (geminiErr) {
-    if (
-      geminiErr instanceof QuotaExceededError ||
-      geminiErr instanceof ModelOverloadedError
-    ) {
-      throw geminiErr;
-    }
-    console.warn(
-      '[AI] Gemini failed for deck generation; trying Groq.',
-      geminiErr instanceof Error ? geminiErr.message : geminiErr
-    );
-    if (!isGroqConfigured()) {
-      throw geminiErr;
-    }
-    return generateWithGroq(prompt, timeoutMs, groqOpts);
-  }
+  return generateWithGeminiForDeck(gemini, prompt, timeoutMs);
 }
 
 /**
