@@ -8,6 +8,16 @@ export type DirectUploadTokenResponse = {
   cloudinaryMaxPdfBytes: number;
 };
 
+function estimateDeckAiBatches(cardCount: number, difficulty: DeckGenerationOptions['difficulty']): number {
+  if (cardCount <= 15) return 1;
+  if (difficulty === 'hard') {
+    const limit = cardCount > 30 ? 15 : 12;
+    return Math.ceil(cardCount / limit);
+  }
+  if (cardCount > 30) return Math.ceil(cardCount / 25);
+  return Math.ceil(cardCount / 20);
+}
+
 export async function generateDeckViaDirectUpload(
   uploadUrl: string,
   token: string,
@@ -25,12 +35,7 @@ export async function generateDeckViaDirectUpload(
   formData.append('shelf_index', '0');
 
   const cards = options.cardCount ?? 15;
-  const aiBatches =
-    cards <= 15
-      ? 1
-      : cards > 30
-        ? Math.ceil(cards / 25)
-        : Math.ceil(cards / 20);
+  const aiBatches = estimateDeckAiBatches(cards, options.difficulty);
   const timeoutMs = Math.min(
     600_000,
     60_000 + aiBatches * 100_000 + Math.ceil(file.size / (512 * 1024)) * 5_000

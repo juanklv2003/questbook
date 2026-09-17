@@ -3,10 +3,12 @@ import { DECK_PRACTICAL_TEXT_CAP } from '../domain/deckGenerationLimits';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
 import { generateDeckLlmText } from '../../../core/ai/generateLlmText';
 import { groqMaxTokensForDeckBatch } from '../../../core/ai/GroqClient';
+import { parseFlashcardJsonArray } from './deckFlashcardJsonParser';
 import { env } from '../../../config/env';
 import { AppError } from '../../../core/errors/AppError';
 import { QuotaExceededError } from '../../../core/errors/QuotaExceededError';
 import { ModelOverloadedError } from '../../../core/errors/ModelOverloadedError';
+import type { Difficulty } from '../domain/IFlashcardGeneratorPort';
 import { z } from 'zod';
 
 /** Cada tarjeta debe traer pregunta y respuesta no vacías; el resto se descarta. */
@@ -41,9 +43,12 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     return env.PDF_MAX_TEXT_CHARS;
   }
 
-  /** Fewer round-trips for large decks (50 cards → 2 batches instead of 5). */
-  private batchLimitFor(totalCards: number): number {
+  /** Smaller batches for hard decks — large JSON arrays often truncate and fail parse. */
+  private batchLimitFor(totalCards: number, difficulty?: Difficulty): number {
     if (totalCards <= 15) return totalCards;
+    if (difficulty === 'hard') {
+      return totalCards > 30 ? 15 : 12;
+    }
     if (totalCards > 30) return 25;
     return 20;
   }
@@ -73,7 +78,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
 
   async generateFromText(text: string, options?: GenerateOptions): Promise<Array<{ question: string; answer: string }>> {
     const maxCards = options?.cardCount ?? this.DEFAULT_CARDS;
-    const batchLimit = this.batchLimitFor(maxCards);
+    const batchLimit = this.batchLimitFor(maxCards, options?.difficulty);
     const batchTotal = Math.max(1, Math.ceil(maxCards / batchLimit));
     const deadlineMs = this.computeDeadlineMs(maxCards, batchLimit);
 
@@ -112,6 +117,42 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
   }
 
   private async generatePass(
+    text: string,
+    options: GenerateOptions | undefined,
+    maxCards: number,
+    existingQuestions: string[],
+    passCtx: PassContext
+  ): Promise<Array<{ question: string; answer: string }>> {
+    const cards = await this.generatePassOnce(text, options, maxCards, existingQuestions, passCtx);
+    if (cards.length > 0) return cards;
+
+    if (maxCards > 6) {
+      const firstHalf = Math.floor(maxCards / 2);
+      const secondHalf = maxCards - firstHalf;
+      console.warn('[deck-gen] empty batch; splitting', {
+        batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
+        maxCards,
+        firstHalf,
+        secondHalf,
+      });
+      const first = await this.generatePassOnce(text, options, firstHalf, existingQuestions, passCtx);
+      const second = await this.generatePassOnce(
+        text,
+        options,
+        secondHalf,
+        [...existingQuestions, ...first.map((c) => c.question)],
+        passCtx
+      );
+      return [...first, ...second].slice(0, maxCards);
+    }
+
+    throw new AppError(
+      422,
+      'La IA no pudo generar tarjetas válidas de este documento. Probá con otro archivo o intentá de nuevo.'
+    );
+  }
+
+  private async generatePassOnce(
     text: string,
     options: GenerateOptions | undefined,
     maxCards: number,
@@ -252,7 +293,7 @@ ${promptText}${truncationNotice}${excludeNotice}
     `;
 
     const timeoutMs = this.remainingTimeoutMs(passCtx.deadlineMs);
-    const maxTokens = groqMaxTokensForDeckBatch(maxCards);
+    const maxTokens = groqMaxTokensForDeckBatch(maxCards, options?.difficulty);
     const startedAt = Date.now();
 
     let responseText = '';
@@ -295,40 +336,30 @@ ${promptText}${truncationNotice}${excludeNotice}
       durationMs: Date.now() - startedAt,
     });
 
-    // Attempt to parse JSON safely, sometimes AI still wraps in markdown
-    let jsonStr = responseText.trim();
-    if (jsonStr.startsWith('```json')) {
-      jsonStr = jsonStr.replace(/^```json\n/, '').replace(/\n```$/, '');
-    } else if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/^```\n/, '').replace(/\n```$/, '');
+    const parsedRaw = parseFlashcardJsonArray(responseText);
+    if (!parsedRaw) {
+      console.error('[deck-gen] failed to parse LLM output', {
+        batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
+        need: maxCards,
+        preview: responseText.slice(0, 400),
+      });
+      return [];
     }
 
-    try {
-      const parsed = JSON.parse(jsonStr);
-      if (!Array.isArray(parsed)) {
-        throw new Error('Gemini response is not a JSON array.');
-      }
+    const cards = parsedRaw
+      .map((item) => responseCardSchema.safeParse(item))
+      .filter((r): r is { success: true; data: { question: string; answer: string } } => r.success)
+      .map((r) => ({ question: r.data.question, answer: r.data.answer }))
+      .slice(0, maxCards);
 
-      const cards = parsed
-        .map((item) => responseCardSchema.safeParse(item))
-        .filter((r): r is { success: true; data: { question: string; answer: string } } => r.success)
-        .map((r) => ({ question: r.data.question, answer: r.data.answer }))
-        .slice(0, maxCards);
-
-      if (cards.length === 0) {
-        throw new AppError(
-          422,
-          'La IA no pudo generar tarjetas válidas de este documento. Probá con otro archivo o intentá de nuevo.'
-        );
-      }
-      return cards;
-    } catch (err) {
-      if (err instanceof AppError) throw err;
-      console.error('Failed to parse Gemini output:', jsonStr);
-      throw new AppError(
-        422,
-        'La IA no pudo generar tarjetas de este documento. Probá de nuevo en unos segundos.'
-      );
+    if (cards.length === 0) {
+      console.warn('[deck-gen] parsed array had no valid cards', {
+        batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
+        need: maxCards,
+        rawCount: parsedRaw.length,
+      });
     }
+
+    return cards;
   }
 }

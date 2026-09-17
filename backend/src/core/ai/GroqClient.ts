@@ -74,19 +74,21 @@ async function callGroqModel(
   }
 
   const message = body.choices?.[0]?.message;
+  const content = message?.content?.trim() ?? '';
   const reasoning =
     message && typeof message === 'object' && 'reasoning' in message
       ? String((message as { reasoning?: string }).reasoning ?? '').trim()
       : '';
-  const text = message?.content?.trim() || reasoning;
+  const text = content.includes('[') ? content : content || reasoning;
   if (!text) {
     throw new Error('Groq returned an empty response.');
   }
   return text;
 }
 
-export function groqMaxTokensForDeckBatch(cardCount: number): number {
-  return Math.min(32_768, 2_048 + cardCount * 900);
+export function groqMaxTokensForDeckBatch(cardCount: number, difficulty?: 'easy' | 'medium' | 'hard'): number {
+  const perCard = difficulty === 'hard' ? 1_100 : difficulty === 'easy' ? 650 : 850;
+  return Math.min(32_768, 2_048 + cardCount * perCard);
 }
 
 /**
