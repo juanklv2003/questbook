@@ -1,5 +1,8 @@
 import apiClient from './axios';
-import { setDeckGenerationClientTimeoutMs } from './deckGenerationTimeouts';
+import {
+  setDeckGenerationBackendBudgetMs,
+  setDeckGenerationClientTimeoutMs,
+} from './deckGenerationTimeouts';
 
 const DEFAULT_MAX_PDF_BYTES = 100 * 1024 * 1024;
 const DEFAULT_CLOUDINARY_MAX_BYTES = 10 * 1024 * 1024;
@@ -19,6 +22,7 @@ type HealthUpload = {
 
 type HealthAi = {
   deckGenerationClientTimeoutMs?: number;
+  deckGenerationTotalTimeoutMs?: number;
 };
 
 export async function loadUploadLimits(): Promise<number> {
@@ -36,6 +40,9 @@ export async function loadUploadLimits(): Promise<number> {
     }
     if (typeof data.ai?.deckGenerationClientTimeoutMs === 'number') {
       setDeckGenerationClientTimeoutMs(data.ai.deckGenerationClientTimeoutMs);
+    }
+    if (typeof data.ai?.deckGenerationTotalTimeoutMs === 'number') {
+      setDeckGenerationBackendBudgetMs(data.ai.deckGenerationTotalTimeoutMs);
     }
   } catch {
     // Keep defaults aligned with backend
