@@ -2,9 +2,8 @@ import { IFlashcardGeneratorPort, GenerateOptions } from '../domain/IFlashcardGe
 import {
   DECK_PRACTICAL_TEXT_CAP,
   DECK_GENERATION_BATCH_RESERVE_MS,
+  DECK_GENERATION_MAX_SPLIT_DEPTH,
   deckBatchLimitFor,
-  estimateDeckGenerationBudgetMs,
-  worstCaseLlmCallsPerBatch,
 } from '../domain/deckGenerationLimits';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
 import { generateDeckLlmText } from '../../../core/ai/generateLlmText';
@@ -28,7 +27,16 @@ type PassContext = {
   batchIndex: number;
   batchTotal: number;
   batchesRemaining: number;
+  splitDepth: number;
 };
+
+function canSplitBatch(passCtx: PassContext): boolean {
+  return passCtx.splitDepth < DECK_GENERATION_MAX_SPLIT_DEPTH;
+}
+
+function withSplitDepth(passCtx: PassContext): PassContext {
+  return { ...passCtx, splitDepth: passCtx.splitDepth + 1 };
+}
 
 function isRecoverableAiError(err: unknown): err is AppError {
   return (
@@ -97,21 +105,14 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     return deckBatchLimitFor(totalCards, difficulty);
   }
 
-  private computeDeadlineMs(totalCards: number, difficulty?: Difficulty): number {
-    const estimated = estimateDeckGenerationBudgetMs(totalCards, difficulty);
-    return Date.now() + Math.min(env.AI_DECK_TOTAL_TIMEOUT_MS, estimated);
+  private computeDeadlineMs(): number {
+    return Date.now() + env.AI_DECK_TOTAL_TIMEOUT_MS;
   }
 
   /**
    * Tiempo máximo para UNA llamada de IA de la tanda en curso.
-   *
-   * Reserva tiempo para las tandas que faltan (una tanda puede necesitar varias
-   * llamadas: reintento, split o fallback JSON→texto) pero NO reparte el slice
-   * entre el peor caso de llamadas: medido en vivo, una tanda de 20 tarjetas tarda
-   * 35-60 s, así que dividir por `worstCaseLlmCallsPerBatch` (≈10) daba ~16 s y
-   * abortaba siempre con 504 AI_TIMEOUT sin ninguna tarjeta. De las llamadas
-   * sobrantes se encarga el deadline global (que nunca se sobrepasa: nunca
-   * devolvemos más que el tiempo que queda).
+   * Reserva `DECK_GENERATION_BATCH_RESERVE_MS` por tanda pendiente y nunca
+   * devuelve más que el tiempo que queda ni más que `AI_DECK_TIMEOUT_MS`.
    */
   private timeoutForBatch(deadlineMs: number, batchesRemaining: number): number {
     const remaining = deadlineMs - Date.now();
@@ -138,18 +139,15 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     const maxCards = options?.cardCount ?? this.DEFAULT_CARDS;
     const batchLimit = this.batchLimitFor(maxCards, options?.difficulty);
     const batchTotal = Math.max(1, Math.ceil(maxCards / batchLimit));
-    const deadlineMs = this.computeDeadlineMs(maxCards, options?.difficulty);
+    const deadlineMs = this.computeDeadlineMs();
     console.info('[deck-gen] start', {
       cardCount: maxCards,
       difficulty: options?.difficulty ?? 'medium',
       contentChars: text.length,
       batchLimit,
       batchTotal,
-      // Peor caso teórico (2 intentos x JSON/texto + splits). Siempre supera el cap,
-      // así que es sólo diagnóstico: NO se usa para acortar los timeouts por llamada.
-      worstCaseCallsPerBatch: worstCaseLlmCallsPerBatch(batchLimit),
-      estimatedWorstCaseMs: estimateDeckGenerationBudgetMs(maxCards, options?.difficulty),
-      budgetMs: Math.min(env.AI_DECK_TOTAL_TIMEOUT_MS, estimateDeckGenerationBudgetMs(maxCards, options?.difficulty)),
+      budgetMs: env.AI_DECK_TOTAL_TIMEOUT_MS,
+      maxSplitDepth: DECK_GENERATION_MAX_SPLIT_DEPTH,
     });
 
     if (maxCards <= batchLimit) {
@@ -158,6 +156,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
         batchIndex: 1,
         batchTotal: 1,
         batchesRemaining: 1,
+        splitDepth: 0,
       });
     }
 
@@ -174,7 +173,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
           options,
           need,
           cards.map((c) => c.question),
-          { deadlineMs, batchIndex, batchTotal, batchesRemaining }
+          { deadlineMs, batchIndex, batchTotal, batchesRemaining, splitDepth: 0 }
         );
         if (batch.length === 0) break;
         cards.push(...batch);
@@ -210,16 +209,18 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     const cards = await this.generatePassOnce(text, options, maxCards, existingQuestions, passCtx);
     if (cards.length > 0) return cards;
 
-    if (maxCards > 6) {
+    if (maxCards > 6 && canSplitBatch(passCtx)) {
       const firstHalf = Math.floor(maxCards / 2);
       const secondHalf = maxCards - firstHalf;
+      const splitCtx = withSplitDepth(passCtx);
       console.warn('[deck-gen] empty batch; splitting', {
         batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
         maxCards,
         firstHalf,
         secondHalf,
+        splitDepth: splitCtx.splitDepth,
       });
-      const first = await this.generatePassOnce(text, options, firstHalf, existingQuestions, passCtx);
+      const first = await this.generatePassOnce(text, options, firstHalf, existingQuestions, splitCtx);
       let second: Array<{ question: string; answer: string }> = [];
       try {
         second = await this.generatePassOnce(
@@ -227,7 +228,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
           options,
           secondHalf,
           [...existingQuestions, ...first.map((c) => c.question)],
-          passCtx
+          splitCtx
         );
       } catch (err) {
         if (first.length > 0 && shouldReturnPartialDeck(err, first.length, maxCards)) {
@@ -476,17 +477,19 @@ ${promptText}${truncationNotice}${excludeNotice}
       durationMs,
     });
 
-    if (isMaxTokensFinish(llmResult.finishReason) && maxCards > 1) {
+    if (isMaxTokensFinish(llmResult.finishReason) && maxCards > 1 && canSplitBatch(passCtx)) {
       const firstHalf = Math.floor(maxCards / 2);
       const secondHalf = maxCards - firstHalf;
+      const splitCtx = withSplitDepth(passCtx);
       console.warn('[deck-gen] MAX_TOKENS; splitting batch', {
         batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
         maxCards,
         firstHalf,
         secondHalf,
+        splitDepth: splitCtx.splitDepth,
         candidateTokens: llmResult.usage?.candidatesTokenCount ?? null,
       });
-      const first = await this.generatePassOnce(text, options, firstHalf, existingQuestions, passCtx);
+      const first = await this.generatePassOnce(text, options, firstHalf, existingQuestions, splitCtx);
       let second: Array<{ question: string; answer: string }> = [];
       try {
         second = await this.generatePassOnce(
@@ -494,7 +497,7 @@ ${promptText}${truncationNotice}${excludeNotice}
           options,
           secondHalf,
           [...existingQuestions, ...first.map((c) => c.question)],
-          passCtx
+          splitCtx
         );
       } catch (err) {
         if (first.length > 0 && shouldReturnPartialDeck(err, first.length, maxCards)) {
@@ -503,6 +506,15 @@ ${promptText}${truncationNotice}${excludeNotice}
         throw err;
       }
       return [...first, ...second].slice(0, maxCards);
+    }
+
+    if (isMaxTokensFinish(llmResult.finishReason) && !canSplitBatch(passCtx)) {
+      console.warn('[deck-gen] MAX_TOKENS; split depth exhausted; parsing truncated JSON', {
+        batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
+        need: maxCards,
+        splitDepth: passCtx.splitDepth,
+        candidateTokens: llmResult.usage?.candidatesTokenCount ?? null,
+      });
     }
 
     const responseText = llmResult.text;
