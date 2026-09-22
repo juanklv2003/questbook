@@ -151,6 +151,8 @@ export const en: { [K in keyof typeof es]: string } = {
   "gen.pdfExtractTimeout": "Reading the PDF took too long. Try a smaller file or fewer pages.",
   "gen.aiNoCards":
     "The AI could not build useful flashcards from this content. Try another PDF, fewer cards, or a different difficulty.",
+  "gen.contentBlocked":
+    "The AI blocked this document's content for safety. Try another file or try again later.",
   "gen.generic": "Failed to generate the book",
 
   "eval.quota": "You have reached the free AI limit.",

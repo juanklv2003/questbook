@@ -150,6 +150,8 @@ export const es = {
     "Leer el PDF tardó demasiado. Probá un archivo más pequeño o con menos páginas.",
   "gen.aiNoCards":
     "La IA no pudo crear tarjetas útiles con este contenido. Probá otro PDF, menos tarjetas o otra dificultad.",
+  "gen.contentBlocked":
+    "La IA bloqueó el contenido de este documento por seguridad. Probá con otro archivo o intentá más tarde.",
   "gen.generic": "Error al generar el libro",
 
   "eval.quota": "Has alcanzado el límite gratuito de la IA.",

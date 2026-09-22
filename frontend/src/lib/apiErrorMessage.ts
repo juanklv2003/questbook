@@ -223,6 +223,12 @@ export function getApiErrorMessage(err: unknown, t: Translate, context: ApiError
     return t('gen.generic');
   }
 
+  // Gemini bloqueó el prompt/documento (promptFeedback.blockReason). Tiene un
+  // mensaje propio: sin este mapeo caía en el genérico "Error al generar el libro".
+  if (code === 'AI_CONTENT_BLOCKED' && context === 'deckGenerate') {
+    return t('gen.contentBlocked');
+  }
+
   if (status === 422 && context === 'deckGenerate') {
     const from422 = mapGenerate422(serverMessage, t);
     if (from422) return from422;
