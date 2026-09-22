@@ -27,6 +27,7 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
   }
 
   if (err instanceof AppError) {
+    console.warn(`[http] ${req.method} ${req.originalUrl} ${err.statusCode}`, err.message);
     const body: { error: string; code?: string; hint?: string } = { error: err.message };
     if (err.code) body.code = err.code;
     if (err.hint) body.hint = err.hint;

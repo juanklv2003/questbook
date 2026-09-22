@@ -84,6 +84,11 @@ export function useDeckGenerator() {
       try {
         return await runDirectUpload();
       } catch (directErr: unknown) {
+        const payload =
+          directErr && typeof directErr === 'object' && 'response' in directErr
+            ? (directErr as { response?: { status?: number; data?: unknown } }).response
+            : undefined;
+        console.error('[deck-generate]', payload?.status, payload?.data);
         if (!error) {
           setError(getApiErrorMessage(directErr, t, 'deckGenerate'));
         }
