@@ -10,6 +10,7 @@ export type DeckLlmUsage = {
   promptTokenCount?: number;
   candidatesTokenCount?: number;
   totalTokenCount?: number;
+  thoughtsTokenCount?: number;
 };
 
 export type DeckLlmResult = {
@@ -18,14 +19,20 @@ export type DeckLlmResult = {
   usage?: DeckLlmUsage;
 };
 
+type GeminiPart = { text?: string; thought?: boolean };
+
 type GeminiGenerateResult = {
   response: {
     text: () => string;
-    candidates?: Array<{ finishReason?: string }>;
+    candidates?: Array<{
+      finishReason?: string;
+      content?: { parts?: GeminiPart[] };
+    }>;
     usageMetadata?: {
       promptTokenCount?: number;
       candidatesTokenCount?: number;
       totalTokenCount?: number;
+      thoughtsTokenCount?: number;
     };
     promptFeedback?: { blockReason?: string };
   };
@@ -38,6 +45,7 @@ function readUsage(result: GeminiGenerateResult): DeckLlmUsage | undefined {
     promptTokenCount: usageRaw.promptTokenCount,
     candidatesTokenCount: usageRaw.candidatesTokenCount,
     totalTokenCount: usageRaw.totalTokenCount,
+    thoughtsTokenCount: usageRaw.thoughtsTokenCount,
   };
 }
 
@@ -46,20 +54,36 @@ function isMaxTokensFinishReason(reason: string | undefined): boolean {
   return reason === 'MAX_TOKENS' || reason.endsWith('_MAX_TOKENS');
 }
 
+function readCandidateText(result: GeminiGenerateResult): string {
+  try {
+    const fromSdk = result.response.text()?.trim();
+    if (fromSdk) return fromSdk;
+  } catch {
+    // SDK throws when there are no candidates / malformed JSON-mode payload.
+  }
+  const parts = result.response.candidates?.[0]?.content?.parts ?? [];
+  return parts
+    .filter((part) => Boolean(part.text) && !part.thought)
+    .map((part) => part.text as string)
+    .join('')
+    .trim();
+}
+
 /**
- * Lee texto/finishReason/uso de una respuesta de Gemini (nunca loguea claves ni
- * payloads crudos).
- *
- * `allowEmptyTextOnMaxTokens` sólo se activa en modo JSON para mazos: cuando la
- * salida se corta en MAX_TOKENS puede volver SIN texto (en 2.5 los tokens de
- * "thinking" cuentan contra el presupuesto de salida). En ese caso conviene
- * devolver la respuesta vacía para que el generador parta la tanda a la mitad,
- * en vez de tirarla y reintentar el prompt completo.
+ * 2.5 Flash thinks by default. Thought tokens count against maxOutputTokens and
+ * often yield empty JSON + finishReason MAX_TOKENS (the generator then 422s).
+ * Budget 0 turns thinking off; the JS SDK still forwards unknown config keys.
  */
-function readGeminiLlmResponse(
-  result: GeminiGenerateResult,
-  allowEmptyTextOnMaxTokens = false
-): DeckLlmResult {
+function deckGenerationConfig(maxOutputTokens: number | undefined, json: boolean) {
+  return {
+    temperature: 0.3,
+    ...(json ? { responseMimeType: 'application/json' as const } : {}),
+    ...(maxOutputTokens ? { maxOutputTokens } : {}),
+    thinkingConfig: { thinkingBudget: 0 },
+  };
+}
+
+function readGeminiLlmResponse(result: GeminiGenerateResult): DeckLlmResult {
   const blockReason = result.response.promptFeedback?.blockReason;
   if (blockReason) {
     throw new AppError(
@@ -72,20 +96,14 @@ function readGeminiLlmResponse(
   }
 
   const finishReason = result.response.candidates?.[0]?.finishReason;
-
-  let text = '';
-  try {
-    text = result.response.text()?.trim() ?? '';
-  } catch {
-    // Sin candidatos el SDK lanza al leer text(); es una respuesta vacía.
-    text = '';
-  }
+  const text = readCandidateText(result);
 
   if (!text) {
-    if (allowEmptyTextOnMaxTokens && isMaxTokensFinishReason(finishReason)) {
-      return { text: '', finishReason, usage: readUsage(result) };
-    }
-    throw new Error('Gemini returned empty text.');
+    throw new Error(
+      isMaxTokensFinishReason(finishReason)
+        ? 'Gemini returned empty text (MAX_TOKENS; thinking likely consumed the budget).'
+        : 'Gemini returned empty text.'
+    );
   }
 
   return { text, finishReason, usage: readUsage(result) };
@@ -128,11 +146,7 @@ async function generateWithGeminiDeck(
           client
             .getGenerativeModel({
               model,
-              generationConfig: {
-                responseMimeType: 'application/json',
-                temperature: 0.3,
-                ...(maxOutputTokens ? { maxOutputTokens } : {}),
-              },
+              generationConfig: deckGenerationConfig(maxOutputTokens, true),
             })
             .generateContent(prompt)
         ),
@@ -142,8 +156,8 @@ async function generateWithGeminiDeck(
       if (model !== models[0]) {
         console.warn(`[AI] Gemini deck generation used fallback model "${model}".`);
       }
-      // Texto vacío + MAX_TOKENS se devuelve a propósito: el generador parte la tanda.
-      return readGeminiLlmResponse(result, true);
+      // Texto vacío + MAX_TOKENS se deja fallar: el fallback JSON→texto reintenta sin thinking.
+      return readGeminiLlmResponse(result);
     } catch (error) {
       lastError = error;
       if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
@@ -179,9 +193,7 @@ async function generateWithGemini(
           client
             .getGenerativeModel({
               model,
-              ...(maxOutputTokens
-                ? { generationConfig: { maxOutputTokens, temperature: 0.3 } }
-                : {}),
+              generationConfig: deckGenerationConfig(maxOutputTokens, false),
             })
             .generateContent(prompt)
         ),

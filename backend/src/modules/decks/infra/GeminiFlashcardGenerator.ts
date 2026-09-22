@@ -474,6 +474,7 @@ ${promptText}${truncationNotice}${excludeNotice}
       finishReason: llmResult.finishReason ?? null,
       promptTokens: llmResult.usage?.promptTokenCount ?? null,
       candidateTokens: llmResult.usage?.candidatesTokenCount ?? null,
+      thoughtTokens: llmResult.usage?.thoughtsTokenCount ?? null,
       durationMs,
     });
 
