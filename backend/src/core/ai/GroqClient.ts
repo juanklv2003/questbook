@@ -1,6 +1,7 @@
 import { env } from '../../config/env';
 import { QuotaExceededError } from '../errors/QuotaExceededError';
 import { isQuotaExhausted, parseRetryDelay } from './GeminiFailover';
+import { deckBatchMaxOutputTokens } from './deckBatchTokens';
 
 const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
 /** Groq max output tokens for Qwen models on GroqCloud. */
@@ -98,9 +99,11 @@ async function callGroqModel(
   return text;
 }
 
-export function groqMaxTokensForDeckBatch(cardCount: number, difficulty?: 'easy' | 'medium' | 'hard'): number {
-  const perCard = difficulty === 'hard' ? 1_100 : difficulty === 'easy' ? 650 : 850;
-  return Math.min(GROQ_MAX_OUTPUT_TOKENS, 2_048 + cardCount * perCard);
+export function groqMaxTokensForDeckBatch(
+  cardCount: number,
+  difficulty?: 'easy' | 'medium' | 'hard'
+): number {
+  return Math.min(GROQ_MAX_OUTPUT_TOKENS, deckBatchMaxOutputTokens(cardCount, difficulty));
 }
 
 export async function generateWithGroq(
