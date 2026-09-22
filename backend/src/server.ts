@@ -13,6 +13,7 @@ const startServer = async () => {
     console.log('✅ Database connection verified.');
 
     const port = env.PORT || 3000;
+    const longRequestMs = env.AI_DECK_TOTAL_TIMEOUT_MS;
     const server = app.listen(port, () => {
       console.log(`🚀 Server is running on port ${port} (pid ${process.pid}, node ${process.version})`);
       console.log(
@@ -27,9 +28,15 @@ const startServer = async () => {
 
     // Render documenta timeouts y "Connection reset by peer" en servicios Node
     // con requests largos (aquí una generación con IA puede tardar minutos).
-    // Los defaults de Node (5s keep-alive) cortan conexiones reutilizadas.
-    server.keepAliveTimeout = 480_000;
-    server.headersTimeout = 485_000;
+    // - requestTimeout: tiempo máximo para RECIBIR la petición (el multipart del
+    //   PDF); el default de Node (~300s) podría cortar subidas lentas de PDFs grandes.
+    // - keepAliveTimeout: inactividad permitida sobre una conexión ya usada, para que
+    //   el navegador pueda reutilizarla después de una generación larga.
+    // - headersTimeout debe quedar por encima de keepAliveTimeout (Node exige
+    //   headersTimeout > keepAliveTimeout para no cortar conexiones vivas).
+    server.requestTimeout = longRequestMs + 5_000;
+    server.keepAliveTimeout = longRequestMs;
+    server.headersTimeout = longRequestMs + 5_000;
 
     server.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {

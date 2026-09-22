@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { env } from './config/env';
 import { geminiModelCandidates } from './core/ai/geminiModels';
 import { isGroqConfigured } from './core/ai/GroqClient';
+import { deckGenerationClientTimeoutMs } from './modules/decks/domain/deckGenerationLimits';
 import { errorHandler } from './core/middlewares/errorHandler';
 
 const app = express();
@@ -76,7 +77,10 @@ app.get('/api/v1/health', (_req, res) => {
       groqFallback: isGroqConfigured(),
       groqModel: isGroqConfigured() ? env.GROQ_MODEL : undefined,
       geminiModels: geminiModelCandidates(),
-      deckGeneration: 'gemini-only-v6-model-fallback',
+      deckGeneration: 'gemini-only-v7-maxoutput-tokens',
+      deckGenerationTimeoutMs: env.AI_DECK_TIMEOUT_MS,
+      deckGenerationTotalTimeoutMs: env.AI_DECK_TOTAL_TIMEOUT_MS,
+      deckGenerationClientTimeoutMs: deckGenerationClientTimeoutMs(),
     },
     upload: {
       maxPdfBytes: env.MAX_PDF_UPLOAD_BYTES,

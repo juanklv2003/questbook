@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { DeckGenerationOptions } from '../types';
+import { directDeckUploadTimeoutMs } from './deckGenerationTimeouts';
 
 export type DirectUploadTokenResponse = {
   token: string;
@@ -7,16 +8,6 @@ export type DirectUploadTokenResponse = {
   expiresInSeconds: number;
   cloudinaryMaxPdfBytes: number;
 };
-
-function estimateDeckAiBatches(cardCount: number, difficulty: DeckGenerationOptions['difficulty']): number {
-  if (cardCount <= 15) return 1;
-  if (difficulty === 'hard') {
-    const limit = cardCount > 30 ? 10 : 12;
-    return Math.ceil(cardCount / limit);
-  }
-  if (cardCount > 30) return Math.ceil(cardCount / 20);
-  return Math.ceil(cardCount / 20);
-}
 
 export async function generateDeckViaDirectUpload(
   uploadUrl: string,
@@ -35,11 +26,7 @@ export async function generateDeckViaDirectUpload(
   formData.append('shelf_index', '0');
 
   const cards = options.cardCount ?? 15;
-  const aiBatches = estimateDeckAiBatches(cards, options.difficulty);
-  const timeoutMs = Math.min(
-    720_000,
-    90_000 + aiBatches * 110_000 + Math.ceil(file.size / (512 * 1024)) * 5_000
-  );
+  const timeoutMs = directDeckUploadTimeoutMs(file, cards, options.difficulty);
 
   const response = await axios.post(uploadUrl, formData, {
     headers: { Authorization: `Bearer ${token}` },
