@@ -164,7 +164,7 @@ The API is served at `/api/v1`.
 ## 6. App AI & UX Guidelines
 
 ### AI Prompt Constraints (Gemini)
-- **Deck batches**: JSON mode with explicit `maxOutputTokens`; if Gemini returns `MAX_TOKENS`, the batch is split once at half size. Nested splits are not allowed; leftover truncated JSON is parsed instead.
+- **Deck batches**: JSON mode with explicit `maxOutputTokens`; if Gemini returns `MAX_TOKENS`, salvaged complete objects from the truncated JSON are kept and only the missing cards are requested once (split depth ≤ 1).
 - **Strict Spanish Output**: All generated flashcards, feedback, and AI interactions MUST be strictly in Spanish.
 - **Zero Hallucination Policy (0%)**: The AI must extract information strictly from the provided context (e.g., uploaded PDFs) and must not invent or hallucinate outside information.
 
