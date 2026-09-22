@@ -13,7 +13,7 @@ QuestBook is an AI-powered flashcard generation and study application. It allows
 - **Language**: TypeScript
 - **Database**: PostgreSQL (Neon) vía `@neondatabase/serverless` (`Pool` sobre WebSocket, queries SQL a mano)
 - **AI Integration**: Google Generative AI (`@google/generative-ai`) con failover de claves y respaldo Groq
-- **PDF parsing**: `pdf-parse` dentro de un `worker_threads` (no bloquea el event loop)
+- **PDF parsing**: `pdf-parse` in a `worker_threads` worker when a compiled `pdfExtractWorker.js` exists; otherwise (and if the worker fails) extraction runs in-process. The TS worker + `ts-node/register` path is not used — it typechecks without Node types and 422s every upload.
 - **Other tools**: `multer` (upload en memoria), `zod` (validación), `helmet` (headers), `compression` (gzip), `express-rate-limit`.
 
 ### Hardening y despliegue
@@ -164,7 +164,7 @@ The API is served at `/api/v1`.
 ## 6. App AI & UX Guidelines
 
 ### AI Prompt Constraints (Gemini)
-- **Deck batches**: JSON mode with explicit `maxOutputTokens`; if Gemini returns `MAX_TOKENS`, salvaged complete objects from the truncated JSON are kept and only the missing cards are requested once (split depth ≤ 1).
+- **Deck batches**: JSON mode with explicit `maxOutputTokens` and `thinkingConfig.thinkingBudget = 0` (Gemini 2.5 otherwise spends the output budget on hidden thinking and returns empty JSON → 422). If JSON mode still returns empty `MAX_TOKENS`, retry as plain text. Truncated JSON is salvaged; only the missing cards are requested once (split depth ≤ 1).
 - **Strict Spanish Output**: All generated flashcards, feedback, and AI interactions MUST be strictly in Spanish.
 - **Zero Hallucination Policy (0%)**: The AI must extract information strictly from the provided context (e.g., uploaded PDFs) and must not invent or hallucinate outside information.
 
