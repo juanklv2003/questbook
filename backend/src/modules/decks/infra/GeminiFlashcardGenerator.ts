@@ -231,7 +231,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
           splitCtx
         );
       } catch (err) {
-        if (first.length > 0 && shouldReturnPartialDeck(err, first.length, maxCards)) {
+        if (first.length > 0) {
           console.warn('[deck-gen] split batch: second half failed; keeping first', {
             first: first.length,
             secondHalf,
@@ -477,39 +477,43 @@ ${promptText}${truncationNotice}${excludeNotice}
       durationMs,
     });
 
-    if (isMaxTokensFinish(llmResult.finishReason) && maxCards > 1 && canSplitBatch(passCtx)) {
-      const firstHalf = Math.floor(maxCards / 2);
-      const secondHalf = maxCards - firstHalf;
+    const cards = this.parseValidCards(llmResult.text, maxCards, passCtx);
+
+    if (
+      isMaxTokensFinish(llmResult.finishReason) &&
+      cards.length > 0 &&
+      cards.length < maxCards &&
+      canSplitBatch(passCtx)
+    ) {
+      const remaining = maxCards - cards.length;
       const splitCtx = withSplitDepth(passCtx);
-      console.warn('[deck-gen] MAX_TOKENS; splitting batch', {
+      console.warn('[deck-gen] MAX_TOKENS; keeping salvaged cards, filling remainder', {
         batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
-        maxCards,
-        firstHalf,
-        secondHalf,
+        have: cards.length,
+        remaining,
         splitDepth: splitCtx.splitDepth,
         candidateTokens: llmResult.usage?.candidatesTokenCount ?? null,
       });
-      const first = await this.generatePassOnce(text, options, firstHalf, existingQuestions, splitCtx);
-      let second: Array<{ question: string; answer: string }> = [];
       try {
-        second = await this.generatePassOnce(
+        const more = await this.generatePassOnce(
           text,
           options,
-          secondHalf,
-          [...existingQuestions, ...first.map((c) => c.question)],
+          remaining,
+          [...existingQuestions, ...cards.map((c) => c.question)],
           splitCtx
         );
+        return [...cards, ...more].slice(0, maxCards);
       } catch (err) {
-        if (first.length > 0 && shouldReturnPartialDeck(err, first.length, maxCards)) {
-          return first;
-        }
-        throw err;
+        console.warn('[deck-gen] remainder fill failed; keeping salvaged', {
+          have: cards.length,
+          remaining,
+        });
+        return cards;
       }
-      return [...first, ...second].slice(0, maxCards);
     }
 
-    if (isMaxTokensFinish(llmResult.finishReason) && !canSplitBatch(passCtx)) {
-      console.warn('[deck-gen] MAX_TOKENS; split depth exhausted; parsing truncated JSON', {
+    if (isMaxTokensFinish(llmResult.finishReason) && cards.length === 0) {
+      console.warn('[deck-gen] MAX_TOKENS; no salvaged cards', {
         batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
         need: maxCards,
         splitDepth: passCtx.splitDepth,
@@ -517,8 +521,14 @@ ${promptText}${truncationNotice}${excludeNotice}
       });
     }
 
-    const responseText = llmResult.text;
+    return cards;
+  }
 
+  private parseValidCards(
+    responseText: string,
+    maxCards: number,
+    passCtx: PassContext
+  ): Array<{ question: string; answer: string }> {
     const parsedRaw = parseFlashcardJsonArray(responseText);
     if (!parsedRaw) {
       console.error('[deck-gen] failed to parse LLM output', {
