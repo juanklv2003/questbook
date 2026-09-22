@@ -22,7 +22,8 @@ QuestBook is an AI-powered flashcard generation and study application. It allows
 - Frontend: `VITE_API_URL` es obligatoria en builds de producción (guard en `frontend/vite.config.ts`);
   `frontend/vercel.json` define cache inmutable de `/assets/*` y headers de seguridad.
 - API: `helmet`, CORS con allowlist (`FRONTEND_URL` + `CORS_ORIGINS`), body limit de 1 MB, 404 en JSON,
-  `keepAliveTimeout`/`headersTimeout` en 120 s/125 s y cierre ordenado ante `SIGTERM`.
+  `keepAliveTimeout`/`headersTimeout` en 480 s/485 s (`src/server.ts`, para generaciones de IA de varios
+  minutos) y cierre ordenado ante `SIGTERM`.
 - Bundle: vendor separado por `manualChunks` (react / motion / icons) para que el chunk de la app
   (≈48 KB gzip) se invalide solo cuando cambia código propio.
 - Checklist y pasos: [`DEPLOYMENT.md`](./DEPLOYMENT.md).
@@ -151,7 +152,7 @@ The API is served at `/api/v1`.
 ### Decks (`/api/v1/decks`)
 - Guard order: every protected deck route checks authentication **before** validating params/body — unauthenticated callers get `401` even when the id or body is also malformed. Every `:id` / `:deckId` is validated as UUID (`400 { error }` when malformed).
 - `GET /`: Lists all decks, ordered by creation date descending. Returns an array of decks including a computed `flashcardsCount` and persisted `progressPercent` (null = no evaluations yet).
-- `POST /generate`: Uploads a PDF or text to generate a new deck. Expects `multipart/form-data` with `file` (optional) and `name` (required). If a `file` is provided, its text is extracted with `pdf-parse` (`PdfTextExtractor`) before being sent to Gemini AI to extract flashcards. To keep requests responsive, the text is truncated to the first 40,000 characters and the AI is limited to 15 flashcards per deck; the Gemini call has a 60s timeout. Returns the new deck info.
+- `POST /generate`: Uploads a PDF or text to generate a new deck. Expects `multipart/form-data` with `file` (optional) and `name` (required). If a `file` is provided, its text is extracted with `pdf-parse` (`PdfTextExtractor`) before batched calls to Gemini (`GeminiFlashcardGenerator`). Source text is capped (`PDF_MAX_TEXT_CHARS` / `DECK_PRACTICAL_TEXT_CAP`). Each batch sets Gemini `maxOutputTokens` from `deckBatchMaxOutputTokens` (difficulty-aware). Wall-clock budget uses `estimateDeckGenerationBudgetMs` capped by `AI_DECK_TOTAL_TIMEOUT_MS`; each call gets the remaining budget minus `DECK_GENERATION_BATCH_RESERVE_MS` per queued batch, capped at `AI_DECK_TIMEOUT_MS` and never more than the time left. `worstCaseLlmCallsPerBatch` is logged only as a worst-case label — using it to shrink per-call timeouts starves real calls (a 20-card batch needs 35-60 s, measured on 2026-09-18). Logs under `[deck-gen]` include `finishReason` and token usage. A prompt blocked by Gemini (`promptFeedback.blockReason`) returns `502 { code: 'AI_CONTENT_BLOCKED' }`. Fallback model chain lives in `core/ai/geminiModels.ts` and only lists models verified live against the API (2.0/1.5 flash are shut down). On late-batch failure, partial decks above ~60% of the requested count (min 8 cards) may still be persisted (502/504/422 and 503 overload — not 429 quota). `GET /api/v1/health` exposes `ai.deckGeneration*TimeoutMs`; Node `requestTimeout`/keep-alive match `AI_DECK_TOTAL_TIMEOUT_MS`. Diagnostic script: `npm run diagnose:deck-gen -- <pdf>` (backend).
 - `GET /:deckId/flashcards`: Retrieves all flashcards associated with a specific `deckId`.
 - `DELETE /:id`: Deletes a specific deck. Uses DB cascades to remove associated flashcards and removes the source file from Cloudinary (via `ICloudStoragePort`).
 - `GET /:id/session`: Returns the resumable study session `{ session: { userId, deckId, currentIndex, results, flashcardsHash, finished, createdAt, updatedAt } }`. 404 = deck not found OR no session yet. 403 = not the owner.
@@ -163,6 +164,7 @@ The API is served at `/api/v1`.
 ## 6. App AI & UX Guidelines
 
 ### AI Prompt Constraints (Gemini)
+- **Deck batches**: JSON mode with explicit `maxOutputTokens`; if Gemini returns `MAX_TOKENS`, the batch is split and retried at half size instead of parsing truncated JSON.
 - **Strict Spanish Output**: All generated flashcards, feedback, and AI interactions MUST be strictly in Spanish.
 - **Zero Hallucination Policy (0%)**: The AI must extract information strictly from the provided context (e.g., uploaded PDFs) and must not invent or hallucinate outside information.
 
