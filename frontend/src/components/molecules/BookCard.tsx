@@ -76,10 +76,10 @@ function getAccentForDeck(name: string): "primary" | "violet" | "emerald" | "amb
   return accents[Math.abs(hash) % accents.length];
 }
 
-// Deterministic height based on deck name (compact on mobile so the tallest
-// book + bookmark still fit the 152px mobile shelf; full size from sm up).
+// Deterministic height based on deck name. Mobile shelf is 152px tall: books
+// should read as real volumes, not thin chips (old h-24 left half the shelf empty).
 function getHeightForDeck(name: string): string {
-  const heights = ["h-24 sm:h-28", "h-24 sm:h-32", "h-28 sm:h-36", "h-28 sm:h-40", "h-32 sm:h-44"];
+  const heights = ["h-32 sm:h-40", "h-32 sm:h-44", "h-36 sm:h-44", "h-36 sm:h-48", "h-40 sm:h-52"];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -87,15 +87,22 @@ function getHeightForDeck(name: string): string {
   return heights[Math.abs(hash) % heights.length];
 }
 
-// Width based on flashcardsCount (more cards = wider).
-// One step narrower on mobile so a full shelf fits ~360px; full width from sm up.
+/** Normaliza el conteo (API a veces manda string; libro nuevo optimista puede venir en 0). */
+function effectiveCardCount(count: number): number {
+  const n = typeof count === "number" ? count : Number(count);
+  if (Number.isFinite(n) && n > 0) return n;
+  return 12;
+}
+
+// Width from card count (more cards = slightly wider). Minimum spine is readable on mobile.
 function getWidthForCards(count: number): string {
-  if (count <= 5) return "w-6 sm:w-7";
-  if (count <= 10) return "w-7 sm:w-9";
-  if (count <= 15) return "w-8 sm:w-10";
-  if (count <= 20) return "w-8 sm:w-11";
-  if (count <= 30) return "w-9 sm:w-12";
-  return "w-10 sm:w-14";
+  const n = effectiveCardCount(count);
+  if (n <= 5) return "w-10 sm:w-12";
+  if (n <= 10) return "w-11 sm:w-14";
+  if (n <= 15) return "w-12 sm:w-14";
+  if (n <= 20) return "w-12 sm:w-16";
+  if (n <= 30) return "w-14 sm:w-16";
+  return "w-14 sm:w-20";
 }
 
 export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSourceNames, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal, shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight }: BookCardProps) {

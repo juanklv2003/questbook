@@ -128,7 +128,11 @@ export function DeckDashboardContainer({
                 key={deck.id}
                 deckId={deck.id}
                 name={deckTitle(deck)}
-                flashcardsCount={deck.flashcardsCount || (deck as DeckLike).cardCount || 0}
+                flashcardsCount={
+                  Number(deck.flashcardsCount) ||
+                  Number((deck as DeckLike).cardCount) ||
+                  0
+                }
                 progressPercent={deck.progressPercent ?? null}
                 pdfSourceNames={deck.pdfSourceNames ?? deck.pdf_source_names ?? undefined}
                 accentColor={deckAccent(deck)}
