@@ -8,6 +8,7 @@ import { UpdateDeckShelfUseCase } from '../useCases/UpdateDeckShelfUseCase';
 import { GetStudySessionUseCase } from '../useCases/GetStudySessionUseCase';
 import { SaveStudySessionUseCase } from '../useCases/SaveStudySessionUseCase';
 import { DeleteStudySessionUseCase } from '../useCases/DeleteStudySessionUseCase';
+import { RecordStudyProgressUseCase } from '../useCases/RecordStudyProgressUseCase';
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
@@ -36,6 +37,10 @@ const sessionBodySchema = z.object({
   finished: z.boolean().optional(),
 });
 
+const studyProgressBodySchema = z.object({
+  isCorrect: z.boolean(),
+});
+
 export class DeckController {
   constructor(
     private readonly generateDeckUseCase: GenerateDeckUseCase,
@@ -46,6 +51,7 @@ export class DeckController {
     private readonly getStudySessionUseCase: GetStudySessionUseCase,
     private readonly saveStudySessionUseCase: SaveStudySessionUseCase,
     private readonly deleteStudySessionUseCase: DeleteStudySessionUseCase,
+    private readonly recordStudyProgressUseCase: RecordStudyProgressUseCase,
     private readonly cloudStorage: ICloudStoragePort,
     private readonly tokenService: ITokenServicePort
   ) {
@@ -59,6 +65,7 @@ export class DeckController {
     this.getSession = catchAsync(this.getSession.bind(this));
     this.saveSession = catchAsync(this.saveSession.bind(this));
     this.deleteSession = catchAsync(this.deleteSession.bind(this));
+    this.recordStudyProgress = catchAsync(this.recordStudyProgress.bind(this));
   }
 
   async getPdfUploadParams(req: Request, res: Response) {
@@ -335,6 +342,17 @@ export class DeckController {
     // Explicit user action only. Finishing a session never deletes the row.
     await this.deleteStudySessionUseCase.execute(deckId, userId);
     res.status(204).send();
+  }
+
+  async recordStudyProgress(req: Request, res: Response) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(401, 'Unauthorized');
+    }
+    const deckId = parseBody(deckIdSchema, req.params.id ?? '');
+    const body = parseBody(studyProgressBodySchema, req.body ?? {});
+    const result = await this.recordStudyProgressUseCase.execute(deckId, userId, body.isCorrect);
+    res.status(200).json(result);
   }
 }
 

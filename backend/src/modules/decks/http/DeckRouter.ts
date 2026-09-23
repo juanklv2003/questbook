@@ -7,6 +7,7 @@ import { UpdateDeckShelfUseCase } from '../useCases/UpdateDeckShelfUseCase';
 import { GetStudySessionUseCase } from '../useCases/GetStudySessionUseCase';
 import { SaveStudySessionUseCase } from '../useCases/SaveStudySessionUseCase';
 import { DeleteStudySessionUseCase } from '../useCases/DeleteStudySessionUseCase';
+import { RecordStudyProgressUseCase } from '../useCases/RecordStudyProgressUseCase';
 import { PostgresStudySessionRepository } from '../infra/PostgresStudySessionRepository';
 import { PostgresDeckRepository } from '../infra/PostgresDeckRepository';
 import { GeminiFlashcardGenerator } from '../infra/GeminiFlashcardGenerator';
@@ -38,6 +39,7 @@ const sessionRepo = new PostgresStudySessionRepository(db);
 const getStudySessionUseCase = new GetStudySessionUseCase(deckRepo, sessionRepo);
 const saveStudySessionUseCase = new SaveStudySessionUseCase(deckRepo, sessionRepo);
 const deleteStudySessionUseCase = new DeleteStudySessionUseCase(deckRepo, sessionRepo);
+const recordStudyProgressUseCase = new RecordStudyProgressUseCase(deckRepo);
 
 // 3. Inject into Controller
 const deckController = new DeckController(
@@ -49,6 +51,7 @@ const deckController = new DeckController(
   getStudySessionUseCase,
   saveStudySessionUseCase,
   deleteStudySessionUseCase,
+  recordStudyProgressUseCase,
   cloudStorage,
   tokenService
 );
@@ -66,6 +69,7 @@ deckRouter.patch('/:id/shelf', deckController.updateShelf);
 deckRouter.get('/:id/session', deckController.getSession);
 deckRouter.patch('/:id/session', deckController.saveSession);
 deckRouter.delete('/:id/session', deckController.deleteSession);
+deckRouter.post('/:id/study-progress', deckController.recordStudyProgress);
 deckRouter.delete('/:id', deckController.deleteDeck);
 
 export { deckRouter };
