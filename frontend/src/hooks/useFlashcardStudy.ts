@@ -470,13 +470,16 @@ export function useFlashcardStudy(
 
   /** New random card order anytime; keeps per-card results and session progress. */
   const reshuffleDeck = useCallback(() => {
-    if (tarjetas.length === 0) return;
-    setColaDeEstudio((prev) => {
-      const base = prev.length > 0 ? prev : orderedTarjetas.map((t) => t.id);
-      return initStudyQueue(base, true);
-    });
+    if (orderedTarjetas.length === 0) return;
+    const allIds = orderedTarjetas.map((t) => t.id);
+    const sessionDone = colaDeEstudio.length === 0;
+    const pendingSet = new Set(sessionDone ? allIds : colaDeEstudio);
+    const shuffledAll = initStudyQueue(allIds, true);
+    setOrder(shuffledAll);
+    setColaDeEstudio(shuffledAll.filter((id) => pendingSet.has(id)));
+    setQueueReady(true);
     resetCardInput();
-  }, [tarjetas.length, orderedTarjetas, resetCardInput]);
+  }, [orderedTarjetas, colaDeEstudio, resetCardInput]);
 
   const evaluar = async () => {
     if (!tarjetaActual) return;
