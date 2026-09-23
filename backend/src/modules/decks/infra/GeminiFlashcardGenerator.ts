@@ -1,6 +1,5 @@
 import { IFlashcardGeneratorPort, GenerateOptions } from '../domain/IFlashcardGeneratorPort';
 import {
-  DECK_PRACTICAL_TEXT_CAP,
   DECK_GENERATION_BATCH_RESERVE_MS,
   DECK_GENERATION_MAX_SPLIT_DEPTH,
   deckBatchLimitFor,
@@ -257,7 +256,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     passCtx: PassContext
   ): Promise<Array<{ question: string; answer: string }>> {
     const difficulty = options?.difficulty ?? 'medium';
-    const textCap = Math.min(this.maxTextChars, DECK_PRACTICAL_TEXT_CAP);
+    const textCap = this.maxTextChars;
 
     let truncated = false;
     let promptText = text;

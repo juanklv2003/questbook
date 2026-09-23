@@ -1,10 +1,5 @@
 import { env } from '../../../config/env';
 
-/**
- * Max source characters sent to deck-generation prompts (Gemini; Groq ITPM cannot handle more).
- */
-export const DECK_PRACTICAL_TEXT_CAP = 32_000;
-
 export type DeckDifficulty = 'easy' | 'medium' | 'hard';
 
 /**
@@ -27,8 +22,9 @@ export const DECK_GENERATION_BATCH_RESERVE_MS = 45_000;
  */
 export const DECK_GENERATION_MAX_SPLIT_DEPTH = 1;
 
+/** Same cap as `PDF_MAX_TEXT_CHARS` (default 500_000). Exposed for upload UI + multi-PDF merge. */
 export function deckSourceTextCap(): number {
-  return Math.min(env.PDF_MAX_TEXT_CHARS, DECK_PRACTICAL_TEXT_CAP);
+  return env.PDF_MAX_TEXT_CHARS;
 }
 
 export function capDeckSourceText(text: string): string {
