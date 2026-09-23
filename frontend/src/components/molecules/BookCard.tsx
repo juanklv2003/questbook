@@ -76,10 +76,10 @@ function getAccentForDeck(name: string): "primary" | "violet" | "emerald" | "amb
   return accents[Math.abs(hash) % accents.length];
 }
 
-// Altura del lomo: más alto en móvil (h-24 dejaba el libro “enano” en baldas de 152px).
-// El ancho sigue ligado al nº de tarjetas; solo subimos la altura.
+// Altura del lomo: en móvil la balda mide 152px y el bookmark sobresale ~28px arriba del
+// lomo → el lomo no puede pasar de ~h-28 (112px). En sm la balda ~180px → tope ~h-36.
 function getHeightForDeck(name: string): string {
-  const heights = ["h-28 sm:h-32", "h-28 sm:h-36", "h-32 sm:h-40", "h-32 sm:h-44", "h-36 sm:h-48"];
+  const heights = ["h-28 sm:h-32", "h-28 sm:h-32", "h-28 sm:h-36", "h-28 sm:h-36", "h-28 sm:h-36"];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
