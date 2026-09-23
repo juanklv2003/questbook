@@ -200,7 +200,6 @@ export const en: { [K in keyof typeof es]: string } = {
   "card.noAnswer": "Answer not available",
   "card.backToQuestion": "Click to go back to the question",
 
-  "eval.score": "Score: {score}%",
   "eval.correct": "Correct",
   "eval.needsReview": "Needs Review",
 

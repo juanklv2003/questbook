@@ -23,7 +23,6 @@ export interface Flashcard {
 
 export interface EvaluationResult {
   isCorrect: boolean;
-  score: number;
   feedback: string;
   /** Deck this evaluation counted towards (persisted progress). */
   deckId?: string;

@@ -38,8 +38,6 @@ export class EvaluateAnswerUseCase {
       dto.userAnswer
     );
 
-    // La corrección final SIEMPRE se decide en el servidor: el score es el único
-    // dato de confianza; el booleano del modelo se re-deriva (score >= 70).
     const result = normalizeEvaluation(raw);
 
     // Progreso acumulado por deck (estudiadas+1, correctas+0/1).
@@ -52,25 +50,29 @@ export class EvaluateAnswerUseCase {
   }
 }
 
+function parseBoolean(raw: unknown): boolean {
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'string') {
+    const s = raw.trim().toLowerCase();
+    if (s === 'true' || s === '1' || s === 'yes' || s === 'sí' || s === 'si') return true;
+    if (s === 'false' || s === '0' || s === 'no') return false;
+  }
+  return false;
+}
+
 /**
  * Sanitiza la evaluación devuelta por el LLM:
- * - `score`: entero acotado a [0, 100] (tolera strings y NaN).
- * - `isCorrect`: SIEMPRE derivado del score (>= 70), nunca del booleano del modelo.
+ * - `isCorrect`: booleano normalizado en el servidor.
  * - `feedback`: string no vacío garantizado.
  */
-export function normalizeEvaluation(raw: { score?: unknown; isCorrect?: unknown; feedback?: unknown }): {
-  score: number;
+export function normalizeEvaluation(raw: { isCorrect?: unknown; feedback?: unknown }): {
   isCorrect: boolean;
   feedback: string;
 } {
-  const parsedScore = Number(raw?.score);
-  const score = Number.isFinite(parsedScore)
-    ? Math.round(Math.min(100, Math.max(0, parsedScore)))
-    : 0;
-  const isCorrect = score >= 70;
+  const isCorrect = parseBoolean(raw?.isCorrect);
   const feedback =
     typeof raw?.feedback === 'string' && raw.feedback.trim()
       ? raw.feedback.trim()
       : 'Sin comentarios adicionales.';
-  return { score, isCorrect, feedback };
+  return { isCorrect, feedback };
 }

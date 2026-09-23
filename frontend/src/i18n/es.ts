@@ -199,7 +199,6 @@ export const es = {
   "card.noAnswer": "Respuesta no disponible",
   "card.backToQuestion": "Haz clic para volver a la pregunta",
 
-  "eval.score": "Puntuación: {score}%",
   "eval.correct": "Correcto",
   "eval.needsReview": "Necesita Repaso",
 

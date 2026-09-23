@@ -238,7 +238,6 @@ export function StudyPlayer({
             ) : (
               <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4">
                 <EvaluationResult
-                  score={evaluation.score}
                   feedback={evaluation.feedback}
                   isCorrect={evaluation.isCorrect}
                 />
