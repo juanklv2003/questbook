@@ -68,6 +68,11 @@ async function initDb() {
     `;
     console.log("Ensured columns: decks.color");
 
+    await sql`
+      ALTER TABLE decks ADD COLUMN IF NOT EXISTS pdf_source_names JSONB;
+    `;
+    console.log("Ensured columns: decks.pdf_source_names");
+
     // Flashcards table
     await sql`
       CREATE TABLE IF NOT EXISTS flashcards (

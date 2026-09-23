@@ -19,6 +19,7 @@ interface GenerateDeckDTO {
   shelfIndex?: number;
   color?: string;
   language?: 'en' | 'es';
+  pdfSourceNames?: string[];
 }
 
 export class GenerateDeckUseCase {
@@ -74,6 +75,7 @@ export class GenerateDeckUseCase {
         folderId: dto.folderId,
         pdfUrl,
         pdfPublicId,
+        pdfSourceNames: dto.pdfSourceNames,
         shelfIndex: dto.shelfIndex ?? 0,
         position: 0,
         color: dto.color ?? 'primary',
@@ -93,6 +95,7 @@ export class GenerateDeckUseCase {
         name: deck.name,
         color: deck.color ?? 'primary',
         flashcardsCount: flashcards.length,
+        pdfSourceNames: deck.pdfSourceNames ?? dto.pdfSourceNames ?? [],
       };
     } catch (error) {
       // Compensación: si algo falla tras subir el PDF a Cloudinary (INSERT del

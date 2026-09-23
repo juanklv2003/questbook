@@ -49,10 +49,14 @@ export class PostgresDeckRepository implements IDeckRepository {
         SET position = position + 1, updated_at = NOW()
         WHERE user_id = $1 AND COALESCE(shelf_index, 0) = $2
       )
-      INSERT INTO decks (name, user_id, folder_id, pdf_url, pdf_public_id, shelf_index, position, color)
-      VALUES ($3, $1, $4, $5, $6, $2, $7, $8)
-      RETURNING id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", color, created_at AS "createdAt", updated_at AS "updatedAt"
+      INSERT INTO decks (name, user_id, folder_id, pdf_url, pdf_public_id, shelf_index, position, color, pdf_source_names)
+      VALUES ($3, $1, $4, $5, $6, $2, $7, $8, $9::jsonb)
+      RETURNING id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", pdf_source_names AS "pdfSourceNames", shelf_index AS "shelfIndex", position AS "position", color, created_at AS "createdAt", updated_at AS "updatedAt"
     `;
+    const pdfSourceNames =
+      deck.pdfSourceNames && deck.pdfSourceNames.length > 0
+        ? JSON.stringify(deck.pdfSourceNames)
+        : null;
     const values = [
       deck.userId,
       shelfIndex,
@@ -62,6 +66,7 @@ export class PostgresDeckRepository implements IDeckRepository {
       deck.pdfPublicId || null,
       position,
       deck.color ?? 'primary',
+      pdfSourceNames,
     ];
 
     const result = await this.db.query<Deck>(query, values);
@@ -70,7 +75,7 @@ export class PostgresDeckRepository implements IDeckRepository {
 
   async findById(id: string): Promise<Deck | null> {
     const query = `
-      SELECT id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", shelf_index AS "shelfIndex", position AS "position", color, studied_count AS "studiedCount", correct_count AS "correctCount", ${PostgresDeckRepository.progressFor('decks')}, created_at AS "createdAt", updated_at AS "updatedAt"
+      SELECT id, name, user_id AS "userId", folder_id AS "folderId", pdf_url AS "pdfUrl", pdf_public_id AS "pdfPublicId", pdf_source_names AS "pdfSourceNames", shelf_index AS "shelfIndex", position AS "position", color, studied_count AS "studiedCount", correct_count AS "correctCount", ${PostgresDeckRepository.progressFor('decks')}, created_at AS "createdAt", updated_at AS "updatedAt"
       FROM decks
       WHERE id = $1
     `;
@@ -87,6 +92,7 @@ export class PostgresDeckRepository implements IDeckRepository {
         d.folder_id AS "folderId",
         d.pdf_url AS "pdfUrl",
         d.pdf_public_id AS "pdfPublicId",
+        d.pdf_source_names AS "pdfSourceNames",
         d.shelf_index AS "shelfIndex",
         d.position AS "position",
         d.color,

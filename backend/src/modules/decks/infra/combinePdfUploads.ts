@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import type { Express } from 'express';
 import { capDeckSourceText, deckSourceTextCap } from '../domain/deckGenerationLimits';
+import { sanitizePdfDisplayName } from '../domain/deckPdfSourceNames';
 import { cloudinaryAttachmentMaxBytes } from '../../../config/uploadLimits';
 import {
   deleteUploadedPdfFile,
@@ -24,6 +25,8 @@ export interface CombinedPdfText {
   totalCharacters: number;
   /** PDFs que quedaron fuera del tope: su texto no se usa, así que no se parsean. */
   skippedFiles: number;
+  /** Nombres de archivo de los PDFs cuyo texto entró en el libro (en orden). */
+  sourceFileNames: string[];
   firstPdfBuffer?: Buffer;
   firstPdfName?: string;
 }
@@ -59,6 +62,7 @@ async function extractOne(file: UploadedFile, maxChars: number): Promise<Extract
 export async function combinePdfUploads(files: UploadedFile[]): Promise<CombinedPdfText> {
   const cap = deckSourceTextCap();
   const parts: string[] = [];
+  const sourceFileNames: string[] = [];
   let used = 0;
   let totalCharacters = 0;
   let skippedFiles = 0;
@@ -79,6 +83,7 @@ export async function combinePdfUploads(files: UploadedFile[]): Promise<Combined
       if (!extracted.text) continue;
 
       parts.push(extracted.text);
+      sourceFileNames.push(sanitizePdfDisplayName(file.originalname));
       used += extracted.text.length + separatorChars;
 
       // Sólo el primer PDF chico se archiva en Cloudinary (y recién después de
@@ -106,6 +111,7 @@ export async function combinePdfUploads(files: UploadedFile[]): Promise<Combined
     content: capDeckSourceText(joined),
     totalCharacters,
     skippedFiles,
+    sourceFileNames,
     firstPdfBuffer,
     firstPdfName,
   };

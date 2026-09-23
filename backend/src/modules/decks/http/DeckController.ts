@@ -16,6 +16,7 @@ import { extractPdfTextFromBuffer } from '../infra/PdfTextExtractor';
 import { capDeckSourceText, deckSourceTextCap } from '../domain/deckGenerationLimits';
 import { cloudinaryAttachmentMaxBytes } from '../../../config/uploadLimits';
 import { combinePdfUploads, measurePdfCharacters } from '../infra/combinePdfUploads';
+import { parsePdfSourceNamesField } from '../domain/deckPdfSourceNames';
 import { fetchPdfBufferForDeck } from '../infra/fetchCloudinaryPdf';
 import type { ICloudStoragePort } from '../domain/ICloudStoragePort';
 import type { ITokenServicePort } from '../../auth/domain/ITokenServicePort';
@@ -114,8 +115,21 @@ export class DeckController {
   }
 
   async generate(req: Request, res: Response) {
-    const { name, folderId, content: reqContent, cardCount, difficulty, shelf_index, shelfIndex, color, language, pdfUrl, pdfPublicId } =
-      req.body;
+    const {
+      name,
+      folderId,
+      content: reqContent,
+      cardCount,
+      difficulty,
+      shelf_index,
+      shelfIndex,
+      color,
+      language,
+      pdfUrl,
+      pdfPublicId,
+      pdf_source_names,
+    } = req.body;
+    const pdfSourceNamesFromBody = parsePdfSourceNamesField(pdf_source_names);
     let content = reqContent;
     let uploadedPdfUrl: string | undefined;
     let uploadedPdfPublicId: string | undefined;
@@ -178,6 +192,10 @@ export class DeckController {
         content,
         fileBuffer: storePdfOnCloudinary ? pdfBuffer : undefined,
         fileName: combined.firstPdfName ?? uploadedPdfs[0]?.originalname,
+        pdfSourceNames:
+          combined.sourceFileNames.length > 0
+            ? combined.sourceFileNames
+            : pdfSourceNamesFromBody,
         cardCount: parsedCardCountEarly,
         difficulty: parsedDifficultyEarly as 'easy' | 'medium' | 'hard' | undefined,
         shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),
@@ -230,6 +248,7 @@ export class DeckController {
       content,
       pdfUrl: uploadedPdfUrl,
       pdfPublicId: uploadedPdfPublicId,
+      pdfSourceNames: pdfSourceNamesFromBody,
       cardCount: parsedCardCount,
       difficulty: parsedDifficulty as 'easy' | 'medium' | 'hard' | undefined,
       shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),

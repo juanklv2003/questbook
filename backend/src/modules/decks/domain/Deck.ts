@@ -8,6 +8,8 @@ export interface Deck {
   flashcardsCount?: number;
   pdfUrl?: string;
   pdfPublicId?: string;
+  /** Original PDF filenames used to build this book (multi-PDF merge order). */
+  pdfSourceNames?: string[] | null;
   /** 0-based shelf (balda) where the book sits. Null = legacy deck, treated as shelf 0. */
   shelfIndex?: number | null;
   /** 0-based order within the shelf (left to right). Null = legacy deck, keeps incoming order. */
