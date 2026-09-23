@@ -6,7 +6,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-import { extractTextFromPdfPath } from '../modules/decks/infra/PdfTextExtractor';
+import { extractPdfTextFromPath } from '../modules/decks/infra/PdfTextExtractor';
 import { capDeckSourceText } from '../modules/decks/domain/deckGenerationLimits';
 import { GeminiFlashcardGenerator } from '../modules/decks/infra/GeminiFlashcardGenerator';
 
@@ -57,10 +57,10 @@ async function main(): Promise<void> {
   }
 
   console.info('[diagnose-deck-gen] extracting PDF', { pdfPath });
-  const rawText = await extractTextFromPdfPath(pdfPath);
-  const text = capDeckSourceText(rawText);
+  const extracted = await extractPdfTextFromPath(pdfPath);
+  const text = capDeckSourceText(extracted.text);
   console.info('[diagnose-deck-gen] text ready', {
-    rawChars: rawText.length,
+    rawChars: extracted.totalCharacters,
     cappedChars: text.length,
   });
 

@@ -12,8 +12,9 @@ import { RecordStudyProgressUseCase } from '../useCases/RecordStudyProgressUseCa
 import { catchAsync } from '../../../core/middlewares/catchAsync';
 import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
-import { extractTextFromPdf } from '../infra/PdfTextExtractor';
+import { extractPdfTextFromBuffer } from '../infra/PdfTextExtractor';
 import { capDeckSourceText, deckSourceTextCap } from '../domain/deckGenerationLimits';
+import { cloudinaryAttachmentMaxBytes } from '../../../config/uploadLimits';
 import { combinePdfUploads, measurePdfCharacters } from '../infra/combinePdfUploads';
 import { fetchPdfBufferForDeck } from '../infra/fetchCloudinaryPdf';
 import type { ICloudStoragePort } from '../domain/ICloudStoragePort';
@@ -132,11 +133,15 @@ export class DeckController {
     if (uploadedPdfs.length > 0) {
       const combined = await combinePdfUploads(uploadedPdfs);
       content = combined.content;
+      console.info('[deck-gen] pdf uploads combined', {
+        files: uploadedPdfs.length,
+        skippedFiles: combined.skippedFiles,
+        contentChars: combined.content.length,
+        totalCharacters: combined.totalCharacters,
+        cap: deckSourceTextCap(),
+      });
 
-      const cloudinaryStoreMaxBytes = Math.min(
-        env.CLOUDINARY_MAX_PDF_BYTES,
-        7 * 1024 * 1024
-      );
+      const cloudinaryStoreMaxBytes = cloudinaryAttachmentMaxBytes();
       let pdfBuffer: Buffer | undefined;
       let storePdfOnCloudinary = false;
       if (
@@ -184,8 +189,13 @@ export class DeckController {
       return;
     } else if (typeof pdfUrl === 'string' && typeof pdfPublicId === 'string' && pdfUrl.trim() && pdfPublicId.trim()) {
       const buffer = await fetchPdfBufferForDeck(pdfPublicId.trim(), pdfUrl.trim());
-      content = await extractTextFromPdf(buffer);
-      content = capDeckSourceText(content);
+      const extracted = await extractPdfTextFromBuffer(buffer);
+      content = capDeckSourceText(extracted.text);
+      console.info('[deck-gen] cloudinary pdf extracted', {
+        contentChars: content.length,
+        totalCharacters: extracted.totalCharacters,
+        cap: deckSourceTextCap(),
+      });
       uploadedPdfUrl = pdfUrl.trim();
       uploadedPdfPublicId = pdfPublicId.trim();
     }
