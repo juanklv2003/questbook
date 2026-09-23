@@ -12,12 +12,18 @@ export type DirectUploadTokenResponse = {
 export async function generateDeckViaDirectUpload(
   uploadUrl: string,
   token: string,
-  file: File,
+  files: File[],
   options: DeckGenerationOptions,
   onProgress?: (percent: number) => void
 ) {
   const formData = new FormData();
-  formData.append('file', file);
+  if (files.length === 1) {
+    formData.append('file', files[0]);
+  } else {
+    for (const f of files) {
+      formData.append('files', f);
+    }
+  }
   formData.append('name', options.name);
   formData.append('cardCount', String(options.cardCount));
   formData.append('difficulty', options.difficulty);
@@ -26,7 +32,12 @@ export async function generateDeckViaDirectUpload(
   formData.append('shelf_index', '0');
 
   const cards = options.cardCount ?? 15;
-  const timeoutMs = directDeckUploadTimeoutMs(file, cards, options.difficulty);
+  const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+  const timeoutMs = directDeckUploadTimeoutMs(
+    { size: totalBytes, name: files[0]?.name ?? 'upload.pdf' } as File,
+    cards,
+    options.difficulty
+  );
 
   const response = await axios.post(uploadUrl, formData, {
     headers: { Authorization: `Bearer ${token}` },

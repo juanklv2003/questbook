@@ -9,12 +9,14 @@ const DEFAULT_CLOUDINARY_MAX_BYTES = 10 * 1024 * 1024;
 
 let maxPdfBytes = DEFAULT_MAX_PDF_BYTES;
 let cloudinaryMaxPdfBytes = DEFAULT_CLOUDINARY_MAX_BYTES;
+let deckSourceTextCap = 32_000;
 let directUploadUrl: string | undefined;
 let loaded = false;
 
 type HealthUpload = {
   maxPdfBytes?: number;
   maxPdfMb?: number;
+  deckSourceTextCap?: number;
   cloudinaryMaxPdfBytes?: number;
   cloudinaryMaxPdfMb?: number;
   directUploadBaseUrl?: string;
@@ -31,6 +33,9 @@ export async function loadUploadLimits(): Promise<number> {
     const { data } = await apiClient.get<{ upload?: HealthUpload; ai?: HealthAi }>('/health');
     if (typeof data.upload?.maxPdfBytes === 'number' && data.upload.maxPdfBytes > 0) {
       maxPdfBytes = data.upload.maxPdfBytes;
+    }
+    if (typeof data.upload?.deckSourceTextCap === 'number' && data.upload.deckSourceTextCap > 0) {
+      deckSourceTextCap = data.upload.deckSourceTextCap;
     }
     if (typeof data.upload?.cloudinaryMaxPdfBytes === 'number' && data.upload.cloudinaryMaxPdfBytes > 0) {
       cloudinaryMaxPdfBytes = data.upload.cloudinaryMaxPdfBytes;
@@ -69,4 +74,14 @@ export function formatMaxPdfMb(): number {
 
 export function formatCloudinaryMaxPdfMb(): number {
   return Math.round(cloudinaryMaxPdfBytes / (1024 * 1024));
+}
+
+export function getDeckSourceTextCap(): number {
+  return deckSourceTextCap;
+}
+
+export function formatCharCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `${Math.round(n / 1000)}k`;
+  return n.toLocaleString();
 }

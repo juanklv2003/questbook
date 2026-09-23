@@ -34,7 +34,10 @@ export function useDeckGenerator() {
     setOverloaded(null);
   };
 
-  const generateDeckFromPdf = async (file: File, options: DeckGenerationOptions) => {
+  const generateDeckFromPdfs = async (files: File[], options: DeckGenerationOptions): Promise<GenerateDeckResult> => {
+    if (files.length === 0) {
+      throw new Error('no_files');
+    }
     setIsGenerating(true);
     setIsAiProcessing(false);
     setProgress(0);
@@ -45,10 +48,12 @@ export function useDeckGenerator() {
     try {
       await loadUploadLimits();
       const maxBytes = getMaxPdfBytes();
-      if (file.size > maxBytes) {
-        const msg = t('gen.fileTooLarge', { maxMb: String(formatMaxPdfMb()) });
-        setError(msg);
-        throw new Error(msg);
+      for (const file of files) {
+        if (file.size > maxBytes) {
+          const msg = t('gen.fileTooLarge', { maxMb: String(formatMaxPdfMb()) });
+          setError(msg);
+          throw new Error(msg);
+        }
       }
 
       const runDirectUpload = async (): Promise<GenerateDeckResult> => {
@@ -66,7 +71,7 @@ export function useDeckGenerator() {
         const result = await generateDeckViaDirectUpload(
           uploadUrl,
           tokenRes.data.token,
-          file,
+          files,
           options,
           (pct) => {
             setProgress(10 + Math.round(pct * 0.45));
@@ -126,5 +131,5 @@ export function useDeckGenerator() {
     }
   };
 
-  return { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error, quotaExceeded, overloaded, clearError };
+  return { generateDeckFromPdfs, isGenerating, isAiProcessing, progress, error, quotaExceeded, overloaded, clearError };
 }

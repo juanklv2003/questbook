@@ -37,7 +37,7 @@ export function DeckDashboardContainer({
 }) {
   const { t } = useLanguage();
   const { decks, isLoading, setDecks } = useDecks();
-  const { generateDeckFromPdf, isGenerating, isAiProcessing, progress, error, quotaExceeded, overloaded, clearError } = useDeckGenerator();
+  const { generateDeckFromPdfs, isGenerating, isAiProcessing, progress, error, quotaExceeded, overloaded, clearError } = useDeckGenerator();
   // Quota (429) wins when both are set; otherwise show the saturation (503) notice.
   const activeNotice = quotaExceeded ?? overloaded;
   const activeVariant = quotaExceeded ? "quota" as const : "overloaded" as const;
@@ -70,9 +70,9 @@ export function DeckDashboardContainer({
     [shelves]
   );
 
-  const handleUpload = async (file: File, options: DeckGenerationOptions) => {
+  const handleUpload = async (files: File[], options: DeckGenerationOptions) => {
     try {
-      const result = await generateDeckFromPdf(file, options);
+      const result = await generateDeckFromPdfs(files, options);
       // Optimistic addition: new books land first on shelf 0 (matches backend bump).
       setDecks(prev => [{
         id: result.deckId,
