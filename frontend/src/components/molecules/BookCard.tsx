@@ -76,22 +76,21 @@ function getAccentForDeck(name: string): "primary" | "violet" | "emerald" | "amb
   return accents[Math.abs(hash) % accents.length];
 }
 
-// Altura del lomo: en móvil la balda mide 152px y el bookmark sobresale ~28px arriba del
-// lomo → el lomo no puede pasar de ~h-28 (112px). En sm la balda ~180px → tope ~h-36.
-function getHeightForDeck(name: string): string {
-  const heights = ["h-28 sm:h-32", "h-28 sm:h-32", "h-28 sm:h-36", "h-28 sm:h-36", "h-28 sm:h-36"];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return heights[Math.abs(hash) % heights.length];
-}
-
-/** Libro recién creado a veces llega con conteo 0: no usar el ancho mínimo del lomo. */
+/** Libro recién creado a veces llega con conteo 0: usar un tamaño medio hasta que llegue el real. */
 function effectiveCardCount(count: number): number {
   const n = typeof count === "number" ? count : Number(count);
   if (Number.isFinite(n) && n > 0) return n;
   return 10;
+}
+
+// Altura del lomo ∝ nº de tarjetas (como el grosor). Tope: balda 152px − bookmark ~28px en móvil.
+function getHeightForCards(count: number): string {
+  const n = effectiveCardCount(count);
+  if (n <= 10) return "h-[102px] sm:h-32";
+  if (n <= 20) return "h-[108px] sm:h-[8.5rem]";
+  if (n <= 30) return "h-[112px] sm:h-36";
+  if (n <= 40) return "h-[116px] sm:h-36";
+  return "h-[118px] sm:h-36";
 }
 
 // Width based on flashcardsCount (more cards = wider).
@@ -110,7 +109,7 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
   const { t } = useLanguage();
   const accent = accentColor ?? getAccentForDeck(name);
   const styles = ACCENT_STYLES[accent];
-  const height = getHeightForDeck(name);
+  const height = getHeightForCards(flashcardsCount);
   const width = getWidthForCards(flashcardsCount);
   const progress =
     typeof progressPercent === "number" ? Math.min(100, Math.max(0, Math.round(progressPercent))) : null;
