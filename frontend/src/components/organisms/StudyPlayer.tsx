@@ -63,6 +63,7 @@ export function StudyPlayer({
 }: StudyPlayerProps) {
   const { t } = useLanguage();
   const [isFlipped, setIsFlipped] = React.useState(false);
+  const nextButtonRef = React.useRef<HTMLButtonElement>(null);
 
   // Auto flip to back when evaluation comes in
   React.useEffect(() => {
@@ -75,12 +76,48 @@ export function StudyPlayer({
     setIsFlipped(false);
   }, [card.id]);
 
+  React.useEffect(() => {
+    if (evaluation) {
+      nextButtonRef.current?.focus({ preventScroll: true });
+    }
+  }, [evaluation]);
+
   const cardStatus: FlashcardStatus = evaluation
     ? (evaluation.isCorrect ? "correct" : "incorrect")
     : "pending";
 
   const percent = total > 0 ? Math.round((progress / total) * 100) : 0;
   const showReview = reviewItems.length > 0 && typeof onSelectCard === "function";
+
+  // Enter: enviar respuesta o pasar a la siguiente tarjeta tras la corrección.
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || e.shiftKey || e.repeat || isEvaluating) return;
+
+      // Never hijack Enter from a focused control or inside an open modal:
+      // each one owns its native activation (button click, checkbox toggle,
+      // textarea submit). The modal check must cover the whole [aria-modal]
+      // subtree, not just buttons — the restart dialog has a checkbox.
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      if (target?.closest('button, input, textarea, select, a, [aria-modal="true"]')) {
+        return;
+      }
+
+      if (evaluation) {
+        e.preventDefault();
+        e.stopPropagation();
+        onNext();
+        return;
+      }
+
+      if (!userAnswer.trim()) return;
+
+      e.preventDefault();
+      onSubmit();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [evaluation, isEvaluating, userAnswer, onSubmit, onNext]);
 
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 pt-3 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
@@ -210,7 +247,7 @@ export function StudyPlayer({
                     <RotateCcw className="w-4 h-4 mr-2" aria-hidden="true" />
                     {t("study.retry")}
                   </Button>
-                  <Button onClick={onNext} className="flex-1 h-12">
+                  <Button ref={nextButtonRef} onClick={onNext} className="flex-1 h-12">
                     {t("study.nextCard")}
                     <ArrowRight className="w-4 h-4 ml-2" aria-hidden="true" />
                   </Button>
