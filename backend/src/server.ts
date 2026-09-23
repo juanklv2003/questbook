@@ -2,6 +2,7 @@ import 'dotenv/config'; // Ensure env is loaded before importing config
 import app from './app';
 import { env } from './config/env';
 import { db } from './config/db';
+import { applySafeSchemaPatches, warnIfSchemaOutdated } from './config/schemaGuard';
 
 // Render/Railway/Vercel: correct req.protocol for OAuth redirect_uri behind HTTPS proxy
 app.set('trust proxy', 1);
@@ -11,6 +12,10 @@ const startServer = async () => {
     // Quick DB check
     await db.query('SELECT 1');
     console.log('✅ Database connection verified.');
+
+    // Parches idempotentes (ej. pdf_source_names) y aviso si aún falta algo manual.
+    await applySafeSchemaPatches();
+    await warnIfSchemaOutdated();
 
     const port = env.PORT || 3000;
     const longRequestMs = env.AI_DECK_TOTAL_TIMEOUT_MS;

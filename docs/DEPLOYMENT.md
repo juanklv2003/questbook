@@ -54,6 +54,7 @@ npx ts-node src/scripts/migrateStudySessions.ts   # crea la tabla más reciente
 npx ts-node src/scripts/migratePasswordReset.ts   # tabla password_reset_tokens (recupero sin SMTP)
 npm run migrate:google-auth                       # OAuth Google (provider, oauth_exchange_codes)
 npm run migrate:flashcards-index                  # índice flashcards(deck_id) — rendimiento listado
+npm run migrate:deck-pdf-sources                  # decks.pdf_source_names (nombres de los PDFs origen)
 ```
 
 > Las migraciones son idempotentes (usan `IF NOT EXISTS`), así que re-ejecutarlas es seguro.
@@ -62,6 +63,13 @@ npm run migrate:flashcards-index                  # índice flashcards(deck_id) 
 > `relation "users" does not exist`.
 > `migrateEmailCi` es la única que puede abortar a propósito: si detecta emails duplicados
 > que sólo difieren en mayúsculas, resolvelos a mano (conservá la cuenta más antigua) y volvé a correr.
+>
+> **Migración sin aplicar = 500.** Si el código nuevo consulta una columna que la DB todavía no
+> tiene, Postgres responde `42703 (undefined_column)` y la API devuelve
+> `500 { code: 'SCHEMA_MISMATCH', hint: 'Backend: corré las migraciones pendientes...' }`.
+> El arranque del backend ahora verifica el esquema y loguea en Render
+> `❌ FALTAN COLUMNAS EN LA BASE DE DATOS: decks.pdf_source_names` con el comando a correr,
+> así no hay que adivinar. Orden recomendado al deployar: migrar → deployar.
 
 ---
 

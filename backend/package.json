@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "migrate:google-auth": "ts-node src/scripts/migrateGoogleAuth.ts",
     "migrate:flashcards-index": "ts-node src/scripts/migrateFlashcardsDeckIdIndex.ts",
+    "migrate:deck-pdf-sources": "ts-node src/scripts/migrateDeckPdfSources.ts",
     "diagnose:deck-gen": "ts-node src/scripts/diagnoseDeckGeneration.ts"
   },
   "keywords": [],

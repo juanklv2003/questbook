@@ -54,6 +54,19 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     return res.status(status).json({ error: message });
   }
 
+  // Esquema desincronizado: Postgres 42703 (undefined_column) / 42P01 (undefined_table)
+  // significa que falta aplicar una migración. Sin este mapeo el cliente recibe un 500
+  // opaco ("Internal Server Error") y hay que bucear en los logs del hosting.
+  const pgCode = (err as { code?: string }).code;
+  if (pgCode === '42703' || pgCode === '42P01') {
+    console.error(`[http] ${req.method} ${req.originalUrl} SCHEMA_MISMATCH`, err.message);
+    return res.status(500).json({
+      error: 'La base de datos no tiene aplicada la última migración.',
+      code: 'SCHEMA_MISMATCH',
+      hint: 'Backend: corré las migraciones pendientes (npm run migrate:deck-pdf-sources; ver docs/DEPLOYMENT.md).',
+    });
+  }
+
   console.error('UNEXPECTED ERROR:', err);
   // En desarrollo mostramos el mensaje real para poder depurar rápido.
   const message = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message;

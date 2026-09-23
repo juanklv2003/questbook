@@ -12,6 +12,7 @@ import {
   deckPromptTextCharsPerCall,
 } from './modules/decks/domain/deckGenerationLimits';
 import { errorHandler } from './core/middlewares/errorHandler';
+import { findMissingColumns } from './config/schemaGuard';
 
 const app = express();
 
@@ -65,9 +66,19 @@ app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/decks', authMiddleware.requireAuth, deckRouter);
 app.use('/api/v1/evaluations', authMiddleware.requireAuth, evaluationRouter);
 
-app.get('/api/v1/health', (_req, res) => {
+app.get('/api/v1/health', async (_req, res) => {
+  let schemaMissing: string[] = [];
+  try {
+    schemaMissing = await findMissingColumns();
+  } catch {
+    schemaMissing = ['schema_check_failed'];
+  }
   res.json({
-    status: 'ok',
+    status: schemaMissing.length === 0 ? 'ok' : 'degraded',
+    schema: {
+      ok: schemaMissing.length === 0,
+      missingColumns: schemaMissing,
+    },
     node: process.version,
     uptimeSeconds: Math.round(process.uptime()),
     cors: {

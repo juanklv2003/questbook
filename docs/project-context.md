@@ -26,6 +26,12 @@ QuestBook is an AI-powered flashcard generation and study application. It allows
   minutos) y cierre ordenado ante `SIGTERM`.
 - Bundle: vendor separado por `manualChunks` (react / motion / icons) para que el chunk de la app
   (≈48 KB gzip) se invalide solo cuando cambia código propio.
+- **Esquema vs código**: `src/config/schemaGuard.ts` verifica al arrancar las columnas que el código
+  usa siempre (`decks.color/shelf_index/position/studied_count/correct_count/pdf_source_names`) y
+  loguea en el hosting `❌ FALTAN COLUMNAS...` con el `npm run migrate:*` a correr. Además el error
+  handler mapea Postgres `42703`/`42P01` a `500 { code: 'SCHEMA_MISMATCH', hint }` en vez del
+  `Internal Server Error` opaco. Regla: al agregar una columna, sumá su migración a
+  `docs/DEPLOYMENT.md` y al chequeo — y migrá antes de deployar.
 - Checklist y pasos: [`DEPLOYMENT.md`](./DEPLOYMENT.md).
 
 ### Frontend (`frontend`)
