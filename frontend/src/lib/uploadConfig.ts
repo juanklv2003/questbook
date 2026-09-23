@@ -6,10 +6,12 @@ import {
 
 const DEFAULT_MAX_PDF_BYTES = 100 * 1024 * 1024;
 const DEFAULT_CLOUDINARY_MAX_BYTES = 10 * 1024 * 1024;
+/** Mínimo de la barra al crear un libro. Un /health viejo con 500k no puede bajarlo. */
+const DEFAULT_DECK_SOURCE_TEXT_CAP = 1_000_000;
 
 let maxPdfBytes = DEFAULT_MAX_PDF_BYTES;
 let cloudinaryMaxPdfBytes = DEFAULT_CLOUDINARY_MAX_BYTES;
-let deckSourceTextCap = 1_000_000;
+let deckSourceTextCap = DEFAULT_DECK_SOURCE_TEXT_CAP;
 let directUploadUrl: string | undefined;
 let loaded = false;
 
@@ -35,7 +37,7 @@ export async function loadUploadLimits(): Promise<number> {
       maxPdfBytes = data.upload.maxPdfBytes;
     }
     if (typeof data.upload?.deckSourceTextCap === 'number' && data.upload.deckSourceTextCap > 0) {
-      deckSourceTextCap = data.upload.deckSourceTextCap;
+      deckSourceTextCap = Math.max(DEFAULT_DECK_SOURCE_TEXT_CAP, data.upload.deckSourceTextCap);
     }
     if (typeof data.upload?.cloudinaryMaxPdfBytes === 'number' && data.upload.cloudinaryMaxPdfBytes > 0) {
       cloudinaryMaxPdfBytes = data.upload.cloudinaryMaxPdfBytes;

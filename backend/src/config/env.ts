@@ -184,12 +184,12 @@ export const env = {
   /**
    * Caracteres máximos del texto del PDF que se usan para generar un mazo.
    *
-   * Default 1_000_000 (barra de "contenido del libro"). Tope duro 4_000_000
-   * (~1M tokens a ~4 caracteres/token, el `inputTokenLimit` de Gemini Flash).
+   * Default y mínimo 1_000_000 (barra de "contenido del libro"). Un .env viejo
+   * con 500000 se sube a 1M. Tope duro 4_000_000 (~1M tokens a ~4 caracteres/token).
    * Eso NO se manda entero en una llamada: `AI_DECK_PROMPT_CHARS_PER_CALL`
    * reparte el documento en ventanas (~50k tokens) para no saturar TPM.
    */
-  PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 1_000_000, 5_000, 4_000_000),
+  PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 1_000_000, 1_000_000, 4_000_000),
   /** Tiempo máximo de espera (ms) al generar tarjetas desde un PDF. */
   AI_DECK_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TIMEOUT_MS, 120_000, 15_000, 300_000),
   /** Tiempo máximo total (ms) para todas las tandas IA de un mismo mazo. */
