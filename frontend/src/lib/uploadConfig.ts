@@ -83,7 +83,10 @@ export function getDeckSourceTextCap(): number {
 }
 
 export function formatCharCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000_000) {
+    const millions = n / 1_000_000;
+    return `${Number.isInteger(millions) ? String(millions) : millions.toFixed(1)}M`;
+  }
   if (n >= 10_000) return `${Math.round(n / 1000)}k`;
   return n.toLocaleString();
 }
