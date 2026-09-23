@@ -18,7 +18,7 @@ import { db } from '../../../config/db';
 import { env } from '../../../config/env';
 import { aiGenerateLimiter } from '../../../core/middlewares/rateLimits';
 import { JwtTokenService } from '../../auth/infra/JwtTokenService';
-import { pdfUpload } from '../infra/pdfUploadStorage';
+import { pdfUploadGenerate, pdfUploadSingle } from '../infra/pdfUploadStorage';
 
 // PDF en disco temporal (multer). Tamaño: MAX_PDF_UPLOAD_MB en .env (default 100 MB).
 
@@ -62,7 +62,8 @@ const deckRouter = Router();
 // Auth: app.ts mounts requireAuth on /api/v1/decks (do not duplicate per route).
 deckRouter.post('/generate/pdf-upload-params', deckController.getPdfUploadParams);
 deckRouter.post('/generate/direct-upload-token', deckController.createDirectUploadToken);
-deckRouter.post('/generate', aiGenerateLimiter, pdfUpload.single('file'), deckController.generate);
+deckRouter.post('/pdf-text-stats', pdfUploadSingle, deckController.previewPdfText);
+deckRouter.post('/generate', aiGenerateLimiter, pdfUploadGenerate, deckController.generate);
 deckRouter.get('/:deckId/flashcards', deckController.getFlashcards);
 deckRouter.get('/', deckController.listDecks);
 deckRouter.patch('/:id/shelf', deckController.updateShelf);

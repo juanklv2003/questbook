@@ -27,8 +27,12 @@ export const DECK_GENERATION_BATCH_RESERVE_MS = 45_000;
  */
 export const DECK_GENERATION_MAX_SPLIT_DEPTH = 1;
 
+export function deckSourceTextCap(): number {
+  return Math.min(env.PDF_MAX_TEXT_CHARS, DECK_PRACTICAL_TEXT_CAP);
+}
+
 export function capDeckSourceText(text: string): string {
-  const cap = Math.min(env.PDF_MAX_TEXT_CHARS, DECK_PRACTICAL_TEXT_CAP);
+  const cap = deckSourceTextCap();
   if (text.length <= cap) return text;
   return text.slice(0, cap);
 }

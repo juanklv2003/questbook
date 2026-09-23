@@ -6,7 +6,10 @@ import helmet from 'helmet';
 import { env } from './config/env';
 import { geminiModelCandidates } from './core/ai/geminiModels';
 import { isGroqConfigured } from './core/ai/GroqClient';
-import { deckGenerationClientTimeoutMs } from './modules/decks/domain/deckGenerationLimits';
+import {
+  deckGenerationClientTimeoutMs,
+  deckSourceTextCap,
+} from './modules/decks/domain/deckGenerationLimits';
 import { errorHandler } from './core/middlewares/errorHandler';
 
 const app = express();
@@ -85,6 +88,7 @@ app.get('/api/v1/health', (_req, res) => {
     upload: {
       maxPdfBytes: env.MAX_PDF_UPLOAD_BYTES,
       maxPdfMb: env.MAX_PDF_UPLOAD_MB,
+      deckSourceTextCap: deckSourceTextCap(),
       cloudinaryMaxPdfBytes: env.CLOUDINARY_MAX_PDF_BYTES,
       cloudinaryMaxPdfMb: env.CLOUDINARY_MAX_PDF_MB,
       directUploadBaseUrl: env.API_PUBLIC_BASE_URL
