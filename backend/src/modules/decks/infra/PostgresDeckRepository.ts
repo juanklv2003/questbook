@@ -7,14 +7,33 @@ export class PostgresDeckRepository implements IDeckRepository {
   constructor(private readonly db: Pool) {}
 
   /**
-   * Study progress derived from cumulative counters. Null while the deck
-   * has zero evaluations (never divide by zero).
+   * Accuracy % from deck counters (IA / modo rápido) or, si aún no hay
+   * contadores, desde la sesión guardada (results JSONB).
    */
-  private static readonly PROGRESS_SELECT =
-    `CASE WHEN {alias}.studied_count = 0 THEN NULL ELSE ROUND(100.0 * {alias}.correct_count / {alias}.studied_count)::int END AS "progressPercent"`;
+  private static progressForDeckOnly(alias: string): string {
+    return `CASE WHEN ${alias}.studied_count = 0 THEN NULL ELSE ROUND(100.0 * ${alias}.correct_count / ${alias}.studied_count)::int END`;
+  }
+
+  private static progressForList(deckAlias: string, sessionAlias: string): string {
+    return `
+      COALESCE(
+        ${PostgresDeckRepository.progressForDeckOnly(deckAlias)},
+        CASE
+          WHEN ${sessionAlias}.results IS NOT NULL
+            AND ${sessionAlias}.results <> '{}'::jsonb
+          THEN (
+            SELECT ROUND(
+              100.0 * SUM(CASE WHEN (e.value)::boolean THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(*), 0)
+            )::int
+            FROM jsonb_each(${sessionAlias}.results) AS e(key, value)
+          )
+        END
+      ) AS "progressPercent"`;
+  }
 
   private static progressFor(alias: string): string {
-    return PostgresDeckRepository.PROGRESS_SELECT.split('{alias}').join(alias);
+    return `${PostgresDeckRepository.progressForDeckOnly(alias)} AS "progressPercent"`;
   }
   async create(deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deck> {
     const shelfIndex = deck.shelfIndex ?? 0;
@@ -73,11 +92,12 @@ export class PostgresDeckRepository implements IDeckRepository {
         d.color,
         d.studied_count AS "studiedCount",
         d.correct_count AS "correctCount",
-        ${PostgresDeckRepository.progressFor('d')},
+        ${PostgresDeckRepository.progressForList('d', 'ss')},
         d.created_at AS "createdAt", 
         d.updated_at AS "updatedAt",
         COALESCE(fc.cnt, 0) AS "flashcardsCount"
       FROM decks d
+      LEFT JOIN study_sessions ss ON ss.deck_id = d.id AND ss.user_id = d.user_id
       LEFT JOIN (
         SELECT deck_id, COUNT(*)::int AS cnt FROM flashcards GROUP BY deck_id
       ) fc ON fc.deck_id = d.id
