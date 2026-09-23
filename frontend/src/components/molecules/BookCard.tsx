@@ -83,13 +83,14 @@ function effectiveCardCount(count: number): number {
   return 10;
 }
 
-// Altura del lomo ∝ nº de tarjetas (como el grosor). Tope: balda 152px − bookmark ~28px en móvil.
+// Altura del lomo ∝ nº de tarjetas. Cinco tramos (10/20/30/40/50) — antes 30–50 compartían h-36.
+// Tope móvil ~118px lomo + bookmark; sm ~h-36 (144px) solo el máximo.
 function getHeightForCards(count: number): string {
   const n = effectiveCardCount(count);
-  if (n <= 10) return "h-[102px] sm:h-32";
-  if (n <= 20) return "h-[108px] sm:h-[8.5rem]";
-  if (n <= 30) return "h-[112px] sm:h-36";
-  if (n <= 40) return "h-[116px] sm:h-36";
+  if (n <= 12) return "h-[100px] sm:h-28";
+  if (n <= 22) return "h-[104px] sm:h-[7.75rem]";
+  if (n <= 32) return "h-[109px] sm:h-32";
+  if (n <= 42) return "h-[114px] sm:h-[8.5rem]";
   return "h-[118px] sm:h-36";
 }
 
@@ -97,11 +98,10 @@ function getHeightForCards(count: number): string {
 // One step narrower on mobile so a full shelf fits ~360px; full width from sm up.
 function getWidthForCards(count: number): string {
   const n = effectiveCardCount(count);
-  if (n <= 5) return "w-6 sm:w-7";
-  if (n <= 10) return "w-7 sm:w-9";
-  if (n <= 15) return "w-8 sm:w-10";
-  if (n <= 20) return "w-8 sm:w-11";
-  if (n <= 30) return "w-9 sm:w-12";
+  if (n <= 12) return "w-7 sm:w-8";
+  if (n <= 22) return "w-7 sm:w-9";
+  if (n <= 32) return "w-8 sm:w-10";
+  if (n <= 42) return "w-9 sm:w-12";
   return "w-10 sm:w-14";
 }
 
