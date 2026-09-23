@@ -225,7 +225,10 @@ export function useFlashcardStudy(
     clearError();
   }, [clearError]);
 
+  const studyModeRef = useRef(studyMode);
   useEffect(() => {
+    if (studyModeRef.current === studyMode) return;
+    studyModeRef.current = studyMode;
     resetCardInput();
   }, [studyMode, resetCardInput]);
 

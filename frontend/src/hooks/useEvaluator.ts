@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import apiClient from '../lib/axios';
 import { getApiErrorMessage } from '../lib/apiErrorMessage';
 import { parseOverloaded, parseQuotaExceeded } from '../lib/quota';
@@ -12,11 +12,11 @@ export function useEvaluator() {
   const [quotaExceeded, setQuotaExceeded] = useState<QuotaExceededInfo | null>(null);
   const [overloaded, setOverloaded] = useState<ModelOverloadedInfo | null>(null);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
     setQuotaExceeded(null);
     setOverloaded(null);
-  };
+  }, []);
 
   const evaluateAnswer = async (
     flashcardId: string,
