@@ -10,8 +10,19 @@ import type { ReviewListItem } from "../molecules/StudyReviewList"
 import { Loader2, AlertCircle, ArrowLeft, RotateCcw, Shuffle, WifiOff } from "lucide-react"
 import { Button } from "../atoms/Button"
 import { useLanguage } from "../../i18n/LanguageContext"
+import type { StudyMode } from "../../lib/studyMode"
 
-export function StudySessionContainer({ deckId, onBack }: { deckId: string, onBack: () => void }) {
+export function StudySessionContainer({
+  deckId,
+  onBack,
+  studyMode,
+  onStudyModeChange,
+}: {
+  deckId: string;
+  onBack: () => void;
+  studyMode: StudyMode;
+  onStudyModeChange: (mode: StudyMode) => void;
+}) {
   const { flashcards, isLoading, error } = useDeckFlashcards(deckId);
   const { t } = useLanguage();
 
@@ -34,10 +45,31 @@ export function StudySessionContainer({ deckId, onBack }: { deckId: string, onBa
     );
   }
 
-  return <StudySessionInner key={deckId} deckId={deckId} flashcards={flashcards} onBack={onBack} />;
+  return (
+    <StudySessionInner
+      key={deckId}
+      deckId={deckId}
+      flashcards={flashcards}
+      onBack={onBack}
+      studyMode={studyMode}
+      onStudyModeChange={onStudyModeChange}
+    />
+  );
 }
 
-function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, flashcards: Flashcard[], onBack: () => void }) {
+function StudySessionInner({
+  deckId,
+  flashcards,
+  onBack,
+  studyMode,
+  onStudyModeChange,
+}: {
+  deckId: string;
+  flashcards: Flashcard[];
+  onBack: () => void;
+  studyMode: StudyMode;
+  onStudyModeChange: (mode: StudyMode) => void;
+}) {
   const { t } = useLanguage();
   const [restartOpen, setRestartOpen] = React.useState(false);
   const [exitOpen, setExitOpen] = React.useState(false);
@@ -53,6 +85,7 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
     evaluarRespuesta,
     isEvaluating,
     feedbackIA,
+    answerRevealed,
     evaluationError,
     quotaExceeded,
     overloaded,
@@ -65,11 +98,14 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
     resumeProgress,
     restart,
     reshuffleDeck,
+    deferCurrentCard,
+    colaDeEstudio,
+    queueReady,
     answeredCount,
     remainingCount,
     isOffline,
     sessionError
-  } = useFlashcardStudy(deckId, flashcards);
+  } = useFlashcardStudy(deckId, flashcards, studyMode);
 
   const handleBack = () => {
     if (isEvaluating) return;
@@ -100,19 +136,18 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
     void restart({ reshuffle });
   };
 
+  const inQueue = React.useMemo(() => new Set(colaDeEstudio), [colaDeEstudio]);
+
   const reviewItems: ReviewListItem[] = React.useMemo(
     () =>
       orderedTarjetas.map((f) => ({
         id: f.id,
         question: f.question,
-        status:
-          resultsById[f.id] === true
-            ? 'correct'
-            : resultsById[f.id] === false
-              ? 'incorrect'
-              : 'pending',
+        status: !inQueue.has(f.id)
+          ? (resultsById[f.id] === false ? 'incorrect' : 'correct')
+          : 'pending',
       })),
-    [orderedTarjetas, resultsById]
+    [orderedTarjetas, resultsById, inQueue]
   );
 
   if (haTerminado) {
@@ -152,6 +187,15 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
 
   // Sin visor de PDF: la columna izquierda es la lista de preguntas
   // (StudyPlayer la pinta como aside) y la derecha la tarjeta activa.
+
+  if (!haTerminado && (!queueReady || !tarjetaActual)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">{t("study.loading")}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full min-w-0 flex flex-col gap-2 pt-2 sm:pt-3">
@@ -205,6 +249,7 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
       )}
 
       <div className="w-full">
+        {tarjetaActual && (
         <StudyPlayer
           card={tarjetaActual}
           progress={progreso}
@@ -225,7 +270,13 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
           onSelectCard={goToCard}
           onRestart={handleRestart}
           onReshuffle={handleReshuffle}
+          onDeferCard={deferCurrentCard}
+          queueRemaining={colaDeEstudio.length}
+          studyMode={studyMode}
+          onStudyModeChange={onStudyModeChange}
+          answerRevealed={answerRevealed}
         />
+        )}
       </div>
       <RestartStudyDialog
         open={restartOpen}

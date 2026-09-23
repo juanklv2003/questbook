@@ -11,6 +11,8 @@ import { AmbientGlow } from './components/atoms/AmbientGlow'
 import { PatternLayer } from './components/atoms/PatternLayer'
 import { LanguageSwitch } from './components/atoms/LanguageSwitch'
 import { useThemeSettings } from './hooks/useThemeSettings'
+import { useStudyMode } from './hooks/useStudyMode'
+import type { StudyMode } from './lib/studyMode'
 import { useLanguage } from './i18n/LanguageContext'
 import type { ProgressBook } from './components/organisms/ProgressPanel'
 
@@ -59,6 +61,7 @@ function App() {
   // Flat background only: color applied to DOM in lib/theme.ts
   // (only --brand/--brand-dark; buttons use the original primary).
   const { pattern } = useThemeSettings();
+  const { studyMode, setStudyMode } = useStudyMode();
   const goHome = React.useCallback(() => setActiveDeckId(null), []);
   // Leaving a study session changed deck progress on the server: back in
   // the library, refresh the book data in case the progress panel opens
@@ -170,6 +173,8 @@ function App() {
                 <StudySessionContainer
                   deckId={activeDeckId}
                   onBack={() => setActiveDeckId(null)}
+                  studyMode={studyMode}
+                  onStudyModeChange={setStudyMode}
                 />
               </React.Suspense>
             ) : (
@@ -185,7 +190,12 @@ function App() {
       {/* App-level Progress/Settings panels: opening them from a study
           session no longer unmounts it (the dashboard used to remount and the
           card in progress was lost). */}
-      <GlobalPanels route={panelRoute} onClose={() => setPanelRoute(null)} />
+      <GlobalPanels
+        route={panelRoute}
+        onClose={() => setPanelRoute(null)}
+        studyMode={studyMode}
+        onStudyModeChange={setStudyMode}
+      />
     </div>
   )
 }
@@ -210,7 +220,17 @@ const cardCountOf = (d: Deck): number =>
  * what is underneath: opening Settings inside a book no longer drops the
  * session or loses the card in progress.
  */
-function GlobalPanels({ route, onClose }: { route: TopbarRoute | null; onClose: () => void }) {
+function GlobalPanels({
+  route,
+  onClose,
+  studyMode,
+  onStudyModeChange,
+}: {
+  route: TopbarRoute | null;
+  onClose: () => void;
+  studyMode: StudyMode;
+  onStudyModeChange: (mode: StudyMode) => void;
+}) {
   const { decks } = useDecks();
   const settings = useThemeSettings();
   const { t } = useLanguage();
@@ -269,6 +289,8 @@ function GlobalPanels({ route, onClose }: { route: TopbarRoute | null; onClose: 
             onHidePreset={settings.hidePreset}
             onRestorePresets={settings.restorePresets}
             onPatternChange={settings.changePattern}
+            studyMode={studyMode}
+            onStudyModeChange={onStudyModeChange}
           />
         </React.Suspense>
       )}

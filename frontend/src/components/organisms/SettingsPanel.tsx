@@ -19,7 +19,9 @@ import {
 } from "../../lib/theme";
 import { cn } from "../../lib/utils";
 import { LanguageSwitch } from "../atoms/LanguageSwitch";
+import { StudyModeSwitch } from "../molecules/StudyModeSwitch";
 import { useLanguage } from "../../i18n/LanguageContext";
+import type { StudyMode } from "../../lib/studyMode";
 
 export interface SettingsPanelProps {
   themeId: string;
@@ -33,6 +35,8 @@ export interface SettingsPanelProps {
   onHidePreset: (id: string) => void;
   onRestorePresets: () => void;
   onPatternChange: (pattern: PatternId) => void;
+  studyMode: StudyMode;
+  onStudyModeChange: (mode: StudyMode) => void;
 }
 
 /**
@@ -55,6 +59,8 @@ export function SettingsPanel({
   onHidePreset,
   onRestorePresets,
   onPatternChange,
+  studyMode,
+  onStudyModeChange,
 }: SettingsPanelProps) {
   const { t } = useLanguage();
   const PATTERN_ICONS: Record<PatternId, typeof Star> = {
@@ -74,6 +80,21 @@ export function SettingsPanel({
     !savedColors.some((c) => c.toLowerCase() === customColor.toLowerCase());
   return (
     <div className="flex flex-col gap-6">
+      <section aria-labelledby="settings-study-mode-title">
+        <h3
+          id="settings-study-mode-title"
+          className="text-sm font-semibold tracking-tight"
+        >
+          {t("settings.studyModeTitle")}
+        </h3>
+        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+          {t("settings.studyModeDescription")}
+        </p>
+        <div className="mt-3">
+          <StudyModeSwitch mode={studyMode} onChange={onStudyModeChange} />
+        </div>
+      </section>
+
       <section aria-labelledby="settings-language-title">
         <h3
           id="settings-language-title"

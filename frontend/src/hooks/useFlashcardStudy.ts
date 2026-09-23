@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Flashcard, EvaluationResult } from '../types';
+import type { StudyMode } from '../lib/studyMode';
 import { useEvaluator } from './useEvaluator';
 import { shuffled } from '../lib/shuffle';
+import {
+  bringToFront,
+  completeHead,
+  deferHead,
+  initStudyQueue,
+  isValidQueueForDeck,
+  rebuildQueueFromLegacy,
+} from '../lib/studyQueue';
 import apiClient from '../lib/axios';
 
 /** Persisted partial study progress. DB is the source, localStorage is offline fallback. */
@@ -12,6 +21,8 @@ export interface SavedStudyProgress {
   /** Hash of the deck's card ids — stale hashes are ignored, never auto-deleted. */
   hash: string;
   finished?: boolean;
+  /** Cola de repaso (ids). Si falta, se reconstruye desde currentIndex. */
+  queueIds?: string[];
 }
 
 /** Offer shown when a saved session is found on mount. */
@@ -57,10 +68,16 @@ function readLocal(deckId: string, tarjetas: Flashcard[]): SavedStudyProgress | 
       return null;
     }
     if (parsed.finished === true) return null;
-    if (parsed.hash !== hashIds(tarjetas.map((t) => t.id))) return null;
+    const deckIds = tarjetas.map((t) => t.id);
+    if (parsed.hash !== hashIds(deckIds)) return null;
     const answered = Object.keys(parsed.resultsById).length;
-    if ((parsed.currentIndex <= 0 && answered === 0) || parsed.currentIndex >= tarjetas.length) {
-      return null;
+    const queueIds = Array.isArray(parsed.queueIds) ? parsed.queueIds as string[] : undefined;
+    const hasQueue =
+      queueIds && isValidQueueForDeck(queueIds, deckIds) && queueIds.length > 0;
+    if (!hasQueue) {
+      if ((parsed.currentIndex <= 0 && answered === 0) || parsed.currentIndex >= tarjetas.length) {
+        return null;
+      }
     }
     return {
       currentIndex: Math.min(Math.max(0, parsed.currentIndex), tarjetas.length - 1),
@@ -68,6 +85,7 @@ function readLocal(deckId: string, tarjetas: Flashcard[]): SavedStudyProgress | 
       updatedAt: parsed.updatedAt,
       hash: parsed.hash,
       finished: false,
+      queueIds: hasQueue ? queueIds : undefined,
     };
   } catch {
     return null;
@@ -108,6 +126,7 @@ function toSnapshot(remote: RemoteSnapshot, total: number): SavedStudyProgress |
     updatedAt: remote.updatedAt,
     hash: remote.hash,
     finished: false,
+    queueIds: undefined,
   };
 }
 
@@ -117,15 +136,20 @@ function toSnapshot(remote: RemoteSnapshot, total: number): SavedStudyProgress |
  * New signature: useFlashcardStudy(deckId, tarjetas). The legacy single-arg
  * call useFlashcardStudy(tarjetas) still works (DB sync disabled, local only).
  */
-export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeTarjetas?: Flashcard[]) {
+export function useFlashcardStudy(
+  deckIdOrTarjetas: string | Flashcard[],
+  maybeTarjetas?: Flashcard[],
+  studyMode: StudyMode = 'ai'
+) {
   const deckId = typeof deckIdOrTarjetas === 'string' ? deckIdOrTarjetas : '';
   const tarjetas: Flashcard[] = typeof deckIdOrTarjetas === 'string'
     ? (maybeTarjetas ?? [])
     : deckIdOrTarjetas;
 
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [respuestaUsuario, setRespuestaUsuario] = useState('');
   const [feedbackIA, setFeedbackIA] = useState<EvaluationResult | null>(null);
+  /** Modo rápido: respuesta del libro visible sin llamar a la IA. */
+  const [answerRevealed, setAnswerRevealed] = useState(false);
   // Result per card (keyed by id: survives reorders and avoids syncing
   // lengths if the deck changes). Missing key = pending.
   const [resultsById, setResultsById] = useState<Record<string, boolean>>({});
@@ -151,6 +175,9 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
 
   // Card id order. null = natural deck order. Set by restart({ reshuffle }).
   const [order, setOrder] = useState<string[] | null>(null);
+  /** Cola de estudio (copia barajable del mazo). Vacía = sesión completada. */
+  const [colaDeEstudio, setColaDeEstudio] = useState<string[]>([]);
+  const [queueReady, setQueueReady] = useState(false);
 
   // Order-resolved deck view. Cards missing from the order (deck regenerated
   // mid-session) are appended so no card is ever lost.
@@ -169,11 +196,47 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     return mapped;
   }, [tarjetas, order]);
 
-  const tarjetaActual = orderedTarjetas[currentIndex];
-  const progreso = currentIndex + 1;
-  const haTerminado = currentIndex >= orderedTarjetas.length;
+  const mazoOriginal = orderedTarjetas;
+  const tarjetaActual = useMemo(() => {
+    const headId = colaDeEstudio[0];
+    if (!headId) return undefined;
+    return mazoOriginal.find((t) => t.id === headId);
+  }, [colaDeEstudio, mazoOriginal]);
+
+  const completedInSession = mazoOriginal.length - colaDeEstudio.length;
+  const progreso = colaDeEstudio.length > 0 ? completedInSession + 1 : completedInSession;
+  const haTerminado = queueReady && colaDeEstudio.length === 0 && mazoOriginal.length > 0;
   const answeredCount = useMemo(() => Object.keys(resultsById).length, [resultsById]);
-  const remainingCount = Math.max(0, orderedTarjetas.length - answeredCount);
+  const remainingCount = colaDeEstudio.length;
+
+  const currentIndex = useMemo(() => {
+    const headId = colaDeEstudio[0];
+    if (!headId) return Math.max(0, mazoOriginal.length - 1);
+    const idx = mazoOriginal.findIndex((t) => t.id === headId);
+    return idx >= 0 ? idx : 0;
+  }, [colaDeEstudio, mazoOriginal]);
+
+  const inQueueSet = useMemo(() => new Set(colaDeEstudio), [colaDeEstudio]);
+
+  const resetCardInput = useCallback(() => {
+    setRespuestaUsuario('');
+    setFeedbackIA(null);
+    setAnswerRevealed(false);
+    clearError();
+  }, [clearError]);
+
+  useEffect(() => {
+    resetCardInput();
+  }, [studyMode, resetCardInput]);
+
+  const loadColaFromMazo = useCallback(
+    (shuffle: boolean) => {
+      const ids = mazoOriginal.map((t) => t.id);
+      setColaDeEstudio(initStudyQueue(ids, shuffle));
+      setQueueReady(true);
+    },
+    [mazoOriginal]
+  );
 
   // Fetch the DB session once per deck. 404 = no saved session (normal).
   // Any other failure = offline, fall back to localStorage.
@@ -255,25 +318,33 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     }
   }, [deckId, tarjetas, resumeResolved, sessionLoading]);
 
+  // Primera carga: cola = copia del mazo (el banner de reanudar puede sobrescribirla después).
+  useEffect(() => {
+    if (queueReady || tarjetas.length === 0) return;
+    loadColaFromMazo(false);
+  }, [queueReady, tarjetas.length, loadColaFromMazo]);
+
   // Persist on every change: localStorage immediately (offline fallback),
   // DB with debounce. Finishing never deletes — it marks finished=true.
   useEffect(() => {
-    if (!deckId || !resumeResolved || tarjetas.length === 0) return;
+    if (!deckId || !resumeResolved || !queueReady || tarjetas.length === 0) return;
     const hash = hashIds(tarjetas.map((t) => t.id));
     const answered = Object.keys(resultsById).length;
-    const finished = currentIndex >= tarjetas.length;
+    const finished = colaDeEstudio.length === 0;
+    const legacyIndex = finished ? tarjetas.length : completedInSession;
 
-    if (!finished && currentIndex === 0 && answered === 0) {
+    if (!finished && colaDeEstudio.length === tarjetas.length && answered === 0) {
       // Pristine: nothing worth persisting yet (no row created, nothing deleted).
       return;
     }
 
     const snapshot: SavedStudyProgress = {
-      currentIndex: finished ? tarjetas.length : currentIndex,
+      currentIndex: legacyIndex,
       resultsById,
       updatedAt: Date.now(),
       hash,
       finished,
+      queueIds: [...colaDeEstudio],
     };
 
     if (localWriteTimer.current) clearTimeout(localWriteTimer.current);
@@ -287,7 +358,7 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     patchTimer.current = setTimeout(() => {
       apiClient
         .patch(`/decks/${deckId}/session`, {
-          currentIndex: finished ? tarjetas.length : currentIndex,
+          currentIndex: legacyIndex,
           results: resultsById,
           flashcardsHash: hash,
           finished,
@@ -327,7 +398,7 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
         }
       }
     };
-  }, [deckId, currentIndex, resultsById, tarjetas, resumeResolved]);
+  }, [deckId, colaDeEstudio, completedInSession, resultsById, tarjetas, resumeResolved, queueReady]);
 
   const pendingResume: PendingResume | null = useMemo(() => {
     if (resumeResolved || !savedSnapshot) return null;
@@ -339,18 +410,22 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
   }, [resumeResolved, savedSnapshot, tarjetas.length]);
 
   const resumeProgress = useCallback(() => {
+    const deckIds = tarjetas.map((t) => t.id);
     setSavedSnapshot((saved) => {
       if (saved) {
-        setCurrentIndex(saved.currentIndex);
         setResultsById(saved.resultsById);
+        if (saved.queueIds && isValidQueueForDeck(saved.queueIds, deckIds)) {
+          setColaDeEstudio([...saved.queueIds]);
+        } else {
+          setColaDeEstudio(rebuildQueueFromLegacy(deckIds, saved.currentIndex, false));
+        }
+        setQueueReady(true);
       }
       return null;
     });
-    setRespuestaUsuario('');
-    setFeedbackIA(null);
-    clearError();
+    resetCardInput();
     setResumeResolved(true);
-  }, [clearError]);
+  }, [tarjetas, resetCardInput]);
 
   // Explicit user action only: clears local fallback and the DB row.
   // resultsById is keyed by card id, so it needs no remap on reorder —
@@ -366,12 +441,15 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     }
     setSavedSnapshot(null);
     setResumeResolved(true);
-    setCurrentIndex(0);
     setResultsById({});
-    setRespuestaUsuario('');
-    setFeedbackIA(null);
-    clearError();
-    setOrder(reshuffle ? shuffled(tarjetas.map((t) => t.id)) : null);
+    resetCardInput();
+    // One shuffle drives both the display order and the queue so they stay
+    // aligned; two independent shuffled() calls would silently diverge.
+    const ids = tarjetas.map((t) => t.id);
+    const nextOrder = reshuffle ? shuffled(ids) : null;
+    setOrder(nextOrder);
+    setColaDeEstudio(initStudyQueue(nextOrder ?? ids, false));
+    setQueueReady(true);
 
     if (deckId) {
       try {
@@ -380,7 +458,7 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
         // 404 (no row) or offline: local state already reset.
       }
     }
-  }, [deckId, clearError, tarjetas]);
+  }, [deckId, resetCardInput, tarjetas]);
 
   // Legacy entry point: plain restart without reshuffling.
   const restartProgress = useCallback(async () => {
@@ -390,18 +468,22 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
   /** New random card order anytime; keeps per-card results and session progress. */
   const reshuffleDeck = useCallback(() => {
     if (tarjetas.length === 0) return;
-    const ids = orderedTarjetas.map((t) => t.id);
-    const nextOrder = shuffled(ids);
-    setOrder(nextOrder);
-    const firstPending = nextOrder.findIndex((id) => resultsById[id] === undefined);
-    setCurrentIndex(firstPending >= 0 ? firstPending : 0);
-    setRespuestaUsuario('');
-    setFeedbackIA(null);
-    clearError();
-  }, [tarjetas.length, orderedTarjetas, resultsById, clearError]);
+    setColaDeEstudio((prev) => {
+      const base = prev.length > 0 ? prev : orderedTarjetas.map((t) => t.id);
+      return initStudyQueue(base, true);
+    });
+    resetCardInput();
+  }, [tarjetas.length, orderedTarjetas, resetCardInput]);
 
   const evaluar = async () => {
-    if (!tarjetaActual || !respuestaUsuario.trim()) return;
+    if (!tarjetaActual) return;
+
+    if (studyMode === 'quick') {
+      setAnswerRevealed(true);
+      return;
+    }
+
+    if (!respuestaUsuario.trim()) return;
 
     try {
       const result = await evaluateAnswer(
@@ -422,46 +504,71 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     }
   };
 
-  const siguienteTarjeta = () => {
-    clearError();
-    setCurrentIndex(prev => prev + 1);
-    setRespuestaUsuario('');
-    setFeedbackIA(null);
-  };
+  /** Me la sé: quita la carta actual de la cola. */
+  const completeCurrentCard = useCallback(() => {
+    if (colaDeEstudio.length === 0) return;
+    const headId = colaDeEstudio[0];
+    setColaDeEstudio((q) => completeHead(q));
+    if (headId) {
+      setResultsById((prev) => ({ ...prev, [headId]: true }));
+    }
+    resetCardInput();
+  }, [colaDeEstudio, resetCardInput]);
 
-  /** Jump to a card (review list, order-resolved). Keeps results untouched. */
+  /** No me la sé: la carta actual pasa al final de la cola. */
+  const deferCurrentCard = useCallback(() => {
+    if (colaDeEstudio.length === 0) return;
+    const headId = colaDeEstudio[0];
+    setColaDeEstudio((q) => deferHead(q));
+    if (headId) {
+      setResultsById((prev) => {
+        const next = { ...prev };
+        delete next[headId];
+        return next;
+      });
+    }
+    resetCardInput();
+  }, [colaDeEstudio, resetCardInput]);
+
+  const siguienteTarjeta = completeCurrentCard;
+
+  /** Jump to a card (review list): la pone al frente de la cola si sigue pendiente. */
   const goToCard = (index: number) => {
     if (index < 0 || index >= orderedTarjetas.length) return;
-    clearError();
-    setCurrentIndex(index);
-    setRespuestaUsuario('');
-    setFeedbackIA(null);
+    const id = orderedTarjetas[index].id;
+    if (!inQueueSet.has(id)) return;
+    setColaDeEstudio((q) => bringToFront(q, id));
+    resetCardInput();
   };
 
   const reintentar = () => {
-    clearError();
-    setRespuestaUsuario('');
-    setFeedbackIA(null);
+    resetCardInput();
   };
 
   return {
     tarjetaActual,
+    mazoOriginal,
+    colaDeEstudio,
     orderedTarjetas,
     order,
     currentIndex,
     progreso,
     total: orderedTarjetas.length,
     haTerminado,
+    queueReady,
     respuestaUsuario,
     setRespuestaUsuario,
     evaluarRespuesta: evaluar,
     isEvaluating,
     feedbackIA,
+    answerRevealed,
     evaluationError,
     quotaExceeded,
     overloaded,
     clearEvaluationError: clearError,
     siguienteTarjeta,
+    completeCurrentCard,
+    deferCurrentCard,
     reintentar,
     resultsById,
     goToCard,
