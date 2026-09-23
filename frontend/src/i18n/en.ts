@@ -243,6 +243,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "book.cardsOther": "{count} flashcards",
   "book.progressComplete": "{progress}% complete",
   "book.description": "Study book with {count} questions and answers.",
+  "book.pdfSources": "PDFs in this book",
   "book.study": "Study",
   "book.edit": "Edit book",
   "book.moveTitle": "Move in the library",

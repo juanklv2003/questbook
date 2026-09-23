@@ -242,6 +242,7 @@ export const es = {
   "book.cardsOther": "{count} tarjetas",
   "book.progressComplete": "{progress}% completo",
   "book.description": "Libro de estudio con {count} preguntas y respuestas.",
+  "book.pdfSources": "PDFs de este libro",
   "book.study": "Reanudar",
   "book.edit": "Editar libro",
   "book.moveTitle": "Mover en la biblioteca",

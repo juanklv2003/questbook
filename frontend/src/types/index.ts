@@ -10,8 +10,11 @@ export interface Deck {
   progressPercent?: number | null;
   /** Spine accent chosen at creation. Null/undefined = legacy deck, falls back to name hash. */
   color?: string | null;
+  /** PDF filenames merged into this book (new decks). */
+  pdfSourceNames?: string[] | null;
   /** Snake_case aliases as returned by legacy payloads. Prefer camelCase. */
   shelf_index?: number | null;
+  pdf_source_names?: string[] | null;
 }
 
 export interface Flashcard {
@@ -93,4 +96,5 @@ export interface GenerateDeckResult {
   name: string;
   flashcardsCount: number;
   color?: string;
+  pdfSourceNames?: string[];
 }

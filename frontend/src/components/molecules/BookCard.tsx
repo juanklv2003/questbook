@@ -2,7 +2,7 @@ import * as React from "react"
 import type { KeyboardEvent } from "react"
 import { createPortal } from "react-dom"
 import { cn } from "../../lib/utils"
-import { BookOpen, Play, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
+import { BookOpen, Play, Pencil, ChevronLeft, ChevronRight, FileText } from "lucide-react"
 import { useLanguage } from "../../i18n/LanguageContext"
 import { DeckDeleteButton } from "../atoms/DeckDeleteButton"
 
@@ -12,6 +12,8 @@ export interface BookCardProps {
   flashcardsCount: number;
   /** 0–100 study progress. Absent/null = not tracked yet (bar hidden). */
   progressPercent?: number | null;
+  /** Original PDF filenames used to create this book. */
+  pdfSourceNames?: string[] | null;
   onSelect: () => void;
   onDeleteSuccess: () => void;
   onEdit?: () => void;
@@ -96,7 +98,7 @@ function getWidthForCards(count: number): string {
   return "w-10 sm:w-14";
 }
 
-export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal, shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight }: BookCardProps) {
+export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSourceNames, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal, shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight }: BookCardProps) {
   const { t } = useLanguage();
   const accent = accentColor ?? getAccentForDeck(name);
   const styles = ACCENT_STYLES[accent];
@@ -161,6 +163,7 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, onSel
       name={name}
       flashcardsCount={flashcardsCount}
       progressPercent={progress}
+      pdfSourceNames={pdfSourceNames}
       deckId={deckId}
       onDeleteSuccess={handleDeleteSuccess}
       onEdit={onEdit}
@@ -400,6 +403,7 @@ function HoverCard({
   name,
   flashcardsCount,
   progressPercent,
+  pdfSourceNames,
   deckId,
   onDeleteSuccess,
   onEdit,
@@ -417,6 +421,7 @@ function HoverCard({
   name: string;
   flashcardsCount: number;
   progressPercent?: number | null;
+  pdfSourceNames?: string[] | null;
   deckId: string;
   onDeleteSuccess: () => void;
   onEdit?: () => void;
@@ -444,6 +449,7 @@ function HoverCard({
     flashcardsCount === 1
       ? t("book.cardsOne", { count: flashcardsCount })
       : t("book.cardsOther", { count: flashcardsCount });
+  const pdfNames = (pdfSourceNames ?? []).filter((n) => typeof n === "string" && n.trim().length > 0);
   return (
     <div className="bg-card rounded-xl border shadow-xl p-4 animate-in fade-in zoom-in-95 duration-200">
       {/* Header */}
@@ -467,6 +473,23 @@ function HoverCard({
         <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
           {t("book.description", { count: flashcardsCount })}
         </p>
+      )}
+
+      {pdfNames.length > 0 && (
+        <div className={cn("mb-3", progress !== null && "mt-2.5")}>
+          <p className="text-[11px] font-medium text-muted-foreground mb-1">{t("book.pdfSources")}</p>
+          <ul className="max-h-24 space-y-1 overflow-y-auto pr-0.5">
+            {pdfNames.map((pdf, index) => (
+              <li
+                key={`${pdf}-${index}`}
+                className="flex items-start gap-1.5 text-[11px] text-muted-foreground"
+              >
+                <FileText className="mt-0.5 h-3 w-3 shrink-0 opacity-70" aria-hidden />
+                <span className="line-clamp-2 break-all leading-snug">{pdf}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/* Actions */}

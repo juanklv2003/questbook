@@ -79,6 +79,7 @@ export function DeckDashboardContainer({
         name: result.name,
         flashcardsCount: result.flashcardsCount,
         color: options.color ?? result.color ?? 'primary',
+        pdfSourceNames: result.pdfSourceNames ?? files.map((f) => f.name),
         shelfIndex: 0,
         position: 0,
       } as Deck, ...prev]);
@@ -129,6 +130,7 @@ export function DeckDashboardContainer({
                 name={deckTitle(deck)}
                 flashcardsCount={deck.flashcardsCount || (deck as DeckLike).cardCount || 0}
                 progressPercent={deck.progressPercent ?? null}
+                pdfSourceNames={deck.pdfSourceNames ?? deck.pdf_source_names ?? undefined}
                 accentColor={deckAccent(deck)}
                 onSelect={() => onSelectDeck(deck.id)}
                 onDeleteSuccess={() => {
