@@ -516,10 +516,21 @@ export function useFlashcardStudy(
     const headId = colaDeEstudio[0];
     setColaDeEstudio((q) => completeHead(q));
     if (headId) {
-      setResultsById((prev) => ({ ...prev, [headId]: true }));
+      const markedCorrect =
+        studyMode === 'quick'
+          ? true
+          : (resultsById[headId] ?? feedbackIA?.isCorrect ?? true);
+      setResultsById((prev) => ({ ...prev, [headId]: markedCorrect }));
+      if (studyMode === 'quick' && deckId) {
+        void apiClient
+          .post(`/decks/${deckId}/study-progress`, { isCorrect: true })
+          .catch(() => {
+            // Offline: session PATCH + list fallback still capture progress.
+          });
+      }
     }
     resetCardInput();
-  }, [colaDeEstudio, resetCardInput]);
+  }, [colaDeEstudio, resetCardInput, studyMode, deckId, resultsById, feedbackIA?.isCorrect]);
 
   /** No me la sé: la carta actual pasa al final de la cola. */
   const deferCurrentCard = useCallback(() => {
