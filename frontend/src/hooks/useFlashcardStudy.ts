@@ -387,6 +387,19 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     await restart({ reshuffle: false });
   }, [restart]);
 
+  /** New random card order anytime; keeps per-card results and session progress. */
+  const reshuffleDeck = useCallback(() => {
+    if (tarjetas.length === 0) return;
+    const ids = orderedTarjetas.map((t) => t.id);
+    const nextOrder = shuffled(ids);
+    setOrder(nextOrder);
+    const firstPending = nextOrder.findIndex((id) => resultsById[id] === undefined);
+    setCurrentIndex(firstPending >= 0 ? firstPending : 0);
+    setRespuestaUsuario('');
+    setFeedbackIA(null);
+    clearError();
+  }, [tarjetas.length, orderedTarjetas, resultsById, clearError]);
+
   const evaluar = async () => {
     if (!tarjetaActual || !respuestaUsuario.trim()) return;
 
@@ -457,6 +470,7 @@ export function useFlashcardStudy(deckIdOrTarjetas: string | Flashcard[], maybeT
     resumeProgress,
     restartProgress,
     restart,
+    reshuffleDeck,
     answeredCount,
     remainingCount,
     lastDeckProgress,

@@ -7,7 +7,7 @@ import { RestartStudyDialog } from "../molecules/RestartStudyDialog"
 import { ExitStudyDialog } from "../molecules/ExitStudyDialog"
 import type { Flashcard } from "../../types"
 import type { ReviewListItem } from "../molecules/StudyReviewList"
-import { Loader2, AlertCircle, ArrowLeft, RotateCcw, WifiOff } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, RotateCcw, Shuffle, WifiOff } from "lucide-react"
 import { Button } from "../atoms/Button"
 import { useLanguage } from "../../i18n/LanguageContext"
 
@@ -64,6 +64,7 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
     pendingResume,
     resumeProgress,
     restart,
+    reshuffleDeck,
     answeredCount,
     remainingCount,
     isOffline,
@@ -87,6 +88,11 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
   const handleRestart = () => {
     if (isEvaluating) return;
     setRestartOpen(true);
+  };
+
+  const handleReshuffle = () => {
+    if (isEvaluating) return;
+    reshuffleDeck();
   };
 
   const handleConfirmRestart = ({ reshuffle }: { reshuffle: boolean }) => {
@@ -123,6 +129,10 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
           {t("study.finishedKept")}
         </p>
         <div className="mt-4 flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" size="lg" onClick={handleReshuffle}>
+            <Shuffle className="w-4 h-4 mr-2" aria-hidden="true" />
+            {t("study.reroll")}
+          </Button>
           <Button variant="outline" size="lg" onClick={handleRestart}>
             <RotateCcw className="w-4 h-4 mr-2" aria-hidden="true" />
             {t("study.restart")}
@@ -214,6 +224,7 @@ function StudySessionInner({ deckId, flashcards, onBack }: { deckId: string, fla
           activeIndex={currentIndex}
           onSelectCard={goToCard}
           onRestart={handleRestart}
+          onReshuffle={handleReshuffle}
         />
       </div>
       <RestartStudyDialog

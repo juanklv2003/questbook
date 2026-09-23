@@ -167,6 +167,7 @@ export const es = {
   "study.restartTitle": "Reiniciar sesión de estudio",
   "study.restartDesc": "Se borrará tu avance guardado y volverás a la primera tarjeta. ¿Quieres continuar?",
   "study.reshuffle": "Mezclar el orden de las preguntas",
+  "study.reroll": "Re-mezclar mazo",
   "study.confirm": "Reiniciar",
   "study.cancel": "Cancelar",
   "study.exitTitle": "¿Salir de la sesión?",

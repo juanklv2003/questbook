@@ -168,6 +168,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "study.restartTitle": "Restart study session",
   "study.restartDesc": "Your saved progress will be cleared and you will go back to the first card. Continue?",
   "study.reshuffle": "Shuffle question order",
+  "study.reroll": "Re-shuffle deck",
   "study.confirm": "Restart",
   "study.cancel": "Cancel",
   "study.exitTitle": "Leave study session?",

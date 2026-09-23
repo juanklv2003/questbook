@@ -7,7 +7,7 @@ import { QuotaCountdownAlert } from "../molecules/QuotaCountdownAlert"
 import { Button } from "../atoms/Button"
 import { TextArea } from "../atoms/TextArea"
 import { useLanguage } from "../../i18n/LanguageContext"
-import { Send, RotateCcw, ArrowRight, AlertCircle } from "lucide-react"
+import { Send, RotateCcw, ArrowRight, AlertCircle, Shuffle } from "lucide-react"
 
 export interface StudyPlayerProps {
   card: FlashcardType;
@@ -36,6 +36,8 @@ export interface StudyPlayerProps {
   onSelectCard?: (index: number) => void;
   /** Reinicio de la sesión (lo cablea el container). Ausente = se oculta. */
   onRestart?: () => void;
+  /** Nuevo orden aleatorio sin borrar aciertos/errores ya guardados. */
+  onReshuffle?: () => void;
 }
 
 export function StudyPlayer({
@@ -57,6 +59,7 @@ export function StudyPlayer({
   activeIndex = 0,
   onSelectCard,
   onRestart,
+  onReshuffle,
 }: StudyPlayerProps) {
   const { t } = useLanguage();
   const [isFlipped, setIsFlipped] = React.useState(false);
@@ -89,7 +92,21 @@ export function StudyPlayer({
           <span className="flex shrink-0 items-center gap-1">
             <span className="text-sm font-medium tabular-nums bg-secondary text-secondary-foreground px-3 py-1 rounded-full">
               {progress} / {total}
-            </span>            {onRestart && (
+            </span>
+            {onReshuffle && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onReshuffle}
+                aria-label={t("study.reroll")}
+                title={t("study.reroll")}
+                className="h-9 w-9 shrink-0 text-muted-foreground"
+              >
+                <Shuffle className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            )}
+            {onRestart && (
               <Button
                 type="button"
                 variant="ghost"
