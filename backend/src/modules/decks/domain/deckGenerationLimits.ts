@@ -22,7 +22,7 @@ export const DECK_GENERATION_BATCH_RESERVE_MS = 45_000;
  */
 export const DECK_GENERATION_MAX_SPLIT_DEPTH = 1;
 
-/** Same cap as `PDF_MAX_TEXT_CHARS` (default 800_000, tope 1_000_000). Exposed for upload UI + multi-PDF merge. */
+/** Same cap as `PDF_MAX_TEXT_CHARS` (default 1_000_000, tope 4_000_000 ≈ 1M tokens). Exposed for upload UI + multi-PDF merge. */
 export function deckSourceTextCap(): number {
   return env.PDF_MAX_TEXT_CHARS;
 }

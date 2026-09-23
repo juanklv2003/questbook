@@ -132,7 +132,7 @@ curl http://localhost:3000/api/v1/no-existe   # 404 en JSON
 | `CORS_ORIGINS` | no | orígenes extra permitidos (previews de Vercel), separados por coma |
 | `COOKIE_SAME_SITE` | no | default `none` en producción / `lax` en desarrollo |
 | `MAX_PDF_UPLOAD_MB` | no | default 100 (ver *Límites conocidos*) |
-| `PDF_MAX_TEXT_CHARS` / `AI_DECK_TIMEOUT_MS` | no | default 800.000 caracteres (máx. 1.000.000) / 120.000 ms |
+| `PDF_MAX_TEXT_CHARS` / `AI_DECK_TIMEOUT_MS` | no | default 1.000.000 caracteres (máx. 4.000.000 ≈ 1M tokens) / 120.000 ms |
 | `AI_DECK_PROMPT_CHARS_PER_CALL` | no | default 200.000 caracteres por llamada a la IA (máx. 500.000); el documento se reparte en ventanas |
 | `DB_POOL_MAX` | no | default 10 conexiones |
 | `GOOGLE_CLIENT_ID` / `_SECRET` / `_CALLBACK_URL` | no | Google OAuth (sin las tres, el botón no funciona) |
@@ -248,8 +248,8 @@ Runbook completo con troubleshooting: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ## Límites conocidos
 
-- **Texto de un libro**: se usan hasta `PDF_MAX_TEXT_CHARS` caracteres por mazo (default 800.000;
-  configurable hasta 1.000.000). Los PDFs que ya no entran en ese presupuesto **no se parsean**
+- **Texto de un libro**: se usan hasta `PDF_MAX_TEXT_CHARS` caracteres por mazo (default 1.000.000;
+  configurable hasta 4.000.000 ≈ 1M tokens). Los PDFs que ya no entran en ese presupuesto **no se parsean**
   (el texto se descartaba igual) y cada llamada a la IA recibe una ventana de
   `AI_DECK_PROMPT_CHARS_PER_CALL` caracteres (default 200.000 ≈ 50k tokens), con ventanas
   consecutivas entre tandas: así un documento grande no repite el prompt completo en cada llamada

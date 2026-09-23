@@ -25,7 +25,7 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => (v?.trim() ? v.trim() : undefined)),
-  // Máximo de caracteres del PDF enviados a la IA al generar tarjetas (default 800_000, máx 1_000_000).
+  // Máximo de caracteres del PDF usados para el libro (default 1_000_000, máx 4_000_000 ≈ 1M tokens).
   PDF_MAX_TEXT_CHARS: z.string().optional(),
   // Timeout (ms) de la llamada IA al generar un mazo desde PDF (default 120_000).
   AI_DECK_TIMEOUT_MS: z.string().optional(),
@@ -184,10 +184,12 @@ export const env = {
   /**
    * Caracteres máximos del texto del PDF que se usan para generar un mazo.
    *
-   * Default 800_000 y tope duro 1_000_000: es el techo que se muestra en la UI
-   * (barra de "contenido del libro") y el que aplica `capDeckSourceText`.
+   * Default 1_000_000 (barra de "contenido del libro"). Tope duro 4_000_000
+   * (~1M tokens a ~4 caracteres/token, el `inputTokenLimit` de Gemini Flash).
+   * Eso NO se manda entero en una llamada: `AI_DECK_PROMPT_CHARS_PER_CALL`
+   * reparte el documento en ventanas (~50k tokens) para no saturar TPM.
    */
-  PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 800_000, 5_000, 1_000_000),
+  PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 1_000_000, 5_000, 4_000_000),
   /** Tiempo máximo de espera (ms) al generar tarjetas desde un PDF. */
   AI_DECK_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TIMEOUT_MS, 120_000, 15_000, 300_000),
   /** Tiempo máximo total (ms) para todas las tandas IA de un mismo mazo. */
