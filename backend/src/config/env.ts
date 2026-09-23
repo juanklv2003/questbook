@@ -25,12 +25,14 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => (v?.trim() ? v.trim() : undefined)),
-  // Máximo de caracteres del PDF enviados a la IA al generar tarjetas (default 500_000).
+  // Máximo de caracteres del PDF enviados a la IA al generar tarjetas (default 800_000, máx 1_000_000).
   PDF_MAX_TEXT_CHARS: z.string().optional(),
   // Timeout (ms) de la llamada IA al generar un mazo desde PDF (default 120_000).
   AI_DECK_TIMEOUT_MS: z.string().optional(),
   /** Wall-clock budget (ms) for all AI batches in one deck generation (default 300_000). */
   AI_DECK_TOTAL_TIMEOUT_MS: z.string().optional(),
+  // Caracteres de texto del PDF incluidos en UNA llamada a la IA (default 200_000).
+  AI_DECK_PROMPT_CHARS_PER_CALL: z.string().optional(),
   // Tamaño máximo del PDF subido (MB). Default 100. Multer guarda el archivo en RAM.
   MAX_PDF_UPLOAD_MB: z.string().optional(),
   DB_POOL_MAX: z.string().optional(),
@@ -179,12 +181,32 @@ export const env = {
   })(),
   /** Modelo Groq para fallback (OpenAI-compatible chat/completions). */
   GROQ_MODEL: _env.data.GROQ_MODEL ?? 'qwen/qwen3.6-27b',
-  /** Caracteres máximos del texto del PDF incluidos en el prompt de generación. */
-  PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 500_000, 5_000, 500_000),
+  /**
+   * Caracteres máximos del texto del PDF que se usan para generar un mazo.
+   *
+   * Default 800_000 y tope duro 1_000_000: es el techo que se muestra en la UI
+   * (barra de "contenido del libro") y el que aplica `capDeckSourceText`.
+   */
+  PDF_MAX_TEXT_CHARS: clampInt(_env.data.PDF_MAX_TEXT_CHARS, 800_000, 5_000, 1_000_000),
   /** Tiempo máximo de espera (ms) al generar tarjetas desde un PDF. */
   AI_DECK_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TIMEOUT_MS, 120_000, 15_000, 300_000),
   /** Tiempo máximo total (ms) para todas las tandas IA de un mismo mazo. */
   AI_DECK_TOTAL_TIMEOUT_MS: clampInt(_env.data.AI_DECK_TOTAL_TIMEOUT_MS, 480_000, 60_000, 600_000),
+  /**
+   * Caracteres de texto que entran en UNA llamada a la IA.
+   *
+   * Con ~4 caracteres por token son ~50k tokens de prompt por llamada: entra
+   * cómodo en el TPM del tier gratuito de Gemini (≈250k) aunque se hagan varias
+   * tandas/retries en el mismo minuto. Un documento más grande se reparte en
+   * ventanas consecutivas (ver `deckPromptWindow`) en vez de repetir el prompt
+   * completo en cada tanda.
+   */
+  AI_DECK_PROMPT_CHARS_PER_CALL: clampInt(
+    _env.data.AI_DECK_PROMPT_CHARS_PER_CALL,
+    200_000,
+    20_000,
+    500_000
+  ),
   /** Límite de subida PDF (bytes), configurable vía MAX_PDF_UPLOAD_MB (default 100). */
   MAX_PDF_UPLOAD_MB: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100),
   MAX_PDF_UPLOAD_BYTES: clampInt(_env.data.MAX_PDF_UPLOAD_MB, 100, 1, 100) * 1024 * 1024,

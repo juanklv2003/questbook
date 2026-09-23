@@ -2,7 +2,10 @@ import { IFlashcardGeneratorPort, GenerateOptions } from '../domain/IFlashcardGe
 import {
   DECK_GENERATION_BATCH_RESERVE_MS,
   DECK_GENERATION_MAX_SPLIT_DEPTH,
+  capDeckSourceText,
   deckBatchLimitFor,
+  deckPromptTextCharsPerCall,
+  deckPromptWindow,
 } from '../domain/deckGenerationLimits';
 import { GeminiFailover } from '../../../core/ai/GeminiFailover';
 import { generateDeckLlmText } from '../../../core/ai/generateLlmText';
@@ -88,15 +91,13 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
   private readonly gemini: GeminiFailover;
 
   // Las peticiones a Gemini con textos enormes pueden tardar minutos o colgarse.
-  // Limitamos el tamaño del prompt (PDF_MAX_TEXT_CHARS) y el timeout (AI_DECK_TIMEOUT_MS).
+  // El texto se acota dos veces: `PDF_MAX_TEXT_CHARS` para el documento completo y
+  // `AI_DECK_PROMPT_CHARS_PER_CALL` por llamada (ventanas), más el timeout
+  // `AI_DECK_TIMEOUT_MS`.
   private readonly DEFAULT_CARDS = 15;
 
   constructor() {
     this.gemini = new GeminiFailover();
-  }
-
-  private get maxTextChars(): number {
-    return env.PDF_MAX_TEXT_CHARS;
   }
 
   /** Smaller batches for hard decks — large JSON arrays often truncate and fail parse. */
@@ -136,13 +137,19 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
 
   async generateFromText(text: string, options?: GenerateOptions): Promise<Array<{ question: string; answer: string }>> {
     const maxCards = options?.cardCount ?? this.DEFAULT_CARDS;
+    // Defensa en el borde del puerto: el controller ya acota el texto, pero este
+    // generador también se usa desde scripts (diagnose:deck-gen).
+    const source = capDeckSourceText(text);
+    const promptCharsPerCall = deckPromptTextCharsPerCall();
     const batchLimit = this.batchLimitFor(maxCards, options?.difficulty);
     const batchTotal = Math.max(1, Math.ceil(maxCards / batchLimit));
     const deadlineMs = this.computeDeadlineMs();
     console.info('[deck-gen] start', {
       cardCount: maxCards,
       difficulty: options?.difficulty ?? 'medium',
-      contentChars: text.length,
+      contentChars: source.length,
+      promptCharsPerCall,
+      promptWindows: Math.max(1, Math.ceil(source.length / promptCharsPerCall)),
       batchLimit,
       batchTotal,
       budgetMs: env.AI_DECK_TOTAL_TIMEOUT_MS,
@@ -150,7 +157,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     });
 
     if (maxCards <= batchLimit) {
-      return this.generatePass(text, options, maxCards, [], {
+      return this.generatePass(source, options, maxCards, [], {
         deadlineMs,
         batchIndex: 1,
         batchTotal: 1,
@@ -168,7 +175,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
       const batchesRemaining = batchTotal - batchIndex + 1;
       try {
         const batch = await this.generatePass(
-          text,
+          source,
           options,
           need,
           cards.map((c) => c.question),
@@ -256,14 +263,11 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     passCtx: PassContext
   ): Promise<Array<{ question: string; answer: string }>> {
     const difficulty = options?.difficulty ?? 'medium';
-    const textCap = this.maxTextChars;
-
-    let truncated = false;
-    let promptText = text;
-    if (promptText.length > textCap) {
-      promptText = promptText.slice(0, textCap);
-      truncated = true;
-    }
+    // Ventana de texto de esta tanda: acota el prompt a `AI_DECK_PROMPT_CHARS_PER_CALL`
+    // y, si el documento no entra en una sola llamada, cada tanda lee una porción
+    // distinta (antes todas mandaban el mismo texto: tokens y latencia repetidos).
+    const window = deckPromptWindow(text, passCtx.batchIndex);
+    const promptText = window.text;
 
     // Determine language for prompt text
     const isSpanish = options?.language === 'es';
@@ -350,11 +354,12 @@ Do NOT include markdown blocks, greetings, or any other text. ONLY the JSON arra
 
     const texts = promptTexts[isSpanish ? 'es' : 'en'];
 
-    const truncationNotice = truncated
-      ? isSpanish
-        ? `\n\nNOTA: El documento original era demasiado largo y solo tienes los primeros ${textCap} caracteres. Genera las tarjetas basándote en esta parte.\n`
-        : `\n\nNOTE: The original document was too long and you only have the first ${textCap} characters. Generate flashcards based on this part.\n`
-      : '';
+    const truncationNotice =
+      window.total > 1
+        ? isSpanish
+          ? `\n\nNOTA: El documento es más largo de lo que entra en una sola llamada; este es el fragmento ${window.index} de ${window.total} (los fragmentos van en orden). Genera las tarjetas SOLO con este fragmento.\n`
+          : `\n\nNOTE: The document is longer than a single call allows; this is fragment ${window.index} of ${window.total} (fragments come in order). Generate flashcards ONLY from this fragment.\n`
+        : '';
 
     const excludeNotice =
       existingQuestions.length > 0
@@ -467,6 +472,7 @@ ${promptText}${truncationNotice}${excludeNotice}
     const durationMs = Date.now() - startedAt;
     console.info('[deck-gen] AI batch ok', {
       batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
+      window: `${window.index}/${window.total}`,
       need: maxCards,
       promptChars: prompt.length,
       maxOutputTokens: maxTokens,

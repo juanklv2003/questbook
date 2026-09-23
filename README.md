@@ -132,7 +132,8 @@ curl http://localhost:3000/api/v1/no-existe   # 404 en JSON
 | `CORS_ORIGINS` | no | orígenes extra permitidos (previews de Vercel), separados por coma |
 | `COOKIE_SAME_SITE` | no | default `none` en producción / `lax` en desarrollo |
 | `MAX_PDF_UPLOAD_MB` | no | default 100 (ver *Límites conocidos*) |
-| `PDF_MAX_TEXT_CHARS` / `AI_DECK_TIMEOUT_MS` | no | default 500.000 caracteres / 120.000 ms |
+| `PDF_MAX_TEXT_CHARS` / `AI_DECK_TIMEOUT_MS` | no | default 800.000 caracteres (máx. 1.000.000) / 120.000 ms |
+| `AI_DECK_PROMPT_CHARS_PER_CALL` | no | default 200.000 caracteres por llamada a la IA (máx. 500.000); el documento se reparte en ventanas |
 | `DB_POOL_MAX` | no | default 10 conexiones |
 | `GOOGLE_CLIENT_ID` / `_SECRET` / `_CALLBACK_URL` | no | Google OAuth (sin las tres, el botón no funciona) |
 
@@ -247,9 +248,17 @@ Runbook completo con troubleshooting: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ## Límites conocidos
 
+- **Texto de un libro**: se usan hasta `PDF_MAX_TEXT_CHARS` caracteres por mazo (default 800.000;
+  configurable hasta 1.000.000). Los PDFs que ya no entran en ese presupuesto **no se parsean**
+  (el texto se descartaba igual) y cada llamada a la IA recibe una ventana de
+  `AI_DECK_PROMPT_CHARS_PER_CALL` caracteres (default 200.000 ≈ 50k tokens), con ventanas
+  consecutivas entre tandas: así un documento grande no repite el prompt completo en cada llamada
+  (menos latencia, menos tokens y menos 429 por TPM) y las tandas cubren partes distintas.
+  Con documentos que entran en una sola llamada el comportamiento es el de siempre.
 - **PDF grande en plan free**: `POST /decks/generate` mantiene el archivo en RAM (multer + copia del
   worker + subida a Cloudinary). En el plan free de Render (≈512 MB) un PDF de 100 MB puede dar
-  OOM/502: bajá `MAX_PDF_UPLOAD_MB` (ej. 25) o pasá a un plan pago.
+  OOM/502: bajá `MAX_PDF_UPLOAD_MB` (ej. 25) o pasá a un plan pago. Los PDFs de más de 7 MB no se
+  archivan en Cloudinary (sólo se usa su texto) y ya no se leen a memoria para eso.
 - **Cookies de terceros**: con frontend y backend en dominios distintos la cookie viaja con
   `SameSite=None; Secure`. En Safari/ITP o modo incógnito puede bloquearse; la solución robusta es un
   dominio propio (`app.tudominio.com` + `api.tudominio.com` → `SameSite=Lax`).

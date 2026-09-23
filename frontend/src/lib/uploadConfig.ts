@@ -9,7 +9,7 @@ const DEFAULT_CLOUDINARY_MAX_BYTES = 10 * 1024 * 1024;
 
 let maxPdfBytes = DEFAULT_MAX_PDF_BYTES;
 let cloudinaryMaxPdfBytes = DEFAULT_CLOUDINARY_MAX_BYTES;
-let deckSourceTextCap = 500_000;
+let deckSourceTextCap = 800_000;
 let directUploadUrl: string | undefined;
 let loaded = false;
 

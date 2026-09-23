@@ -9,6 +9,7 @@ import { isGroqConfigured } from './core/ai/GroqClient';
 import {
   deckGenerationClientTimeoutMs,
   deckSourceTextCap,
+  deckPromptTextCharsPerCall,
 } from './modules/decks/domain/deckGenerationLimits';
 import { errorHandler } from './core/middlewares/errorHandler';
 
@@ -84,6 +85,7 @@ app.get('/api/v1/health', (_req, res) => {
       deckGenerationTimeoutMs: env.AI_DECK_TIMEOUT_MS,
       deckGenerationTotalTimeoutMs: env.AI_DECK_TOTAL_TIMEOUT_MS,
       deckGenerationClientTimeoutMs: deckGenerationClientTimeoutMs(),
+      deckPromptCharsPerCall: deckPromptTextCharsPerCall(),
     },
     upload: {
       maxPdfBytes: env.MAX_PDF_UPLOAD_BYTES,
