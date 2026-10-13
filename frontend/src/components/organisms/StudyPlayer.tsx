@@ -103,11 +103,26 @@ export function StudyPlayer({
   const isTypingTarget = (target: HTMLElement | null) =>
     Boolean(target?.closest('button, input, textarea, select, a, [aria-modal="true"]'));
 
-  // Enter / flechas: corregir, «me la sé» o «no me la sé» tras la evaluación.
+  // Espacio / Enter / flechas: voltear la tarjeta, corregir, «me la sé» o
+  // «no me la sé» tras la evaluación.
   React.useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.repeat || isEvaluating) return;
+      if (e.repeat) return;
       const target = e.target instanceof HTMLElement ? e.target : null;
+
+      // Espacio: voltea la tarjeta desde cualquier foco (lo mismo que un clic).
+      // Los campos de texto, botones y modales abiertos conservan su
+      // comportamiento nativo del Espacio. stopPropagation evita el doble flip
+      // cuando la propia tarjeta tiene foco: Flashcard también escucha Espacio
+      // en su keydown y ambos giros se cancelarían entre sí.
+      if (e.key === " " && !isTypingTarget(target)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsFlipped((flipped) => !flipped);
+        return;
+      }
+
+      if (isEvaluating) return;
 
       if (inReview) {
         // Arrows are global after grading, but text fields and open modals

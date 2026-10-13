@@ -221,7 +221,7 @@ export const es = {
   "card.pending": "Pendiente",
   "card.correct": "Acertada",
   "card.incorrect": "Fallada",
-  "card.ariaLabel": "Tarjeta de estudio. Pregunta: {question}. Pulsa Intro para voltear.",
+  "card.ariaLabel": "Tarjeta de estudio. Pregunta: {question}. Pulsa Intro o Espacio para voltear.",
   "card.question": "Pregunta",
   "card.flipToAnswer": "Haz clic para voltear",
   "card.answer": "Respuesta",

@@ -222,7 +222,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "card.pending": "Pending",
   "card.correct": "Correct",
   "card.incorrect": "Incorrect",
-  "card.ariaLabel": "Study card. Question: {question}. Press Enter to flip.",
+  "card.ariaLabel": "Study card. Question: {question}. Press Enter or Space to flip.",
   "card.question": "Question",
   "card.flipToAnswer": "Click to flip",
   "card.answer": "Answer",
