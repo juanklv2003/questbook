@@ -211,7 +211,6 @@ export const es = {
   "study.modeAi": "Con IA",
   "study.modeQuick": "Rápido",
   "study.quickModeBlurb": "Sin corrección de IA: toca la tarjeta o pulsa espacio para ver la respuesta y luego decide con las flechas.",
-  "study.deleteCard": "Eliminar esta pregunta",
   "study.deleteCardTitle": "¿Eliminar esta pregunta?",
   "study.deleteCardDesc": "La tarjeta se borra del libro y no se puede recuperar.",
   "study.deleteCardConfirm": "Eliminar",
@@ -235,6 +234,7 @@ export const es = {
   "review.empty": "Todavía no hay preguntas en esta sesión.",
   "review.goToQuestion": "Ir a la pregunta {n}: {label}",
   "review.questionLabel": "Pregunta {n} · {label}",
+  "review.deleteQuestion": "Eliminar la pregunta {n}",
 
   "book.openAria": "Abrir libro {name}",
   "book.closeMenuAria": "Cerrar menú del libro",

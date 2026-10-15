@@ -212,7 +212,6 @@ export const en: { [K in keyof typeof es]: string } = {
   "study.modeAi": "With AI",
   "study.modeQuick": "Quick",
   "study.quickModeBlurb": "No AI grading: tap the card or press space to reveal the answer, then decide with the arrow keys.",
-  "study.deleteCard": "Delete this question",
   "study.deleteCardTitle": "Delete this question?",
   "study.deleteCardDesc": "The card will be removed from this book and can't be recovered.",
   "study.deleteCardConfirm": "Delete",
@@ -236,6 +235,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "review.empty": "No questions in this session yet.",
   "review.goToQuestion": "Go to question {n}: {label}",
   "review.questionLabel": "Question {n} · {label}",
+  "review.deleteQuestion": "Delete question {n}",
 
   "book.openAria": "Open book {name}",
   "book.closeMenuAria": "Close book menu",

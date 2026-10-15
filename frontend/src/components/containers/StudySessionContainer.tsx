@@ -141,11 +141,10 @@ function StudySessionInner({
     void restart({ reshuffle });
   };
 
-  // Borra la tarjeta actual en el backend y la saca de la sesión en vivo. El
-  // error NO se atrapa acá: StudyPlayer lo muestra y deja el diálogo abierto.
-  const handleDeleteCard = async () => {
-    if (!tarjetaActual) return;
-    const cardId = tarjetaActual.id;
+  // Borra la tarjeta pedida desde la lista de repaso y la saca de la sesión en
+  // vivo. El error NO se atrapa acá: StudyPlayer lo muestra y deja el diálogo
+  // abierto.
+  const handleDeleteCard = async (cardId: string) => {
     await apiClient.delete(`/decks/${deckId}/flashcards/${cardId}`);
     removeCard(cardId);
     setFlashcards((prev) => prev.filter((c) => c.id !== cardId));

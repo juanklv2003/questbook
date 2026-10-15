@@ -1,6 +1,7 @@
 import * as React from "react"
-import { CheckCircle2, ChevronDown, Circle, ListChecks, XCircle } from "lucide-react"
+import { CheckCircle2, ChevronDown, Circle, ListChecks, Trash2, XCircle } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { Button } from "../atoms/Button"
 import { useLanguage, type TranslationKey } from "../../i18n/LanguageContext"
 import { useMinWidthLg } from "../../hooks/useMinWidthLg"
 import type { FlashcardStatus } from "./Flashcard"
@@ -15,6 +16,10 @@ export interface StudyReviewListProps {
   items: ReviewListItem[];
   activeIndex: number;
   onSelect: (index: number) => void;
+  /** Pide borrar una tarjeta. Ausente = la fila no muestra el botón. */
+  onDeleteCard?: (item: ReviewListItem) => void;
+  /** Bloquea el borrado mientras la IA evalúa o hay un borrado en vuelo. */
+  deleteDisabled?: boolean;
 }
 
 const STATUS_META: Record<FlashcardStatus, { labelKey: TranslationKey }> = {
@@ -33,11 +38,103 @@ function StatusIcon({ status }: { status: FlashcardStatus }) {
   return <Circle className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 }
 
+interface ReviewRowProps {
+  item: ReviewListItem;
+  index: number;
+  isActive: boolean;
+  /** Escritorio: recorta la pregunta a 2 líneas para que la lista no crezca. */
+  clampQuestion?: boolean;
+  onSelect: () => void;
+  onDelete?: () => void;
+  deleteDisabled: boolean;
+  className?: string;
+}
+
+/**
+ * Fila de la lista de repaso: elegir la pregunta y —opcional— borrarla. El
+ * borde, el fondo y el hover viven en el <li> para que la fila entera se lea
+ * como una sola pieza; adentro van dos botones hermanos (nunca anidados, que es
+ * HTML inválido y rompe el foco).
+ */
+function ReviewRow({
+  item,
+  index,
+  isActive,
+  clampQuestion = false,
+  onSelect,
+  onDelete,
+  deleteDisabled,
+  className,
+}: ReviewRowProps) {
+  const { t } = useLanguage();
+  const statusLabel = t(STATUS_META[item.status].labelKey);
+
+  return (
+    <li
+      className={cn(
+        "flex items-stretch gap-1 rounded-lg border transition-colors duration-200",
+        isActive
+          ? "border-primary/40 bg-accent/70"
+          : "border-transparent bg-transparent hover:border-border hover:bg-accent/50",
+        className
+      )}
+    >
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
+        aria-current={isActive ? "true" : undefined}
+        className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-lg px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+      >
+        <span className="mt-0.5">
+          <StatusIcon status={item.status} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {t("review.questionLabel", { n: index + 1, label: statusLabel })}
+          </span>
+          <span
+            className={cn(
+              "mt-0.5 block break-words text-sm text-foreground",
+              clampQuestion ? "line-clamp-2 leading-snug" : "leading-relaxed"
+            )}
+          >
+            {item.question}
+          </span>
+        </span>
+      </button>
+
+      {onDelete && (
+        <span className="flex shrink-0 items-center pr-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onDelete}
+            disabled={deleteDisabled}
+            aria-label={t("review.deleteQuestion", { n: index + 1 })}
+            title={t("review.deleteQuestion", { n: index + 1 })}
+            className="h-8 w-8 text-muted-foreground/70 hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </span>
+      )}
+    </li>
+  );
+}
+
 /**
  * Móvil (<lg): acordeón con scroll interno al expandir.
  * Escritorio (≥1024, p. ej. 720p/1080p): sidebar «Repasar» como antes — lista vertical con max 52vh.
  */
-export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewListProps) {
+export function StudyReviewList({
+  items,
+  activeIndex,
+  onSelect,
+  onDeleteCard,
+  deleteDisabled = false,
+}: StudyReviewListProps) {
   const { t } = useLanguage();
   const isDesktop = useMinWidthLg();
   const [open, setOpen] = React.useState(false);
@@ -60,40 +157,19 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
           <p className="text-sm text-muted-foreground">{t("review.empty")}</p>
         ) : (
           <ol className="flex min-h-0 max-h-[52vh] flex-col gap-2 overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]">
-            {items.map((item, index) => {
-              const isActive = index === activeIndex;
-              const meta = STATUS_META[item.status];
-              const statusLabel = t(meta.labelKey);
-              return (
-                <li key={item.id} className="min-w-0 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onSelect(index)}
-                    aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
-                    aria-current={isActive ? "true" : undefined}
-                    className={cn(
-                      "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                      isActive
-                        ? "border-primary/40 bg-accent/70"
-                        : "border-transparent bg-transparent hover:border-border hover:bg-accent/50"
-                    )}
-                  >
-                    <span className="mt-0.5">
-                      <StatusIcon status={item.status} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {t("review.questionLabel", { n: index + 1, label: statusLabel })}
-                      </span>
-                      <span className="mt-0.5 block line-clamp-2 break-words text-sm leading-snug text-foreground">
-                        {item.question}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+            {items.map((item, index) => (
+              <ReviewRow
+                key={item.id}
+                item={item}
+                index={index}
+                isActive={index === activeIndex}
+                clampQuestion
+                onSelect={() => onSelect(index)}
+                onDelete={onDeleteCard ? () => onDeleteCard(item) : undefined}
+                deleteDisabled={deleteDisabled}
+                className="min-w-0 shrink-0"
+              />
+            ))}
           </ol>
         )}
       </nav>
@@ -135,40 +211,18 @@ export function StudyReviewList({ items, activeIndex, onSelect }: StudyReviewLis
             id={listId}
             className="flex max-h-[min(18rem,calc(100dvh-16rem))] min-h-0 flex-col gap-1 overflow-y-auto overscroll-y-contain pb-1 pr-1 [-webkit-overflow-scrolling:touch]"
           >
-            {items.map((item, index) => {
-              const isActive = index === activeIndex;
-              const meta = STATUS_META[item.status];
-              const statusLabel = t(meta.labelKey);
-              return (
-                <li key={item.id} className="min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => onSelect(index)}
-                    aria-label={t("review.goToQuestion", { n: index + 1, label: statusLabel })}
-                    aria-current={isActive ? "true" : undefined}
-                    className={cn(
-                      "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                      isActive
-                        ? "border-primary/40 bg-accent/70"
-                        : "border-transparent bg-transparent hover:border-border hover:bg-accent/50"
-                    )}
-                  >
-                    <span className="mt-0.5">
-                      <StatusIcon status={item.status} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {t("review.questionLabel", { n: index + 1, label: statusLabel })}
-                      </span>
-                      <span className="mt-0.5 block break-words text-sm leading-relaxed text-foreground">
-                        {item.question}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+            {items.map((item, index) => (
+              <ReviewRow
+                key={item.id}
+                item={item}
+                index={index}
+                isActive={index === activeIndex}
+                onSelect={() => onSelect(index)}
+                onDelete={onDeleteCard ? () => onDeleteCard(item) : undefined}
+                deleteDisabled={deleteDisabled}
+                className="min-w-0"
+              />
+            ))}
           </ol>
         ))}
     </nav>
