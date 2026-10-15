@@ -7,7 +7,7 @@ import { QuotaCountdownAlert } from "../molecules/QuotaCountdownAlert"
 import { Button } from "../atoms/Button"
 import { TextArea } from "../atoms/TextArea"
 import { useLanguage } from "../../i18n/LanguageContext"
-import { Send, RotateCcw, ArrowRight, ArrowLeft, AlertCircle, Shuffle, Eye } from "lucide-react"
+import { Send, RotateCcw, ArrowRight, ArrowLeft, AlertCircle, Shuffle } from "lucide-react"
 import type { StudyMode } from "../../lib/studyMode"
 import { StudyModeSwitch } from "../molecules/StudyModeSwitch"
 
@@ -110,14 +110,19 @@ export function StudyPlayer({
       if (e.repeat) return;
       const target = e.target instanceof HTMLElement ? e.target : null;
 
-      // Espacio: voltea la tarjeta desde cualquier foco (lo mismo que un clic).
-      // Los campos de texto, botones y modales abiertos conservan su
+      // Espacio: en modo rápido revela la respuesta (como tocar la tarjeta)
+      // para que aparezcan las flechas; en el resto de los casos voltea la
+      // tarjeta. Los campos de texto, botones y modales abiertos conservan su
       // comportamiento nativo del Espacio. stopPropagation evita el doble flip
       // cuando la propia tarjeta tiene foco: Flashcard también escucha Espacio
       // en su keydown y ambos giros se cancelarían entre sí.
       if (e.key === " " && !isTypingTarget(target)) {
         e.preventDefault();
         e.stopPropagation();
+        if (studyMode === "quick" && !inReview) {
+          onSubmit();
+          return;
+        }
         setIsFlipped((flipped) => !flipped);
         return;
       }
@@ -175,10 +180,14 @@ export function StudyPlayer({
           {t("study.deferCard")}
         </Button>
       )}
-      <Button variant="outline" onClick={onRetry} className="flex-1 h-12">
-        <RotateCcw className="w-4 h-4 mr-2" aria-hidden="true" />
-        {t("study.retry")}
-      </Button>
+      {/* Modo sin IA: solo las flechas «no me la sé» / «me la sé». Reintentar
+          no aplica porque no hay respuesta escrita que corregir. */}
+      {studyMode === "ai" && (
+        <Button variant="outline" onClick={onRetry} className="flex-1 h-12">
+          <RotateCcw className="w-4 h-4 mr-2" aria-hidden="true" />
+          {t("study.retry")}
+        </Button>
+      )}
       <Button ref={nextButtonRef} onClick={onNext} className="flex-1 h-12">
         {t("study.knowCard")}
         <ArrowRight className="w-4 h-4 ml-2" aria-hidden="true" />
@@ -257,7 +266,15 @@ export function StudyPlayer({
                 question={card.question}
                 answer={card.answer}
                 isFlipped={isFlipped}
-                onFlip={() => setIsFlipped(!isFlipped)}
+                onFlip={() => {
+                  // Modo sin IA: tocar la tarjeta revela la respuesta (mismo
+                  // camino que el espacio). Ya revelada, solo voltea.
+                  if (studyMode === "quick" && !inReview) {
+                    onSubmit();
+                    return;
+                  }
+                  setIsFlipped(!isFlipped);
+                }}
                 status={cardStatus}
               />
             </div>
@@ -297,80 +314,67 @@ export function StudyPlayer({
 
           <div className="w-full max-w-2xl flex flex-col gap-4">
             {!inReview ? (
-              <div className="flex flex-col gap-4">
-                {studyMode === "ai" && ((quotaExceeded ?? overloaded) && onAcknowledgeQuota) ? (
-                  <QuotaCountdownAlert
-                    quota={(quotaExceeded ?? overloaded)!}
-                    onAcknowledge={onAcknowledgeQuota}
-                    actionKey="evaluate"
-                    variant={quotaExceeded ? "quota" : "overloaded"}
-                  />
-                ) : (
-                  studyMode === "ai" && error && (
-                    <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
-                      <span>{error}</span>
-                    </div>
-                  )
-                )}
-                {studyMode === "quick" && (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {t("study.quickModeBlurb")}
-                  </p>
-                )}
-                <label htmlFor="study-answer" className="text-sm font-medium">
-                  {studyMode === "quick" ? t("study.answerLabelOptional") : t("study.answerLabel")}
-                </label>
-                <TextArea
-                  id="study-answer"
-                  placeholder={t("study.answerPlaceholder")}
-                  value={userAnswer}
-                  onChange={(e) => setUserAnswer(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      if (isEvaluating) return;
-                      if (studyMode === "quick" || userAnswer.trim()) {
-                        onSubmit();
-                      }
-                    }
-                  }}
-                  disabled={isEvaluating}
-                  className="text-base min-h-[96px] bg-card"
-                />
-                <Button
-                  onClick={onSubmit}
-                  isLoading={studyMode === "ai" && isEvaluating}
-                  disabled={studyMode === "ai" && (!userAnswer.trim() || isEvaluating)}
-                  className="w-full h-12 text-base"
-                >
-                  {!isEvaluating && (studyMode === "quick" ? (
-                    <Eye className="w-4 h-4 mr-2" aria-hidden="true" />
+              studyMode === "quick" ? (
+                // Modo sin IA: sin recuadro de respuesta. Se revela con el
+                // espacio (o tocando la tarjeta) y se decide con las flechas.
+                <p className="text-center text-xs text-muted-foreground leading-relaxed">
+                  {t("study.quickModeBlurb")}
+                </p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {(quotaExceeded ?? overloaded) && onAcknowledgeQuota ? (
+                    <QuotaCountdownAlert
+                      quota={(quotaExceeded ?? overloaded)!}
+                      onAcknowledge={onAcknowledgeQuota}
+                      actionKey="evaluate"
+                      variant={quotaExceeded ? "quota" : "overloaded"}
+                    />
                   ) : (
-                    <Send className="w-4 h-4 mr-2" aria-hidden="true" />
-                  ))}
-                  {studyMode === "quick" ? t("study.showAnswer") : t("study.submitAnswer")}
-                </Button>
-              </div>
+                    error && (
+                      <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                        <span>{error}</span>
+                      </div>
+                    )
+                  )}
+                  <label htmlFor="study-answer" className="text-sm font-medium">
+                    {t("study.answerLabel")}
+                  </label>
+                  <TextArea
+                    id="study-answer"
+                    placeholder={t("study.answerPlaceholder")}
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (isEvaluating) return;
+                        if (userAnswer.trim()) {
+                          onSubmit();
+                        }
+                      }
+                    }}
+                    disabled={isEvaluating}
+                    className="text-base min-h-[96px] bg-card"
+                  />
+                  <Button
+                    onClick={onSubmit}
+                    isLoading={isEvaluating}
+                    disabled={!userAnswer.trim() || isEvaluating}
+                    className="w-full h-12 text-base"
+                  >
+                    {!isEvaluating && <Send className="w-4 h-4 mr-2" aria-hidden="true" />}
+                    {t("study.submitAnswer")}
+                  </Button>
+                </div>
+              )
             ) : (
               <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4">
-                {evaluation ? (
+                {evaluation && (
                   <EvaluationResult
                     feedback={evaluation.feedback}
                     isCorrect={evaluation.isCorrect}
                   />
-                ) : (
-                  <div className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm flex flex-col gap-3">
-                    <p className="text-sm font-medium">{t("study.quickCompareTitle")}</p>
-                    {userAnswer.trim() ? (
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap rounded-lg bg-muted/40 p-3">
-                        <span className="font-medium text-foreground">{t("study.yourAnswer")}: </span>
-                        {userAnswer}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{t("study.quickNoAnswer")}</p>
-                    )}
-                  </div>
                 )}
                 {reviewActions}
               </div>
@@ -378,6 +382,7 @@ export function StudyPlayer({
           </div>
         </div>
       </div>
+
     </div>
   )
 }

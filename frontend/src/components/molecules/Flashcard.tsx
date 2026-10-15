@@ -77,10 +77,16 @@ export function Flashcard({ question, answer, isFlipped, onFlip, status = "pendi
             </p>
             <Badge color={styles.badgeColor} label={t(styles.badgeKey)} className="shrink-0" />
           </div>
-          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto px-5 py-4 sm:px-8">
-            <h3 className="min-w-0 text-center text-lg font-semibold leading-snug tracking-tight text-foreground break-words sm:text-2xl">
-              {question}
-            </h3>
+          {/* Scroll container is the outer box; the inner `min-h-full` wrapper
+              centers short text but grows with tall text, so overflowing
+              content stays reachable from the top (flex `items-center` alone
+              clips the start of long answers with no way to scroll up). */}
+          <div className="min-h-0 w-full flex-1 overflow-y-auto px-5 py-4 sm:px-8">
+            <div className="flex min-h-full items-center justify-center">
+              <h3 className="min-w-0 text-center text-lg font-semibold leading-snug tracking-tight text-foreground break-words sm:text-2xl">
+                {question}
+              </h3>
+            </div>
           </div>
           <p className="flex items-center justify-center gap-1.5 px-5 pb-4 text-xs text-muted-foreground sm:px-8 sm:pb-5">
             <MousePointerClick className="h-3.5 w-3.5" aria-hidden="true" />
@@ -111,10 +117,12 @@ export function Flashcard({ question, answer, isFlipped, onFlip, status = "pendi
               </span>
             ) : null}
           </div>
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-5 py-4 sm:px-8">
-            <p className="w-full min-w-0 text-center text-base leading-relaxed text-card-foreground break-words sm:text-xl">
-              {answer || t("card.noAnswer")}
-            </p>
+          <div className="min-h-0 w-full flex-1 overflow-y-auto px-5 py-4 sm:px-8">
+            <div className="flex min-h-full items-center justify-center">
+              <p className="w-full min-w-0 text-center text-base leading-relaxed text-card-foreground break-words sm:text-xl">
+                {answer || t("card.noAnswer")}
+              </p>
+            </div>
           </div>
           <p className="flex items-center justify-center gap-1.5 px-5 pb-4 text-xs text-muted-foreground sm:px-8 sm:pb-5">
             <MousePointerClick className="h-3.5 w-3.5" aria-hidden="true" />
