@@ -11,6 +11,7 @@ import { Loader2, AlertCircle, ArrowLeft, RotateCcw, Shuffle, WifiOff } from "lu
 import { Button } from "../atoms/Button"
 import { useLanguage } from "../../i18n/LanguageContext"
 import type { StudyMode } from "../../lib/studyMode"
+import apiClient from "../../lib/axios"
 
 export function StudySessionContainer({
   deckId,
@@ -23,7 +24,7 @@ export function StudySessionContainer({
   studyMode: StudyMode;
   onStudyModeChange: (mode: StudyMode) => void;
 }) {
-  const { flashcards, isLoading, error } = useDeckFlashcards(deckId);
+  const { flashcards, isLoading, error, setFlashcards } = useDeckFlashcards(deckId);
   const { t } = useLanguage();
 
   if (isLoading) {
@@ -50,6 +51,7 @@ export function StudySessionContainer({
       key={deckId}
       deckId={deckId}
       flashcards={flashcards}
+      setFlashcards={setFlashcards}
       onBack={onBack}
       studyMode={studyMode}
       onStudyModeChange={onStudyModeChange}
@@ -60,12 +62,14 @@ export function StudySessionContainer({
 function StudySessionInner({
   deckId,
   flashcards,
+  setFlashcards,
   onBack,
   studyMode,
   onStudyModeChange,
 }: {
   deckId: string;
   flashcards: Flashcard[];
+  setFlashcards: React.Dispatch<React.SetStateAction<Flashcard[]>>;
   onBack: () => void;
   studyMode: StudyMode;
   onStudyModeChange: (mode: StudyMode) => void;
@@ -99,6 +103,7 @@ function StudySessionInner({
     restart,
     reshuffleDeck,
     deferCurrentCard,
+    removeCard,
     colaDeEstudio,
     queueReady,
     answeredCount,
@@ -134,6 +139,16 @@ function StudySessionInner({
   const handleConfirmRestart = ({ reshuffle }: { reshuffle: boolean }) => {
     setRestartOpen(false);
     void restart({ reshuffle });
+  };
+
+  // Borra la tarjeta actual en el backend y la saca de la sesión en vivo. El
+  // error NO se atrapa acá: StudyPlayer lo muestra y deja el diálogo abierto.
+  const handleDeleteCard = async () => {
+    if (!tarjetaActual) return;
+    const cardId = tarjetaActual.id;
+    await apiClient.delete(`/decks/${deckId}/flashcards/${cardId}`);
+    removeCard(cardId);
+    setFlashcards((prev) => prev.filter((c) => c.id !== cardId));
   };
 
   const inQueue = React.useMemo(() => new Set(colaDeEstudio), [colaDeEstudio]);
@@ -271,6 +286,7 @@ function StudySessionInner({
           onRestart={handleRestart}
           onReshuffle={handleReshuffle}
           onDeferCard={deferCurrentCard}
+          onDeleteCard={handleDeleteCard}
           queueRemaining={colaDeEstudio.length}
           studyMode={studyMode}
           onStudyModeChange={onStudyModeChange}

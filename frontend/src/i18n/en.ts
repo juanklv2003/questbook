@@ -212,6 +212,11 @@ export const en: { [K in keyof typeof es]: string } = {
   "study.modeAi": "With AI",
   "study.modeQuick": "Quick",
   "study.quickModeBlurb": "No AI grading: tap the card or press space to reveal the answer, then decide with the arrow keys.",
+  "study.deleteCard": "Delete this question",
+  "study.deleteCardTitle": "Delete this question?",
+  "study.deleteCardDesc": "The card will be removed from this book and can't be recovered.",
+  "study.deleteCardConfirm": "Delete",
+  "study.deleteCardError": "Couldn't delete the question. Please try again.",
   "study.reviewQuestions": "Questions · {done}/{total}",
 
   "card.pending": "Pending",

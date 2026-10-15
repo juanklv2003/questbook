@@ -211,6 +211,11 @@ export const es = {
   "study.modeAi": "Con IA",
   "study.modeQuick": "Rápido",
   "study.quickModeBlurb": "Sin corrección de IA: toca la tarjeta o pulsa espacio para ver la respuesta y luego decide con las flechas.",
+  "study.deleteCard": "Eliminar esta pregunta",
+  "study.deleteCardTitle": "¿Eliminar esta pregunta?",
+  "study.deleteCardDesc": "La tarjeta se borra del libro y no se puede recuperar.",
+  "study.deleteCardConfirm": "Eliminar",
+  "study.deleteCardError": "No se pudo eliminar la pregunta. Intenta de nuevo.",
   "study.reviewQuestions": "Preguntas · {done}/{total}",
 
   "card.pending": "Pendiente",

@@ -48,4 +48,16 @@ export class PostgresFlashcardRepository implements IFlashcardRepository {
     const result = await this.db.query<Flashcard>(query, [id]);
     return result.rows[0] || null;
   }
+
+  async deleteById(id: string, deckId: string): Promise<boolean> {
+    // Scoped to deck_id so a caller can never delete a card that belongs to
+    // another deck even if it guesses a valid card id.
+    const query = `
+      DELETE FROM flashcards
+      WHERE id = $1 AND deck_id = $2
+      RETURNING id
+    `;
+    const result = await this.db.query<{ id: string }>(query, [id, deckId]);
+    return result.rows.length > 0;
+  }
 }

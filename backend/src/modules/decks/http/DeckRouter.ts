@@ -3,6 +3,7 @@ import { GenerateDeckUseCase } from '../useCases/GenerateDeckUseCase';
 import { GetDeckFlashcardsUseCase } from '../useCases/GetDeckFlashcardsUseCase';
 import { ListDecksUseCase } from '../useCases/ListDecksUseCase';
 import { DeleteDeckUseCase } from '../useCases/DeleteDeckUseCase';
+import { DeleteFlashcardUseCase } from '../useCases/DeleteFlashcardUseCase';
 import { UpdateDeckShelfUseCase } from '../useCases/UpdateDeckShelfUseCase';
 import { GetStudySessionUseCase } from '../useCases/GetStudySessionUseCase';
 import { SaveStudySessionUseCase } from '../useCases/SaveStudySessionUseCase';
@@ -34,6 +35,7 @@ const generateDeckUseCase = new GenerateDeckUseCase(deckRepo, aiGenerator, flash
 const getDeckFlashcardsUseCase = new GetDeckFlashcardsUseCase(flashcardRepo, deckRepo);
 const listDecksUseCase = new ListDecksUseCase(deckRepo);
 const deleteDeckUseCase = new DeleteDeckUseCase(deckRepo, cloudStorage);
+const deleteFlashcardUseCase = new DeleteFlashcardUseCase(flashcardRepo, deckRepo);
 const updateDeckShelfUseCase = new UpdateDeckShelfUseCase(deckRepo);
 const sessionRepo = new PostgresStudySessionRepository(db);
 const getStudySessionUseCase = new GetStudySessionUseCase(deckRepo, sessionRepo);
@@ -47,6 +49,7 @@ const deckController = new DeckController(
   getDeckFlashcardsUseCase,
   listDecksUseCase,
   deleteDeckUseCase,
+  deleteFlashcardUseCase,
   updateDeckShelfUseCase,
   getStudySessionUseCase,
   saveStudySessionUseCase,
@@ -65,6 +68,7 @@ deckRouter.post('/generate/direct-upload-token', deckController.createDirectUplo
 deckRouter.post('/pdf-text-stats', pdfUploadSingle, deckController.previewPdfText);
 deckRouter.post('/generate', aiGenerateLimiter, pdfUploadGenerate, deckController.generate);
 deckRouter.get('/:deckId/flashcards', deckController.getFlashcards);
+deckRouter.delete('/:deckId/flashcards/:cardId', deckController.deleteFlashcard);
 deckRouter.get('/', deckController.listDecks);
 deckRouter.patch('/:id/shelf', deckController.updateShelf);
 deckRouter.get('/:id/session', deckController.getSession);

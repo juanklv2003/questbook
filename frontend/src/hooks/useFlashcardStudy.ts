@@ -549,6 +549,26 @@ export function useFlashcardStudy(
 
   const siguienteTarjeta = completeCurrentCard;
 
+  /**
+   * Drops a deleted card from the live session: queue, results and order. The
+   * deck itself is owned by the caller (the container filters its own list);
+   * this only keeps the session from ever landing on a card that no longer
+   * exists. When the removed card was on top, its input state is cleared so the
+   * next card never inherits a stale answer or evaluation.
+   */
+  const removeCard = useCallback((cardId: string) => {
+    const wasCurrent = colaDeEstudio[0] === cardId;
+    setColaDeEstudio((q) => (q.includes(cardId) ? q.filter((id) => id !== cardId) : q));
+    setResultsById((prev) => {
+      if (!(cardId in prev)) return prev;
+      const next = { ...prev };
+      delete next[cardId];
+      return next;
+    });
+    setOrder((prev) => (prev ? prev.filter((id) => id !== cardId) : prev));
+    if (wasCurrent) resetCardInput();
+  }, [colaDeEstudio, resetCardInput]);
+
   /** Jump to a card (review list): la pone al frente de la cola si sigue pendiente. */
   const goToCard = (index: number) => {
     if (index < 0 || index >= orderedTarjetas.length) return;
@@ -587,6 +607,7 @@ export function useFlashcardStudy(
     completeCurrentCard,
     deferCurrentCard,
     reintentar,
+    removeCard,
     resultsById,
     goToCard,
     // Partial-progress persistence:

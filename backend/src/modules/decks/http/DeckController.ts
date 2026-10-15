@@ -4,6 +4,7 @@ import { GenerateDeckUseCase } from '../useCases/GenerateDeckUseCase';
 import { GetDeckFlashcardsUseCase } from '../useCases/GetDeckFlashcardsUseCase';
 import { ListDecksUseCase } from '../useCases/ListDecksUseCase';
 import { DeleteDeckUseCase } from '../useCases/DeleteDeckUseCase';
+import { DeleteFlashcardUseCase } from '../useCases/DeleteFlashcardUseCase';
 import { UpdateDeckShelfUseCase } from '../useCases/UpdateDeckShelfUseCase';
 import { GetStudySessionUseCase } from '../useCases/GetStudySessionUseCase';
 import { SaveStudySessionUseCase } from '../useCases/SaveStudySessionUseCase';
@@ -26,6 +27,7 @@ import { env } from '../../../config/env';
 // Validar el formato en el router evita 500 por IDs malformados y da un 400
 // claro.
 const deckIdSchema = z.uuid('ID de libro inválido');
+const cardIdSchema = z.uuid('ID de tarjeta inválido');
 
 type UploadedFilesMap = Record<string, Express.Multer.File[]>;
 
@@ -59,6 +61,7 @@ export class DeckController {
     private readonly getDeckFlashcardsUseCase: GetDeckFlashcardsUseCase,
     private readonly listDecksUseCase: ListDecksUseCase,
     private readonly deleteDeckUseCase: DeleteDeckUseCase,
+    private readonly deleteFlashcardUseCase: DeleteFlashcardUseCase,
     private readonly updateDeckShelfUseCase: UpdateDeckShelfUseCase,
     private readonly getStudySessionUseCase: GetStudySessionUseCase,
     private readonly saveStudySessionUseCase: SaveStudySessionUseCase,
@@ -73,6 +76,7 @@ export class DeckController {
     this.getFlashcards = catchAsync(this.getFlashcards.bind(this));
     this.listDecks = catchAsync(this.listDecks.bind(this));
     this.deleteDeck = catchAsync(this.deleteDeck.bind(this));
+    this.deleteFlashcard = catchAsync(this.deleteFlashcard.bind(this));
     this.updateShelf = catchAsync(this.updateShelf.bind(this));
     this.getSession = catchAsync(this.getSession.bind(this));
     this.saveSession = catchAsync(this.saveSession.bind(this));
@@ -292,6 +296,20 @@ export class DeckController {
     const deckId = parseBody(deckIdSchema, req.params.id ?? '');
 
     await this.deleteDeckUseCase.execute(deckId, userId);
+    res.status(204).send();
+  }
+
+  async deleteFlashcard(req: Request, res: Response) {
+    // Auth first: unauthenticated callers get 401 even for malformed ids.
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(401, 'Unauthorized');
+    }
+
+    const deckId = parseBody(deckIdSchema, req.params.deckId ?? '');
+    const cardId = parseBody(cardIdSchema, req.params.cardId ?? '');
+
+    await this.deleteFlashcardUseCase.execute(deckId, cardId, userId);
     res.status(204).send();
   }
 

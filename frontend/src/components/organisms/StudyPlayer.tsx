@@ -7,9 +7,10 @@ import { QuotaCountdownAlert } from "../molecules/QuotaCountdownAlert"
 import { Button } from "../atoms/Button"
 import { TextArea } from "../atoms/TextArea"
 import { useLanguage } from "../../i18n/LanguageContext"
-import { Send, RotateCcw, ArrowRight, ArrowLeft, AlertCircle, Shuffle } from "lucide-react"
+import { Send, RotateCcw, ArrowRight, ArrowLeft, AlertCircle, Shuffle, Trash2 } from "lucide-react"
 import type { StudyMode } from "../../lib/studyMode"
 import { StudyModeSwitch } from "../molecules/StudyModeSwitch"
+import { DeleteCardDialog } from "../molecules/DeleteCardDialog"
 
 export interface StudyPlayerProps {
   card: FlashcardType;
@@ -48,6 +49,11 @@ export interface StudyPlayerProps {
   onStudyModeChange: (mode: StudyMode) => void;
   /** Modo rápido: el usuario ya pidió ver la respuesta del libro. */
   answerRevealed?: boolean;
+  /**
+   * Borra la tarjeta actual (ausente = se oculta el botón). Rechaza si el
+   * borrado falla; StudyPlayer mantiene el diálogo abierto y muestra el error.
+   */
+  onDeleteCard?: () => Promise<void> | void;
 }
 
 export function StudyPlayer({
@@ -75,10 +81,38 @@ export function StudyPlayer({
   studyMode,
   onStudyModeChange,
   answerRevealed = false,
+  onDeleteCard,
 }: StudyPlayerProps) {
   const { t } = useLanguage();
   const [isFlipped, setIsFlipped] = React.useState(false);
   const nextButtonRef = React.useRef<HTMLButtonElement>(null);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
+  const openDeleteDialog = () => {
+    setDeleteError(null);
+    setDeleteOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    if (isDeleting) return;
+    setDeleteOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!onDeleteCard) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDeleteCard();
+      setDeleteOpen(false);
+    } catch {
+      setDeleteError(t("study.deleteCardError"));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const inReview =
     Boolean(evaluation) || (studyMode === "quick" && answerRevealed);
@@ -108,6 +142,8 @@ export function StudyPlayer({
   React.useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return;
+      // Con el diálogo de borrado abierto, el modal manda: sin atajos globales.
+      if (deleteOpen) return;
       const target = e.target instanceof HTMLElement ? e.target : null;
 
       // Espacio: en modo rápido revela la respuesta (como tocar la tarjeta)
@@ -170,7 +206,7 @@ export function StudyPlayer({
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [inReview, isEvaluating, userAnswer, studyMode, onSubmit, onNext, onDeferCard]);
+  }, [inReview, isEvaluating, userAnswer, studyMode, onSubmit, onNext, onDeferCard, deleteOpen]);
 
   const reviewActions = (
     <div className="flex flex-col sm:flex-row gap-4">
@@ -261,6 +297,22 @@ export function StudyPlayer({
 
         <div className="order-1 flex min-w-0 flex-col items-center gap-4 lg:order-2">
           <div className="w-full max-w-2xl flex flex-col items-center gap-2">
+            {onDeleteCard && (
+              <div className="flex w-full justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={openDeleteDialog}
+                  disabled={isEvaluating || isDeleting}
+                  aria-label={t("study.deleteCard")}
+                  title={t("study.deleteCard")}
+                  className="h-8 w-8 shrink-0 text-muted-foreground/70 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            )}
             <div className="w-full flex justify-center">
               <Flashcard
                 question={card.question}
@@ -383,6 +435,14 @@ export function StudyPlayer({
         </div>
       </div>
 
+      <DeleteCardDialog
+        open={deleteOpen}
+        question={card.question}
+        isDeleting={isDeleting}
+        error={deleteError}
+        onClose={closeDeleteDialog}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
   )
 }
