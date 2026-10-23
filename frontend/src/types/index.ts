@@ -89,6 +89,8 @@ export interface DeckGenerationOptions {
   difficulty: Difficulty;
   color?: string;
   language?: 'en' | 'es';
+  /** Una tarjeta por consigna numerada del PDF; la IA sólo reformula el enunciado. */
+  questionBank?: boolean;
 }
 
 export interface GenerateDeckResult {

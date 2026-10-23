@@ -15,7 +15,7 @@ import { env } from '../../../config/env';
 import { AppError } from '../../../core/errors/AppError';
 import { QuotaExceededError } from '../../../core/errors/QuotaExceededError';
 import { ModelOverloadedError } from '../../../core/errors/ModelOverloadedError';
-import type { Difficulty } from '../domain/IFlashcardGeneratorPort';
+import type { Difficulty, QuestionBankSourceItem } from '../domain/IFlashcardGeneratorPort';
 import { z } from 'zod';
 
 /** Cada tarjeta debe traer pregunta y respuesta no vacías; el resto se descarta. */
@@ -85,6 +85,68 @@ function sleepMs(ms: number): Promise<void> {
 function isAiTimeoutMessage(detail: string): boolean {
   const d = detail.toLowerCase();
   return d.includes('timed out') || d.includes('timeout');
+}
+
+/** Consignas por llamada al reescribir. Cada salida es corta; 12 evita truncados. */
+const PARAPHRASE_BATCH_SIZE = 12;
+
+const paraphraseEntrySchema = z.object({
+  id: z.union([z.number(), z.string()]),
+  question: z.string().trim().min(1),
+});
+
+/** Mapa `id` (1-based dentro del lote) → consigna reescrita. Nunca completa el lote entero. */
+function parseParaphraseOutput(output: string): Map<number, string> | null {
+  const parsed = parseFlashcardJsonArray(output);
+  if (!parsed) return null;
+
+  const result = new Map<number, string>();
+  for (const entry of parsed) {
+    const valid = paraphraseEntrySchema.safeParse(entry);
+    if (!valid.success) continue;
+    const id = Number(valid.data.id);
+    if (!Number.isInteger(id) || id < 1) continue;
+    if (result.has(id)) continue;
+    result.set(id, valid.data.question);
+  }
+  return result.size > 0 ? result : null;
+}
+
+function buildParaphrasePrompt(
+  batch: QuestionBankSourceItem[],
+  language: 'en' | 'es'
+): string {
+  const payload = JSON.stringify(
+    batch.map((item, index) => ({ id: index + 1, question: item.question }))
+  );
+
+  if (language === 'en') {
+    return `You are a teacher preparing an exam question bank.
+You will receive a JSON array of exam questions that were already extracted from a PDF.
+TASK: rewrite EACH question with slightly different wording.
+HARD RULES:
+- Keep the exact same meaning, scope and technical terminology.
+- Do NOT add or remove information. Do NOT answer the question. Do NOT invent answer options.
+- Do NOT merge, split, reorder or drop questions.
+- Keep each question in the language it is already written in.
+OUTPUT: a JSON array with one object per question, using the exact keys "id" and "question".
+"id" MUST be exactly the number you received. No markdown, no extra text. ONLY the JSON array.
+QUESTIONS:
+${payload}`;
+  }
+
+  return `Sos un docente que prepara un banco de preguntas de examen.
+Vas a recibir un array JSON con consignas ya extraídas de un PDF.
+TAREA: reescribí CADA consigna con palabras ligeramente distintas.
+REGLAS DURAS:
+- Mismo significado, mismo alcance y misma terminología técnica.
+- NO agregues ni quites información. NO respondas la consigna. NO inventes opciones.
+- NO combines, dividas, reordenes ni omitas consignas.
+- Mantené el idioma en el que ya está escrita cada consigna.
+SALIDA: un array JSON con un objeto por consigna, con las claves exactas "id" y "question".
+El "id" tiene que ser EXACTAMENTE el número recibido. Sin markdown ni texto extra. SÓLO el array JSON.
+CONSIGNAS:
+${payload}`;
 }
 
 export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
@@ -203,6 +265,127 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
       );
     }
     return cards.slice(0, maxCards);
+  }
+
+  /**
+   * Modo banco de preguntas: reescribe SÓLO la consigna.
+   *
+   * La respuesta se copia tal cual del bloque del PDF, así que el modelo no puede
+   * inventar ni mezclar conceptos de otra sección. Si la IA falla en una tanda, esa
+   * tanda conserva el enunciado original: se pierde la variación de redacción,
+   * nunca la tarjeta.
+   */
+  async paraphraseQuestions(
+    items: QuestionBankSourceItem[],
+    options?: GenerateOptions
+  ): Promise<Array<{ question: string; answer: string }>> {
+    if (items.length === 0) return [];
+
+    const language = options?.language ?? 'es';
+    const deadlineMs = this.computeDeadlineMs();
+    const cards: Array<{ question: string; answer: string }> = [];
+
+    console.info('[deck-gen] question bank start', {
+      items: items.length,
+      batches: Math.ceil(items.length / PARAPHRASE_BATCH_SIZE),
+      budgetMs: env.AI_DECK_TOTAL_TIMEOUT_MS,
+    });
+
+    for (let start = 0; start < items.length; start += PARAPHRASE_BATCH_SIZE) {
+      const batch = items.slice(start, start + PARAPHRASE_BATCH_SIZE);
+      // La primera tanda sí propaga el error del proveedor: si la IA no responde
+      // desde el arranque, el usuario tiene que enterarse en vez de recibir un
+      // mazo con las consignas sin reescribir.
+      const questions = await this.paraphraseBatch(batch, language, deadlineMs, start > 0);
+      batch.forEach((item, index) => {
+        cards.push({ question: questions[index] || item.question, answer: item.answer });
+      });
+    }
+
+    console.info('[deck-gen] question bank done', { items: items.length, cards: cards.length });
+    return cards;
+  }
+
+  private async paraphraseBatch(
+    batch: QuestionBankSourceItem[],
+    language: 'en' | 'es',
+    deadlineMs: number,
+    allowFallback: boolean
+  ): Promise<string[]> {
+    const originals = batch.map((item) => item.question);
+    const timeoutMs = Math.min(env.AI_DECK_TIMEOUT_MS, deadlineMs - Date.now());
+    if (timeoutMs <= 0) {
+      return this.keepOriginalQuestions(originals, allowFallback, 'AI_TIMEOUT');
+    }
+
+    const prompt = buildParaphrasePrompt(batch, language);
+    const maxTokens = Math.min(65_536, 1_024 + batch.length * 420);
+    const startedAt = Date.now();
+
+    let llmResult: Awaited<ReturnType<typeof generateDeckLlmText>>;
+    try {
+      llmResult = await generateDeckLlmText(this.gemini, prompt, timeoutMs, { maxTokens });
+    } catch (err) {
+      if (err instanceof QuotaExceededError || err instanceof ModelOverloadedError) throw err;
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error('[deck-gen] paraphrase batch failed', {
+        size: batch.length,
+        promptChars: prompt.length,
+        timeoutMs,
+        durationMs: Date.now() - startedAt,
+        err: detail,
+      });
+      return this.keepOriginalQuestions(originals, allowFallback, sanitizeAiHint(detail));
+    }
+
+    const paraphrased = parseParaphraseOutput(llmResult.text);
+    if (!paraphrased) {
+      console.warn('[deck-gen] paraphrase output unparsable; keeping originals', {
+        size: batch.length,
+        finishReason: llmResult.finishReason ?? null,
+        preview: llmResult.text.slice(0, 240),
+      });
+      return originals;
+    }
+
+    console.info('[deck-gen] paraphrase batch ok', {
+      size: batch.length,
+      returned: paraphrased.size,
+      promptChars: prompt.length,
+      maxOutputTokens: maxTokens,
+      durationMs: Date.now() - startedAt,
+    });
+
+    return originals.map((question, index) => paraphrased.get(index + 1) ?? question);
+  }
+
+  private keepOriginalQuestions(
+    originals: string[],
+    allowFallback: boolean,
+    hint: string
+  ): string[] {
+    if (allowFallback) {
+      console.warn('[deck-gen] paraphrase skipped; keeping original questions', {
+        questions: originals.length,
+        hint,
+      });
+      return originals;
+    }
+    if (hint === 'AI_TIMEOUT') {
+      throw new AppError(
+        504,
+        'La generación de tarjetas tardó demasiado. Probá con menos tarjetas o un documento más corto.',
+        true,
+        'AI_TIMEOUT'
+      );
+    }
+    throw new AppError(
+      502,
+      'Error al comunicarse con el servicio de IA. Probá de nuevo en unos segundos.',
+      true,
+      'AI_PROVIDER_ERROR',
+      hint
+    );
   }
 
   private async generatePass(

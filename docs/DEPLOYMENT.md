@@ -122,6 +122,14 @@ curl https://flashcards-ia-api.onrender.com/api/v1/health      # {"status":"ok"}
 > Neon vía `Pool`); con Node 20 habría que agregar el paquete `ws`. El frontend necesita
 > ≥ 22.13 o 24 (`vite@8`, `eslint@10`).
 
+> **Modo banco de preguntas (subrayados):** el backend ahora declara `pdfjs-dist@5.4.296` y
+> `@napi-rs/canvas@0.1.80` como dependencias directas, fijadas a las versiones que ya resolvía
+> `pdf-parse@2.4.5`. Las dos son ESM-only y se cargan con `require()` desde CommonJS: eso exige
+> Node ≥ 22.12 (acá es 24). `@napi-rs/canvas` es un binario nativo; el `npm ci` de Render lo baja
+> para linux-x64 sin compilar. La detección de subrayado renderiza cada página a escala 2
+> (~5 s para 8 páginas) y corre en el worker del PDF, con su propio tope de 240 s.
+
+
 ### Railway (alternativa)
 
 1. **New Project → Deploy from GitHub repo**.

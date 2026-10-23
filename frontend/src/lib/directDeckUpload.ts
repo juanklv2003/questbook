@@ -30,6 +30,7 @@ export async function generateDeckViaDirectUpload(
   formData.append('color', options.color ?? 'primary');
   formData.append('language', options.language ?? 'es');
   formData.append('shelf_index', '0');
+  formData.append('questionBank', options.questionBank ? 'true' : 'false');
   formData.append('pdf_source_names', JSON.stringify(files.map((f) => f.name)));
 
   const cards = options.cardCount ?? 15;

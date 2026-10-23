@@ -1,5 +1,5 @@
 import * as React from "react"
-import { UploadCloud, BrainCircuit, Loader2, FileText, X, Plus } from "lucide-react"
+import { UploadCloud, BrainCircuit, Loader2, FileText, X, Plus, AlertTriangle } from "lucide-react"
 import { useLanguage } from "../../i18n/LanguageContext"
 import type { DeckGenerationOptions, Difficulty } from "../../types"
 import { Button } from "../atoms/Button"
@@ -19,7 +19,7 @@ export interface DeckUploaderProps {
   isAiProcessing?: boolean;
 }
 
-const CARD_COUNT_OPTIONS = [10, 20, 30, 40, 50];
+const CARD_COUNT_OPTIONS = [10, 20, 30, 40, 50, 75, 100];
 
 type QueuedPdf = {
   id: string;
@@ -38,6 +38,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
   const [difficulty, setDifficulty] = React.useState<Difficulty>('medium');
   const [color, setColor] = React.useState<string>('primary');
   const [language, setLanguage] = React.useState<'en' | 'es'>('es');
+  const [questionBank, setQuestionBank] = React.useState(false);
   const [queue, setQueue] = React.useState<QueuedPdf[]>([]);
   const [textCap, setTextCap] = React.useState(() => getDeckSourceTextCap());
 
@@ -143,6 +144,14 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
     }
   };
 
+  // Encender el modo banco de preguntas sube el tope a 100: el modo crea una
+  // tarjeta por consigna, así que dejar 10 recortaría el examen sin aviso.
+  const toggleQuestionBank = () => {
+    const next = !questionBank;
+    setQuestionBank(next);
+    if (next) setCardCount(100);
+  };
+
   const handleGenerate = () => {
     const files = queue.filter((q) => !q.error && (q.characters ?? 0) > 0).map((q) => q.file);
     if (files.length === 0) return;
@@ -150,7 +159,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
       ? files[0].name.replace(/\.pdf$/i, '')
       : t('up.multiPdfBookName');
     const name = deckName.trim() || fallbackName;
-    onUpload(files, { name, cardCount, difficulty, color, language });
+    onUpload(files, { name, cardCount, difficulty, color, language, questionBank });
   };
 
   return (
@@ -237,15 +246,46 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
         )}
 
         <div className="flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <label htmlFor="deck-question-bank" className="text-sm font-medium">{t("up.questionBank")}</label>
+              <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+                {t("up.questionBankHint")}
+              </p>
+            </div>
+            <button
+              id="deck-question-bank"
+              type="button"
+              role="switch"
+              aria-checked={questionBank}
+              onClick={toggleQuestionBank}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
+                questionBank ? 'bg-primary' : 'bg-secondary'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                  questionBank ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {questionBank ? t("up.questionBankEnabled") : t("up.questionBankDisabled")}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
           <label className="text-sm font-medium">{t("up.count")}</label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {CARD_COUNT_OPTIONS.map(count => (
               <button
                 key={count}
                 type="button"
                 onClick={() => setCardCount(count)}
                 aria-pressed={cardCount === count}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
                   cardCount === count
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
@@ -255,6 +295,15 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
               </button>
             ))}
           </div>
+          {cardCount === 100 && (
+            <div
+              role="note"
+              className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-700 dark:text-amber-400"
+            >
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+              <span>{t("up.highCountNotice")}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">

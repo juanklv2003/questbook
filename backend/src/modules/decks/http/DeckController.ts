@@ -15,6 +15,11 @@ import { AppError } from '../../../core/errors/AppError';
 import { parseBody } from '../../../core/validation/parseBody';
 import { extractPdfTextFromBuffer } from '../infra/PdfTextExtractor';
 import { capDeckSourceText, deckSourceTextCap } from '../domain/deckGenerationLimits';
+import { parseDeckCardCount, parseQuestionBankFlag } from '../domain/deckCardCountLimits';
+import {
+  readQuestionBankFromBuffer,
+  readQuestionBankFromUploads,
+} from '../infra/questionBankUpload';
 import { cloudinaryAttachmentMaxBytes } from '../../../config/uploadLimits';
 import { combinePdfUploads, measurePdfCharacters } from '../infra/combinePdfUploads';
 import { parsePdfSourceNamesField } from '../domain/deckPdfSourceNames';
@@ -132,6 +137,7 @@ export class DeckController {
       pdfUrl,
       pdfPublicId,
       pdf_source_names,
+      questionBank,
     } = req.body;
     const pdfSourceNamesFromBody = parsePdfSourceNamesField(pdf_source_names);
     let content = reqContent;
@@ -147,8 +153,32 @@ export class DeckController {
       throw new AppError(400, 'Deck name is required');
     }
 
+    const questionBankRequested = parseQuestionBankFlag(questionBank);
+
     const uploadedPdfs = collectUploadedPdfs(req);
     if (uploadedPdfs.length > 0) {
+      // Validación antes de parsear el PDF: no tiene sentido pagar la extracción
+      // para después rechazar el cuerpo por un `cardCount` inválido.
+      const parsedCardCountEarly = parseDeckCardCount(cardCount);
+      const parsedDifficultyEarly = parseDeckDifficulty(difficulty);
+      const parsedLanguageEarly = parseDeckLanguage(language);
+
+      if (questionBankRequested) {
+        const result = await this.generateQuestionBankDeck({
+          name,
+          userId,
+          folderId,
+          uploadedPdfs,
+          cardCount: parsedCardCountEarly,
+          difficulty: parsedDifficultyEarly,
+          shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),
+          color: parseDeckColor(color),
+          language: parsedLanguageEarly,
+        });
+        res.status(201).json(result);
+        return;
+      }
+
       const combined = await combinePdfUploads(uploadedPdfs);
       content = combined.content;
       console.info('[deck-gen] pdf uploads combined', {
@@ -168,25 +198,6 @@ export class DeckController {
       ) {
         pdfBuffer = combined.firstPdfBuffer;
         storePdfOnCloudinary = true;
-      }
-
-      const parsedCardCountEarly = cardCount ? Number(cardCount) : undefined;
-      if (
-        parsedCardCountEarly !== undefined &&
-        (isNaN(parsedCardCountEarly) || parsedCardCountEarly < 1 || parsedCardCountEarly > 50)
-      ) {
-        throw new AppError(400, 'cardCount must be between 1 and 50');
-      }
-
-      const validDifficulties = ['easy', 'medium', 'hard'];
-      const parsedDifficultyEarly = difficulty || undefined;
-      if (parsedDifficultyEarly && !validDifficulties.includes(parsedDifficultyEarly)) {
-        throw new AppError(400, 'difficulty must be easy, medium, or hard');
-      }
-
-      const parsedLanguageEarly = language || 'es';
-      if (parsedLanguageEarly !== 'en' && parsedLanguageEarly !== 'es') {
-        throw new AppError(400, 'language must be either "en" or "es"');
       }
 
       const result = await this.generateDeckUseCase.execute({
@@ -211,6 +222,34 @@ export class DeckController {
       return;
     } else if (typeof pdfUrl === 'string' && typeof pdfPublicId === 'string' && pdfUrl.trim() && pdfPublicId.trim()) {
       const buffer = await fetchPdfBufferForDeck(pdfPublicId.trim(), pdfUrl.trim());
+      uploadedPdfUrl = pdfUrl.trim();
+      uploadedPdfPublicId = pdfPublicId.trim();
+
+      if (questionBankRequested) {
+        const bank = await readQuestionBankFromBuffer(buffer, pdfPublicId.trim());
+        console.info('[deck-gen] cloudinary question bank parsed', {
+          items: bank.items.length,
+          totalCharacters: bank.totalCharacters,
+        });
+        const result = await this.generateDeckUseCase.execute({
+          name,
+          userId,
+          folderId,
+          questionBankItems: bank.items,
+          pdfUrl: uploadedPdfUrl,
+          pdfPublicId: uploadedPdfPublicId,
+          pdfSourceNames:
+            bank.sourceFileNames.length > 0 ? bank.sourceFileNames : pdfSourceNamesFromBody,
+          cardCount: parseDeckCardCount(cardCount),
+          difficulty: parseDeckDifficulty(difficulty),
+          shelfIndex: parseShelfIndex(shelf_index ?? shelfIndex),
+          color: parseDeckColor(color),
+          language: parseDeckLanguage(language),
+        });
+        res.status(201).json(result);
+        return;
+      }
+
       const extracted = await extractPdfTextFromBuffer(buffer);
       content = capDeckSourceText(extracted.text);
       console.info('[deck-gen] cloudinary pdf extracted', {
@@ -218,32 +257,15 @@ export class DeckController {
         totalCharacters: extracted.totalCharacters,
         cap: deckSourceTextCap(),
       });
-      uploadedPdfUrl = pdfUrl.trim();
-      uploadedPdfPublicId = pdfPublicId.trim();
     }
 
     if (!content) {
       throw new AppError(400, 'Either file or content is required');
     }
 
-    // Validate cardCount
-    const parsedCardCount = cardCount ? Number(cardCount) : undefined;
-    if (parsedCardCount !== undefined && (isNaN(parsedCardCount) || parsedCardCount < 1 || parsedCardCount > 50)) {
-      throw new AppError(400, 'cardCount must be between 1 and 50');
-    }
-
-    // Validate difficulty
-    const validDifficulties = ['easy', 'medium', 'hard'];
-    const parsedDifficulty = difficulty || undefined;
-    if (parsedDifficulty && !validDifficulties.includes(parsedDifficulty)) {
-      throw new AppError(400, 'difficulty must be easy, medium, or hard');
-    }
-
-    // Validate language (optional, default to 'es')
-    const parsedLanguage = language || 'es';
-    if (parsedLanguage !== 'en' && parsedLanguage !== 'es') {
-      throw new AppError(400, 'language must be either "en" or "es"');
-    }
+    const parsedCardCount = parseDeckCardCount(cardCount);
+    const parsedDifficulty = parseDeckDifficulty(difficulty);
+    const parsedLanguage = parseDeckLanguage(language);
 
     const result = await this.generateDeckUseCase.execute({
       name,
@@ -261,6 +283,49 @@ export class DeckController {
     });
 
     res.status(201).json(result);
+  }
+
+  /**
+   * Modo banco de preguntas: una tarjeta por consigna numerada, con la respuesta
+   * tomada del propio bloque del PDF (nunca generada por la IA).
+   */
+  private async generateQuestionBankDeck(params: {
+    name: string;
+    userId: string;
+    folderId?: string;
+    uploadedPdfs: Express.Multer.File[];
+    cardCount?: number;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    shelfIndex?: number;
+    color: string;
+    language: 'en' | 'es';
+  }) {
+    const bank = await readQuestionBankFromUploads(params.uploadedPdfs);
+    console.info('[deck-gen] question bank parsed', {
+      files: params.uploadedPdfs.length,
+      items: bank.items.length,
+      totalCharacters: bank.totalCharacters,
+      cardCount: params.cardCount ?? null,
+    });
+
+    const storePdfOnCloudinary =
+      bank.firstPdfBuffer !== undefined &&
+      bank.firstPdfBuffer.length <= cloudinaryAttachmentMaxBytes();
+
+    return this.generateDeckUseCase.execute({
+      name: params.name,
+      userId: params.userId,
+      folderId: params.folderId,
+      questionBankItems: bank.items,
+      fileBuffer: storePdfOnCloudinary ? bank.firstPdfBuffer : undefined,
+      fileName: bank.firstPdfName ?? params.uploadedPdfs[0]?.originalname,
+      pdfSourceNames: bank.sourceFileNames.length > 0 ? bank.sourceFileNames : undefined,
+      cardCount: params.cardCount,
+      difficulty: params.difficulty,
+      shelfIndex: params.shelfIndex,
+      color: params.color,
+      language: params.language,
+    });
   }
 
   async getFlashcards(req: Request, res: Response) {
@@ -415,6 +480,24 @@ function parseShelfIndex(raw: unknown): number | undefined {
 }
 
 const VALID_DECK_COLORS = ['primary', 'violet', 'emerald', 'amber', 'rose'] as const;
+
+const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+
+function parseDeckDifficulty(raw: unknown): 'easy' | 'medium' | 'hard' | undefined {
+  if (!raw) return undefined;
+  if (typeof raw !== 'string' || !(VALID_DIFFICULTIES as readonly string[]).includes(raw)) {
+    throw new AppError(400, 'difficulty must be easy, medium, or hard');
+  }
+  return raw as 'easy' | 'medium' | 'hard';
+}
+
+function parseDeckLanguage(raw: unknown): 'en' | 'es' {
+  const value = raw || 'es';
+  if (value !== 'en' && value !== 'es') {
+    throw new AppError(400, 'language must be either "en" or "es"');
+  }
+  return value;
+}
 
 function parseDeckColor(raw: unknown): string {
   if (typeof raw !== 'string') return 'primary';

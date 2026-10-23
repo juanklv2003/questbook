@@ -4,13 +4,26 @@ import { Worker } from 'worker_threads';
 import { PDFParse } from 'pdf-parse';
 import { AppError } from '../../../core/errors/AppError';
 import { deckSourceTextCap } from '../domain/deckGenerationLimits';
+import type { QuestionBankLine } from '../domain/questionBank';
 
 const EXTRACT_TIMEOUT_MS = 60_000;
+
+/**
+ * Renderizar y escanear pixels es mucho más caro que leer la capa de texto: un
+ * examen de 8 páginas a escala 2 tarda decenas de segundos. El tope de texto
+ * (60s) no alcanza para el modo banco de preguntas.
+ */
+const QUESTION_BANK_EXTRACT_TIMEOUT_MS = 240_000;
 
 export interface ExtractedPdfText {
   /** Texto listo para el prompt, ya acotado a `maxChars` (lo que sobra no se usa nunca). */
   text: string;
   /** Caracteres reales del PDF, antes del tope. Alimenta la barra de presupuesto de la UI. */
+  totalCharacters: number;
+}
+
+export interface ExtractedQuestionBank {
+  lines: QuestionBankLine[];
   totalCharacters: number;
 }
 
@@ -34,6 +47,16 @@ function emptyTextError(): AppError {
   return new AppError(
     422,
     'No se pudo extraer texto del PDF. Asegúrate de que contenga texto real (no solo imágenes escaneadas).'
+  );
+}
+
+function questionBankError(detail?: string): AppError {
+  return new AppError(
+    422,
+    'No se pudo analizar el PDF en modo banco de preguntas. Verificá que el archivo no esté dañado e intentá de nuevo.',
+    true,
+    'PDF_QUESTION_BANK_FAILED',
+    detail
   );
 }
 
@@ -66,21 +89,47 @@ async function extractInProcess(bytes: Uint8Array, maxChars: number): Promise<Ex
   }
 }
 
+/**
+ * Modo banco de preguntas en proceso.
+ *
+ * Sólo se usa cuando no hay worker compilado (desarrollo con `ts-node` sin
+ * `dist/`). Bloquea el event loop, así que en producción nunca se llega acá: el
+ * worker compilado siempre existe después de `npm run build`.
+ */
+async function extractQuestionBankInProcess(bytes: Uint8Array): Promise<ExtractedQuestionBank> {
+  const { readQuestionBankLines } = await import('./questionBankLines');
+  const lines = await readQuestionBankLines(bytes);
+  return {
+    lines,
+    totalCharacters: lines.reduce((total, line) => total + line.text.length, 0),
+  };
+}
+
 /** Respuesta del worker: `empty` = PDF válido sin texto (no hace falta reintentar en proceso). */
 type WorkerOutcome =
   | { kind: 'ok'; text: string; totalCharacters: number }
+  | { kind: 'questionBank'; lines: QuestionBankLine[]; totalCharacters: number }
   | { kind: 'empty' }
   | { kind: 'failed'; reason: string };
 
+interface WorkerInput {
+  buffer?: Uint8Array;
+  filePath?: string;
+  maxChars: number;
+  mode?: 'text' | 'questionBank';
+}
+
 function runPdfWorker(
   workerFile: string,
-  workerData: { buffer?: Uint8Array; filePath?: string; maxChars: number }
+  workerData: WorkerInput,
+  timeoutMs: number
 ): Promise<WorkerOutcome> {
   return new Promise((resolve, reject) => {
     console.info('[pdf-extract] starting worker', {
       workerFile,
       hasPath: Boolean(workerData.filePath),
       maxChars: workerData.maxChars,
+      mode: workerData.mode ?? 'text',
     });
     const worker = new Worker(workerFile, { workerData });
 
@@ -92,26 +141,37 @@ function runPdfWorker(
           'La extracción del PDF tardó demasiado. Probá con un archivo más pequeño.'
         )
       );
-    }, EXTRACT_TIMEOUT_MS);
+    }, timeoutMs);
 
-    worker.once('message', (msg: { text?: string; totalCharacters?: number; error?: string }) => {
-      clearTimeout(timeout);
-      if (msg.error) {
-        console.error('[pdf-extract] worker reported error:', msg.error);
-        resolve({ kind: 'failed', reason: msg.error });
-        return;
+    worker.once(
+      'message',
+      (msg: { text?: string; totalCharacters?: number; lines?: QuestionBankLine[]; error?: string }) => {
+        clearTimeout(timeout);
+        if (msg.error) {
+          console.error('[pdf-extract] worker reported error:', msg.error);
+          resolve({ kind: 'failed', reason: msg.error });
+          return;
+        }
+        if (Array.isArray(msg.lines)) {
+          resolve({
+            kind: 'questionBank',
+            lines: msg.lines,
+            totalCharacters: msg.totalCharacters ?? 0,
+          });
+          return;
+        }
+        const result = clipExtractedText(msg.text, workerData.maxChars);
+        if (!result.text) {
+          resolve({ kind: 'empty' });
+          return;
+        }
+        resolve({
+          kind: 'ok',
+          text: result.text,
+          totalCharacters: Math.max(result.totalCharacters, msg.totalCharacters ?? 0),
+        });
       }
-      const result = clipExtractedText(msg.text, workerData.maxChars);
-      if (!result.text) {
-        resolve({ kind: 'empty' });
-        return;
-      }
-      resolve({
-        kind: 'ok',
-        text: result.text,
-        totalCharacters: Math.max(result.totalCharacters, msg.totalCharacters ?? 0),
-      });
-    });
+    );
 
     worker.once('error', (error) => {
       clearTimeout(timeout);
@@ -152,7 +212,7 @@ async function extractPdf(
   const workerFile = workerScriptPath();
   if (workerFile) {
     try {
-      const outcome = await runPdfWorker(workerFile, { ...input, maxChars });
+      const outcome = await runPdfWorker(workerFile, { ...input, maxChars }, EXTRACT_TIMEOUT_MS);
       if (outcome.kind === 'ok') {
         return { text: outcome.text, totalCharacters: outcome.totalCharacters };
       }
@@ -166,7 +226,7 @@ async function extractPdf(
         'El archivo no es un PDF válido o no se pudo leer su contenido.',
         true,
         'PDF_PARSE_FAILED',
-        outcome.reason.replace(/\s+/g, ' ').slice(0, 160)
+        outcome.kind === 'failed' ? outcome.reason.replace(/\s+/g, ' ').slice(0, 160) : undefined
       );
     } catch (error) {
       // Sólo se cae al parseo en proceso cuando el worker falló de verdad
@@ -200,6 +260,52 @@ async function extractPdf(
 }
 
 /**
+ * Líneas del PDF con la marca de subrayado resuelta (modo banco de preguntas).
+ *
+ * A diferencia del texto plano, acá NO se cae en silencio al parseo en proceso
+ * cuando el worker falla: sin la detección de subrayado las respuestas saldrían
+ * sin marcar, y una tarjeta con la respuesta equivocada es peor que un error
+ * claro.
+ */
+async function extractQuestionBankPdf(input: {
+  buffer?: Buffer;
+  filePath?: string;
+}): Promise<ExtractedQuestionBank> {
+  const workerFile = workerScriptPath();
+  if (!workerFile) {
+    console.warn('[pdf-extract] no compiled worker; reading question bank in process');
+    return extractQuestionBankInProcess(await loadPdfData(input));
+  }
+
+  let outcome: WorkerOutcome;
+  try {
+    outcome = await runPdfWorker(
+      workerFile,
+      { ...input, maxChars: 0, mode: 'questionBank' },
+      QUESTION_BANK_EXTRACT_TIMEOUT_MS
+    );
+  } catch (error) {
+    throw questionBankError(errorMessage(error).replace(/\s+/g, ' ').slice(0, 160));
+  }
+
+  if (outcome.kind === 'questionBank') {
+    if (outcome.lines.length === 0) {
+      throw new AppError(
+        422,
+        'No se encontró texto en el PDF. El modo banco de preguntas necesita un archivo con texto seleccionable.'
+      );
+    }
+    return { lines: outcome.lines, totalCharacters: outcome.totalCharacters };
+  }
+  if (outcome.kind === 'empty') {
+    throw emptyTextError();
+  }
+  throw questionBankError(
+    outcome.kind === 'failed' ? outcome.reason.replace(/\s+/g, ' ').slice(0, 160) : undefined
+  );
+}
+
+/**
  * Extrae texto leyendo el PDF desde disco (no duplica el archivo en el heap del proceso principal).
  *
  * `maxChars` acota el texto devuelto (default: el cap del mazo); `totalCharacters`
@@ -220,4 +326,18 @@ export async function extractPdfTextFromBuffer(
   maxChars: number = deckSourceTextCap()
 ): Promise<ExtractedPdfText> {
   return extractPdf({ buffer }, maxChars);
+}
+
+/** Líneas con subrayado del PDF leído desde disco. */
+export async function extractQuestionBankLinesFromPath(
+  filePath: string
+): Promise<ExtractedQuestionBank> {
+  return extractQuestionBankPdf({ filePath });
+}
+
+/** Líneas con subrayado del PDF en memoria. */
+export async function extractQuestionBankLinesFromBuffer(
+  buffer: Buffer
+): Promise<ExtractedQuestionBank> {
+  return extractQuestionBankPdf({ buffer });
 }

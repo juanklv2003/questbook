@@ -1,5 +1,5 @@
 import { IDeckRepository } from '../domain/IDeckRepository';
-import { IFlashcardGeneratorPort, Difficulty } from '../domain/IFlashcardGeneratorPort';
+import { IFlashcardGeneratorPort, Difficulty, QuestionBankSourceItem } from '../domain/IFlashcardGeneratorPort';
 import { IFlashcardRepository } from '../../flashcards/domain/IFlashcardRepository';
 import { ICloudStoragePort } from '../domain/ICloudStoragePort';
 import { AppError } from '../../../core/errors/AppError';
@@ -8,7 +8,12 @@ interface GenerateDeckDTO {
   name: string;
   userId: string;
   folderId?: string;
-  content: string;
+  content?: string;
+  /**
+   * Modo banco de preguntas: consignas ya extraídas del PDF. Cuando viene, el
+   * generador sólo reescribe los enunciados y las respuestas salen de acá.
+   */
+  questionBankItems?: QuestionBankSourceItem[];
   fileBuffer?: Buffer;
   fileName?: string;
   /** PDF already on Cloudinary (browser upload). Skips server-side upload. */
@@ -37,11 +42,23 @@ export class GenerateDeckUseCase {
     // IA primero, Cloudinary después: en Render free evita pico de RAM (PDF + subida + prompt).
     let generatedCards;
     try {
-      generatedCards = await this.aiGenerator.generateFromText(dto.content, {
-        cardCount: dto.cardCount,
-        difficulty: dto.difficulty,
-        language: dto.language,
-      });
+      if (dto.questionBankItems && dto.questionBankItems.length > 0) {
+        const items = dto.cardCount
+          ? dto.questionBankItems.slice(0, dto.cardCount)
+          : dto.questionBankItems;
+        generatedCards = await this.aiGenerator.paraphraseQuestions(items, {
+          language: dto.language,
+        });
+      } else {
+        if (!dto.content) {
+          throw new AppError(400, 'Either file or content is required');
+        }
+        generatedCards = await this.aiGenerator.generateFromText(dto.content, {
+          cardCount: dto.cardCount,
+          difficulty: dto.difficulty,
+          language: dto.language,
+        });
+      }
     } catch (error) {
       throw error;
     }
