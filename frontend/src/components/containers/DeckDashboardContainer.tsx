@@ -11,6 +11,7 @@ import { Button } from "../atoms/Button"
 import { Plus, BookOpen } from "lucide-react"
 import { useLanguage } from "../../i18n/LanguageContext"
 import type { Deck, DeckGenerationOptions } from "../../types"
+import { normalizeDeckColor } from "../../lib/deckColor"
 
 /** Legacy payload aliases (title/cardCount) tolerated by the dashboard. */
 type DeckLike = Deck & { title?: string; cardCount?: number }
@@ -18,14 +19,8 @@ type DeckLike = Deck & { title?: string; cardCount?: number }
 /** Book display name with legacy `title` fallback. */
 const deckTitle = (d: Deck): string => d.name || (d as DeckLike).title || ""
 
-type DeckAccent = "primary" | "violet" | "emerald" | "amber" | "rose";
-
-const isDeckAccent = (value: unknown): value is DeckAccent =>
-  value === "primary" || value === "violet" || value === "emerald" || value === "amber" || value === "rose";
-
-/** Persisted accent only: NULL/legacy keeps the name-hash fallback inside BookCard. */
-const deckAccent = (d: Deck): DeckAccent | undefined =>
-  isDeckAccent(d.color) ? d.color : undefined;
+/** Persisted accent (hex libre o nombre histórico): NULL/legacy usa el fallback de BookCard. */
+const deckAccent = (d: Deck): string | undefined => normalizeDeckColor(d.color);
 
 export function DeckDashboardContainer({
   onSelectDeck,

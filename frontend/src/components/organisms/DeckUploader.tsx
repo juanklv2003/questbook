@@ -11,6 +11,7 @@ import {
   formatMaxPdfMb,
 } from "../../lib/uploadConfig"
 import { fetchPdfCharacterCount } from "../../lib/pdfTextStats"
+import { DeckColorPicker } from "../molecules/DeckColorPicker"
 
 export interface DeckUploaderProps {
   onUpload: (files: File[], options: DeckGenerationOptions) => void;
@@ -50,14 +51,6 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
     { value: 'easy', label: t("up.easy"), description: t("up.easyDesc") },
     { value: 'medium', label: t("up.medium"), description: t("up.mediumDesc") },
     { value: 'hard', label: t("up.hard"), description: t("up.hardDesc") },
-  ];
-
-  const COLOR_OPTIONS: { value: string; label: string; swatch: string }[] = [
-    { value: 'primary', label: t("up.blue"), swatch: 'bg-primary' },
-    { value: 'violet', label: t("up.violet"), swatch: 'bg-violet-600' },
-    { value: 'emerald', label: t("up.green"), swatch: 'bg-emerald-600' },
-    { value: 'amber', label: t("up.amber"), swatch: 'bg-amber-600' },
-    { value: 'rose', label: t("up.rose"), swatch: 'bg-rose-600' },
   ];
 
   const enqueueFiles = React.useCallback(async (incoming: FileList | File[]) => {
@@ -334,28 +327,12 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
 
         <div className="flex flex-col gap-2">
           <span id="deck-color-label" className="text-sm font-medium">{t("up.color")}</span>
-          <div className="flex gap-2" role="group" aria-labelledby="deck-color-label">
-            {COLOR_OPTIONS.map(option => {
-              const selected = color === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setColor(option.value)}
-                  aria-pressed={selected}
-                  title={option.label}
-                  aria-label={t("up.colorOption", { label: option.label })}
-                  className={`flex h-10 flex-1 cursor-pointer items-center justify-center rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
-                    selected
-                      ? 'bg-secondary ring-2 ring-primary ring-offset-2 ring-offset-card'
-                      : 'bg-secondary hover:bg-secondary/80'
-                  }`}
-                >
-                  <span aria-hidden="true" className={`h-6 w-6 rounded-full ${option.swatch}`} />
-                </button>
-              );
-            })}
-          </div>
+          <DeckColorPicker
+            value={color}
+            onChange={setColor}
+            labelId="deck-color-label"
+            disabled={isGenerating}
+          />
         </div>
 
         <div className="flex flex-col gap-2">

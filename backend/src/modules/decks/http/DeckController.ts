@@ -16,6 +16,7 @@ import { parseBody } from '../../../core/validation/parseBody';
 import { extractPdfTextFromBuffer } from '../infra/PdfTextExtractor';
 import { capDeckSourceText, deckSourceTextCap } from '../domain/deckGenerationLimits';
 import { parseDeckCardCount, parseQuestionBankFlag } from '../domain/deckCardCountLimits';
+import { parseDeckColor } from '../domain/deckColor';
 import {
   readQuestionBankFromBuffer,
   readQuestionBankFromUploads,
@@ -479,8 +480,6 @@ function parseShelfIndex(raw: unknown): number | undefined {
   return parsed;
 }
 
-const VALID_DECK_COLORS = ['primary', 'violet', 'emerald', 'amber', 'rose'] as const;
-
 const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
 
 function parseDeckDifficulty(raw: unknown): 'easy' | 'medium' | 'hard' | undefined {
@@ -499,8 +498,3 @@ function parseDeckLanguage(raw: unknown): 'en' | 'es' {
   return value;
 }
 
-function parseDeckColor(raw: unknown): string {
-  if (typeof raw !== 'string') return 'primary';
-  const normalized = raw.trim().toLowerCase();
-  return (VALID_DECK_COLORS as readonly string[]).includes(normalized) ? normalized : 'primary';
-}

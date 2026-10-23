@@ -5,6 +5,7 @@ import { cn } from "../../lib/utils"
 import { BookOpen, Play, Pencil, ChevronLeft, ChevronRight, FileText } from "lucide-react"
 import { useLanguage } from "../../i18n/LanguageContext"
 import { DeckDeleteButton } from "../atoms/DeckDeleteButton"
+import { resolveDeckColor, type LegacyDeckColor } from "../../lib/deckColor"
 
 export interface BookCardProps {
   deckId: string;
@@ -17,8 +18,8 @@ export interface BookCardProps {
   onSelect: () => void;
   onDeleteSuccess: () => void;
   onEdit?: () => void;
-  /** Color accent for the book spine. */
-  accentColor?: "primary" | "violet" | "emerald" | "amber" | "rose";
+  /** Color accent for the book spine: cualquier `#rrggbb` o un nombre histórico. */
+  accentColor?: string;
   /** Show as horizontal book (laying down) */
   horizontal?: boolean;
   /** 0-based shelf where this book sits (for the move fallbacks). */
@@ -33,47 +34,15 @@ export interface BookCardProps {
   canMoveRight?: boolean;
 }
 
-const ACCENT_STYLES = {
-  primary: {
-    spine: "bg-primary",
-    hover: "hover:shadow-[0_4px_20px_-2px_hsl(var(--primary)/0.4)]",
-    bookmark: "bg-primary",
-    badge: "bg-primary/10 text-primary",
-  },
-  violet: {
-    spine: "bg-violet-600",
-    hover: "hover:shadow-[0_4px_20px_-2px_rgba(139,92,246,0.4)]",
-    bookmark: "bg-violet-500",
-    badge: "bg-violet-500/10 text-violet-600",
-  },
-  emerald: {
-    spine: "bg-emerald-600",
-    hover: "hover:shadow-[0_4px_20px_-2px_rgba(16,185,129,0.4)]",
-    bookmark: "bg-emerald-500",
-    badge: "bg-emerald-500/10 text-emerald-600",
-  },
-  amber: {
-    spine: "bg-amber-600",
-    hover: "hover:shadow-[0_4px_20px_-2px_rgba(245,158,11,0.4)]",
-    bookmark: "bg-amber-500",
-    badge: "bg-amber-500/10 text-amber-600",
-  },
-  rose: {
-    spine: "bg-rose-600",
-    hover: "hover:shadow-[0_4px_20px_-2px_rgba(244,63,94,0.4)]",
-    bookmark: "bg-rose-500",
-    badge: "bg-rose-500/10 text-rose-600",
-  },
-} as const;
+const ACCENT_FALLBACKS: LegacyDeckColor[] = ["primary", "violet", "emerald", "amber", "rose"];
 
-// Deterministic color based on deck name
-function getAccentForDeck(name: string): "primary" | "violet" | "emerald" | "amber" | "rose" {
-  const accents: ("primary" | "violet" | "emerald" | "amber" | "rose")[] = ["primary", "violet", "emerald", "amber", "rose"];
+// Color determinista para libros sin color guardado (o con valor desconocido).
+function getAccentForDeck(name: string): LegacyDeckColor {
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return accents[Math.abs(hash) % accents.length];
+  return ACCENT_FALLBACKS[Math.abs(hash) % ACCENT_FALLBACKS.length] ?? "primary";
 }
 
 /** Libro recién creado a veces llega con conteo 0: usar un tamaño medio hasta que llegue el real. */
@@ -108,7 +77,23 @@ function getWidthForCards(count: number): string {
 export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSourceNames, onSelect, onDeleteSuccess, onEdit, accentColor, horizontal, shelfIndex, shelfCount, onMoveLeft, onMoveRight, onMoveToShelf, canMoveLeft, canMoveRight }: BookCardProps) {
   const { t } = useLanguage();
   const accent = accentColor ?? getAccentForDeck(name);
-  const styles = ACCENT_STYLES[accent];
+  const accentCss = resolveDeckColor(accent);
+  // `.lomo`, bookmark y glow salen del mismo color elegido: un solo valor y el
+  // resto se deriva con `color-mix()`, así un color libre (o un preset viejo)
+  // pinta igual que los cinco fijos de antes.
+  const accentVars = {
+    "--deck-accent": accentCss,
+    "--deck-glow": `color-mix(in srgb, ${accentCss} 45%, transparent)`,
+  } as React.CSSProperties;
+  const spineStyle: React.CSSProperties = { backgroundColor: accentCss };
+  const bookmarkStyle: React.CSSProperties = {
+    backgroundColor: `color-mix(in srgb, ${accentCss} 82%, white)`,
+  };
+  const badgeStyle: React.CSSProperties = {
+    backgroundColor: `color-mix(in srgb, ${accentCss} 14%, transparent)`,
+    color: `color-mix(in srgb, ${accentCss} 75%, black)`,
+  };
+  const hoverClass = "hover:shadow-[0_4px_20px_-2px_var(--deck-glow)]";
   const height = getHeightForCards(flashcardsCount);
   const width = getWidthForCards(flashcardsCount);
   const progress =
@@ -176,7 +161,7 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
       onEdit={onEdit}
       onSelect={openStudy}
       showEdit={prefersHover}
-      badgeStyle={styles.badge}
+      badgeStyle={badgeStyle}
       {...moveProps}
     />
   );
@@ -203,7 +188,7 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
   // Horizontal book (laying down)
   if (horizontal) {
     return (
-      <div ref={rootRef} className="group relative hover:z-30 focus-within:z-30">
+      <div ref={rootRef} style={accentVars} className="group relative hover:z-30 focus-within:z-30">
         <div
           onClick={handleSpineClick}
           onKeyDown={handleKeyDown}
@@ -214,16 +199,15 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
             "relative cursor-pointer select-none",
             "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
             "hover:-translate-y-1 focus-visible:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-sm",
-            styles.hover
+            hoverClass
           )}
         >
           {/* Horizontal book spine */}
           <div className={cn(
             "relative h-8 rounded-sm overflow-hidden",
-            styles.spine,
             "shadow-md",
             "flex items-center px-3 gap-2"
-          )}>
+          )} style={spineStyle}>
             <div className="absolute left-1 top-0 bottom-0 w-px bg-white/20" />
             <div className="absolute left-2 top-0 bottom-0 w-px bg-white/10" />
             <span className="text-[10px] font-semibold text-white/90 truncate flex-1 drop-shadow-sm">
@@ -273,7 +257,7 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
 
   // Vertical book (standing up) - spine view
   return (
-    <div ref={rootRef} className="group relative hover:z-30 focus-within:z-30">
+    <div ref={rootRef} style={accentVars} className="group relative hover:z-30 focus-within:z-30">
       <div
         onClick={handleSpineClick}
         onKeyDown={handleKeyDown}
@@ -284,18 +268,17 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
           "relative cursor-pointer select-none",
           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
           "hover:-translate-y-1 focus-visible:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-sm",
-          styles.hover
+          hoverClass
         )}
       >
         {/* Bookmark */}
         <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
           <div className={cn(
             "w-3 h-6",
-            styles.bookmark,
             "rounded-b-sm",
             "shadow-sm",
             "opacity-80 group-hover:opacity-100 transition-opacity"
-          )}>
+          )} style={bookmarkStyle}>
             <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[5px] border-b-card" />
           </div>
         </div>
@@ -304,11 +287,10 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
         <div className={cn(
           "relative rounded-sm overflow-hidden",
           height, width,
-          styles.spine,
           "shadow-lg",
           "flex flex-col items-center justify-between py-2",
           "border border-white/10"
-        )}>
+        )} style={spineStyle}>
           <div className="w-4 h-0.5 bg-white/30 rounded-full" />
           <div className="flex-1 flex items-center justify-center overflow-hidden">
             <span className={cn(
@@ -435,7 +417,7 @@ function HoverCard({
   onSelect: () => void;
   /** Escritorio (hover); oculto en el sheet móvil. */
   showEdit?: boolean;
-  badgeStyle: string;
+  badgeStyle: React.CSSProperties;
   shelfIndex?: number;
   shelfCount?: number;
   onMoveLeft?: () => void;
@@ -462,7 +444,7 @@ function HoverCard({
       {/* Header */}
       <div className="mb-3">
         <h4 className="font-semibold text-sm leading-tight text-foreground line-clamp-2">{name}</h4>
-        <div className={cn("inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium", badgeStyle)}>
+        <div className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium" style={badgeStyle}>
           <BookOpen className="w-3 h-3" />
           {cardsLabel}
         </div>
