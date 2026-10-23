@@ -313,7 +313,7 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     allowFallback: boolean
   ): Promise<string[]> {
     const originals = batch.map((item) => item.question);
-    const timeoutMs = Math.min(env.AI_DECK_TIMEOUT_MS, deadlineMs - Date.now());
+    let timeoutMs = Math.min(env.AI_DECK_TIMEOUT_MS, deadlineMs - Date.now());
     if (timeoutMs <= 0) {
       return this.keepOriginalQuestions(originals, allowFallback, 'AI_TIMEOUT');
     }
@@ -322,20 +322,45 @@ export class GeminiFlashcardGenerator implements IFlashcardGeneratorPort {
     const maxTokens = Math.min(65_536, 1_024 + batch.length * 420);
     const startedAt = Date.now();
 
-    let llmResult: Awaited<ReturnType<typeof generateDeckLlmText>>;
-    try {
-      llmResult = await generateDeckLlmText(this.gemini, prompt, timeoutMs, { maxTokens });
-    } catch (err) {
-      if (err instanceof QuotaExceededError || err instanceof ModelOverloadedError) throw err;
-      const detail = err instanceof Error ? err.message : String(err);
-      console.error('[deck-gen] paraphrase batch failed', {
-        size: batch.length,
-        promptChars: prompt.length,
-        timeoutMs,
-        durationMs: Date.now() - startedAt,
-        err: detail,
-      });
-      return this.keepOriginalQuestions(originals, allowFallback, sanitizeAiHint(detail));
+    let llmResult: Awaited<ReturnType<typeof generateDeckLlmText>> | undefined;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        llmResult = await generateDeckLlmText(this.gemini, prompt, timeoutMs, { maxTokens });
+        break;
+      } catch (err) {
+        if (err instanceof QuotaExceededError) throw err;
+        if (err instanceof ModelOverloadedError) {
+          // Mismo criterio que el camino de texto: acá la cadena de modelos ya
+          // se agotó. Antes esto re-lanzaba el 503 sin intentar nada más, así
+          // que el modo banco de preguntas moría con un solo pico de saturación.
+          if (attempt < 2) {
+            const waitMs = Math.min(err.retryAfterSeconds * 1000, timeoutMs);
+            console.warn('[deck-gen] paraphrase saturated; waiting before retry', {
+              size: batch.length,
+              waitMs,
+              retryAfterSeconds: err.retryAfterSeconds,
+            });
+            await sleepMs(waitMs);
+            timeoutMs = Math.min(env.AI_DECK_TIMEOUT_MS, deadlineMs - Date.now());
+            if (timeoutMs <= 0) throw err;
+            continue;
+          }
+          throw err;
+        }
+        const detail = err instanceof Error ? err.message : String(err);
+        console.error('[deck-gen] paraphrase batch failed', {
+          size: batch.length,
+          promptChars: prompt.length,
+          timeoutMs,
+          durationMs: Date.now() - startedAt,
+          err: detail,
+        });
+        return this.keepOriginalQuestions(originals, allowFallback, sanitizeAiHint(detail));
+      }
+    }
+
+    if (!llmResult) {
+      return this.keepOriginalQuestions(originals, allowFallback, 'AI_PROVIDER_ERROR');
     }
 
     const paraphrased = parseParaphraseOutput(llmResult.text);
@@ -576,7 +601,7 @@ ${texts.textToAnalyze}
 ${promptText}${truncationNotice}${excludeNotice}
     `;
 
-    const timeoutMs = this.timeoutForBatch(passCtx.deadlineMs, passCtx.batchesRemaining);
+    let timeoutMs = this.timeoutForBatch(passCtx.deadlineMs, passCtx.batchesRemaining);
     if (timeoutMs <= 0) {
       throw new AppError(
         504,
@@ -601,12 +626,20 @@ ${promptText}${truncationNotice}${excludeNotice}
         }
         if (apiErr instanceof ModelOverloadedError) {
           if (attempt < 2) {
-            const waitMs = Math.min(apiErr.retryAfterSeconds, 45) * 1000;
+            // La cadena de modelos ya se agotó: acá significa que TODOS los
+            // modelos configurados están saturados. Se respeta el RetryInfo de
+            // Google, pero nunca por encima del presupuesto que queda para esta
+            // tanda: el tope fijo de 45 s reintentaba antes de lo que Google
+            // pedía y garantizaba un segundo 503.
+            const waitMs = Math.min(apiErr.retryAfterSeconds * 1000, timeoutMs);
             console.warn('[deck-gen] Gemini saturated; waiting before retry', {
               batch: `${passCtx.batchIndex}/${passCtx.batchTotal}`,
               waitMs,
+              retryAfterSeconds: apiErr.retryAfterSeconds,
             });
             await sleepMs(waitMs);
+            timeoutMs = this.timeoutForBatch(passCtx.deadlineMs, passCtx.batchesRemaining);
+            if (timeoutMs <= 0) throw apiErr;
             continue;
           }
           throw apiErr;

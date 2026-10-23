@@ -48,12 +48,21 @@ export const authLimiter = rateLimit({
   message: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',
 });
 
-/** Expensive AI deck generation (per authenticated user, fallback IP). */
+/**
+ * Expensive AI deck generation (per authenticated user, fallback IP).
+ *
+ * `skipFailedRequests`: un 503 de saturación o un 429 de cuota de Gemini no
+ * generó ningún libro, así que no debe gastar una de las 5 fichas. Antes, unos
+ * cuantos intentos fallidos dejaban al usuario bloqueado una hora con el
+ * mensaje "has generado demasiados libros", que además era falso y tapaba la
+ * causa real.
+ */
 export const aiGenerateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skipFailedRequests: true,
   keyGenerator: userOrIpKey,
   handler: rateLimitJsonHandler,
   message: 'Has generado demasiados libros en poco tiempo. Inténtalo más tarde.',
@@ -65,6 +74,7 @@ export const aiEvaluateLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
+  skipFailedRequests: true,
   keyGenerator: userOrIpKey,
   handler: rateLimitJsonHandler,
   message: 'Demasiadas evaluaciones en poco tiempo. Haz una pausa e inténtalo de nuevo.',

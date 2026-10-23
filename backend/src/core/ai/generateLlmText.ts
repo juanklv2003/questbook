@@ -130,14 +130,29 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   });
 }
 
-async function generateWithGeminiDeck(
+/**
+ * Recorre la cadena de modelos hasta que uno responda.
+ *
+ * La cuota del free tier y la saturación son **por modelo**
+ * (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`): agotar `gemini-2.5-flash`
+ * no dice nada de `gemini-3.5-flash`. Por eso las dos se resuelven probando el
+ * siguiente modelo y no fallando.
+ *
+ * Antes esto cortaba con `throw` en el primer `ModelOverloadedError` o
+ * `QuotaExceededError`, así que tener tres modelos configurados no servía de
+ * nada: un 503 en el primero tumbaba la generación entera.
+ */
+async function runGeminiModelChain(
   gemini: GeminiFailover,
   prompt: string,
   timeoutMs: number,
-  maxOutputTokens?: number
+  maxOutputTokens: number | undefined,
+  json: boolean
 ): Promise<DeckLlmResult> {
   const models = geminiModelCandidates();
   let lastError: unknown;
+  let quotaError: QuotaExceededError | undefined;
+  let overloadError: ModelOverloadedError | undefined;
 
   for (const model of models) {
     try {
@@ -146,54 +161,7 @@ async function generateWithGeminiDeck(
           client
             .getGenerativeModel({
               model,
-              generationConfig: deckGenerationConfig(maxOutputTokens, true),
-            })
-            .generateContent(prompt)
-        ),
-        timeoutMs,
-        'Gemini'
-      )) as GeminiGenerateResult;
-      if (model !== models[0]) {
-        console.warn(`[AI] Gemini deck generation used fallback model "${model}".`);
-      }
-      // Texto vacío + MAX_TOKENS se deja fallar: el fallback JSON→texto reintenta sin thinking.
-      return readGeminiLlmResponse(result);
-    } catch (error) {
-      lastError = error;
-      if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
-        throw error;
-      }
-      if (error instanceof AppError) {
-        throw error;
-      }
-      if (isGeminiModelNotFoundError(error)) {
-        console.warn(`[AI] Gemini model "${model}" not found; trying next.`);
-        continue;
-      }
-      throw error;
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new Error('No Gemini model available for deck generation.');
-}
-
-async function generateWithGemini(
-  gemini: GeminiFailover,
-  prompt: string,
-  timeoutMs: number,
-  maxOutputTokens?: number
-): Promise<DeckLlmResult> {
-  const models = geminiModelCandidates();
-  let lastError: unknown;
-
-  for (const model of models) {
-    try {
-      const result = (await withTimeout(
-        gemini.withFailover((client: GoogleGenerativeAI) =>
-          client
-            .getGenerativeModel({
-              model,
-              generationConfig: deckGenerationConfig(maxOutputTokens, false),
+              generationConfig: deckGenerationConfig(maxOutputTokens, json),
             })
             .generateContent(prompt)
         ),
@@ -203,11 +171,19 @@ async function generateWithGemini(
       if (model !== models[0]) {
         console.warn(`[AI] Gemini used fallback model "${model}".`);
       }
+      // Texto vacío + MAX_TOKENS se deja fallar: el fallback JSON→texto reintenta sin thinking.
       return readGeminiLlmResponse(result);
     } catch (error) {
       lastError = error;
-      if (error instanceof QuotaExceededError || error instanceof ModelOverloadedError) {
-        throw error;
+      if (error instanceof QuotaExceededError) {
+        quotaError = quotaError ?? error;
+        console.warn(`[AI] Gemini "${model}" out of quota; trying next model.`);
+        continue;
+      }
+      if (error instanceof ModelOverloadedError) {
+        overloadError = overloadError ?? error;
+        console.warn(`[AI] Gemini "${model}" overloaded; trying next model.`);
+        continue;
       }
       if (error instanceof AppError) {
         throw error;
@@ -220,7 +196,29 @@ async function generateWithGemini(
     }
   }
 
+  // Ningún modelo respondió: se informa el motivo más accionable.
+  // Cuota gana a saturación porque dice cuándo vuelve a andar (resetAt real).
+  if (quotaError) throw quotaError;
+  if (overloadError) throw overloadError;
   throw lastError instanceof Error ? lastError : new Error('No Gemini model available.');
+}
+
+async function generateWithGeminiDeck(
+  gemini: GeminiFailover,
+  prompt: string,
+  timeoutMs: number,
+  maxOutputTokens?: number
+): Promise<DeckLlmResult> {
+  return runGeminiModelChain(gemini, prompt, timeoutMs, maxOutputTokens, true);
+}
+
+async function generateWithGemini(
+  gemini: GeminiFailover,
+  prompt: string,
+  timeoutMs: number,
+  maxOutputTokens?: number
+): Promise<DeckLlmResult> {
+  return runGeminiModelChain(gemini, prompt, timeoutMs, maxOutputTokens, false);
 }
 
 async function generateWithGeminiForDeck(
