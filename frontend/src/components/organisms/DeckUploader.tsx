@@ -20,7 +20,10 @@ export interface DeckUploaderProps {
   isAiProcessing?: boolean;
 }
 
-const CARD_COUNT_OPTIONS = [10, 20, 30, 40, 50, 75, 100];
+/** Rango de tarjetas por mazo: el mismo que valida el backend (`DECK_CARD_COUNT_MAX`). */
+const CARD_COUNT_MIN = 1;
+const CARD_COUNT_MAX = 100;
+const DEFAULT_CARD_COUNT = 10;
 
 type QueuedPdf = {
   id: string;
@@ -35,7 +38,10 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
   const [dragActive, setDragActive] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [deckName, setDeckName] = React.useState('');
-  const [cardCount, setCardCount] = React.useState<number>(10);
+  const [cardCount, setCardCount] = React.useState<number>(DEFAULT_CARD_COUNT);
+  // Texto del input numérico. Se separa del número para poder escribir estados
+  // intermedios ("", "0") sin que el slider salte a un valor inválido.
+  const [countInput, setCountInput] = React.useState<string>(String(DEFAULT_CARD_COUNT));
   const [difficulty, setDifficulty] = React.useState<Difficulty>('medium');
   const [color, setColor] = React.useState<string>('primary');
   const [language, setLanguage] = React.useState<'en' | 'es'>('es');
@@ -137,13 +143,31 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
     }
   };
 
-  // Encender el modo banco de preguntas sube el tope a 100: el modo crea una
-  // tarjeta por consigna, así que dejar 10 recortaría el examen sin aviso.
-  const toggleQuestionBank = () => {
-    const next = !questionBank;
-    setQuestionBank(next);
-    if (next) setCardCount(100);
+  // Un solo camino para cambiar la cantidad: el slider y el input numérico
+  // siempre muestran el mismo valor, ya dentro del rango 1–100.
+  const applyCardCount = (value: number) => {
+    const clamped = Math.min(CARD_COUNT_MAX, Math.max(CARD_COUNT_MIN, value));
+    setCardCount(clamped);
+    setCountInput(String(clamped));
   };
+
+  // Mientras se escribe se acepta cualquier dígito: "0" o "" son estados
+  // intermedios de un número válido. Solo se aplica lo que ya está en rango y,
+  // al salir del campo, el texto vuelve al último valor válido.
+  const handleCountInput = (raw: string) => {
+    setCountInput(raw);
+    const parsed = Number.parseInt(raw, 10);
+    if (Number.isFinite(parsed) && parsed >= CARD_COUNT_MIN && parsed <= CARD_COUNT_MAX) {
+      setCardCount(parsed);
+    }
+  };
+
+  const normalizeCountInput = () => setCountInput(String(cardCount));
+
+  // El modo banco de preguntas no toca la cantidad: la cantidad elegida marca
+  // el tope de consignas incluidas, pero activar el modo no debe cambiar la
+  // elección del usuario.
+  const toggleQuestionBank = () => setQuestionBank((prev) => !prev);
 
   const handleGenerate = () => {
     const files = queue.filter((q) => !q.error && (q.characters ?? 0) > 0).map((q) => q.file);
@@ -270,25 +294,41 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">{t("up.count")}</label>
-          <div className="grid grid-cols-4 gap-2">
-            {CARD_COUNT_OPTIONS.map(count => (
-              <button
-                key={count}
-                type="button"
-                onClick={() => setCardCount(count)}
-                aria-pressed={cardCount === count}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
-                  cardCount === count
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                }`}
-              >
-                {count}
-              </button>
-            ))}
+          <div className="flex items-baseline justify-between gap-2">
+            <label htmlFor="deck-card-count" className="text-sm font-medium">{t("up.count")}</label>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {CARD_COUNT_MIN}–{CARD_COUNT_MAX}
+            </span>
           </div>
-          {cardCount === 100 && (
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={CARD_COUNT_MIN}
+              max={CARD_COUNT_MAX}
+              step={1}
+              value={cardCount}
+              onChange={(e) => applyCardCount(Number(e.target.value))}
+              aria-label={t("up.countSliderAria")}
+              className="h-2 min-w-0 flex-1 cursor-pointer accent-primary"
+            />
+            <input
+              id="deck-card-count"
+              type="number"
+              inputMode="numeric"
+              min={CARD_COUNT_MIN}
+              max={CARD_COUNT_MAX}
+              step={1}
+              value={countInput}
+              onChange={(e) => handleCountInput(e.target.value)}
+              onBlur={normalizeCountInput}
+              aria-describedby="deck-card-count-hint"
+              className="w-20 shrink-0 px-3 py-2 rounded-lg text-sm text-center tabular-nums border bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+            />
+          </div>
+          <p id="deck-card-count-hint" className="text-xs text-muted-foreground leading-relaxed">
+            {t("up.countHint")}
+          </p>
+          {cardCount > 50 && (
             <div
               role="note"
               className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-700 dark:text-amber-400"
