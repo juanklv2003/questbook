@@ -42,8 +42,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPasswor
   const errorMessage = localError || authError;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-      <div className="space-y-1 text-center sm:space-y-1.5">
+    <form onSubmit={handleSubmit} className="space-y-3 short:space-y-2.5 sm:space-y-4">
+      <div className="space-y-1 text-center short:hidden sm:space-y-1.5">
         <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("auth.loginTitle")}</h2>
         <p className="text-xs text-muted-foreground sm:text-sm">{t("auth.loginSubtitle")}</p>
       </div>
@@ -125,7 +125,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPasswor
 
       {isLoading ? null : (
         <>
-          <div className="mt-0 flex items-center gap-0.5">
+          <div className="mt-0 flex items-center gap-0.5 short:hidden">
             <div className="w-full border-t border-border/50" />
             <span className="whitespace-nowrap text-xs text-muted-foreground">{t('auth.orContinueWith')}</span>
             <div className="w-full border-t border-border/50" />

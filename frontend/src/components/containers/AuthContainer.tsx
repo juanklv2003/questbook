@@ -41,7 +41,7 @@ type AuthView = 'login' | 'register' | 'forgot';
   const activeTab: Exclude<AuthView, 'forgot'> = view === 'forgot' ? 'login' : view;
 
   return (
-    <div className="flex w-full flex-1 flex-col items-center justify-center px-3 py-4 sm:px-4 sm:py-6 md:py-10">
+    <div className="flex w-full flex-1 flex-col items-center justify-center px-3 py-3 short:py-2 sm:px-4 sm:py-4 md:py-6">
       <div className="flex w-full max-w-4xl shrink-0 flex-col items-center gap-4 md:flex-row md:gap-12">
         {/* Marca grande solo en tablet/escritorio (en móvil ya está en el header). */}
         <div className="hidden flex-col items-center gap-4 text-center md:flex md:w-1/2">
@@ -57,8 +57,11 @@ type AuthView = 'login' | 'register' | 'forgot';
           </div>
         </div>
 
-        {/* Tarjeta: en móvil altura acotada + scroll interno para teclado / Turnstile / Google */}
-        <div className="flex w-full max-w-md max-h-[calc(100dvh-5.25rem-env(safe-area-inset-bottom,0px))] flex-col overflow-hidden rounded-2xl border bg-card text-foreground shadow-xl shadow-black/10 md:max-h-none md:w-1/2">
+        {/* Tarjeta: altura acotada al viewport en TODAS las medidas, con scroll
+            interno en el panel. En un portátil de 720p (viewport real ~600px por
+            las barras del navegador) el card completo no entraba y el botón de
+            Google quedaba debajo del pliegue. */}
+        <div className="flex w-full max-w-md max-h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom,0px))] short:max-h-[calc(100dvh-5rem-env(safe-area-inset-bottom,0px))] flex-col overflow-hidden rounded-2xl border bg-card text-foreground shadow-xl shadow-black/10 md:max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom,0px))] md:w-1/2">
           <div
             role="tablist"
             aria-label={t('auth.tabsLabel')}
@@ -97,7 +100,7 @@ type AuthView = 'login' | 'register' | 'forgot';
             initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 sm:p-6 md:p-7 [-webkit-overflow-scrolling:touch]"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 short:p-3 sm:p-5 md:p-6 [-webkit-overflow-scrolling:touch]"
           >
             {view === 'forgot' ? (
               <ForgotPasswordForm onBackToLogin={() => setView('login')} />

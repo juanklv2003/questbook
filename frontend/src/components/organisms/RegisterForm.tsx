@@ -71,8 +71,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   const canSubmit = !isLoading && Boolean(TURNSTILE_SITE_KEY) && Boolean(turnstileToken);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-      <div className="space-y-1 text-center sm:space-y-1.5">
+    <form onSubmit={handleSubmit} className="space-y-4 short:space-y-2.5 sm:space-y-5">
+      <div className="space-y-1 text-center short:hidden sm:space-y-1.5">
         <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("auth.registerTitle")}</h2>
         <p className="text-xs text-muted-foreground sm:text-sm">{t("auth.registerSubtitle")}</p>
       </div>
@@ -171,7 +171,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
 
       {!isLoading && (
         <>
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 short:hidden">
             <div className="w-full border-t border-border/50" />
             <span className="whitespace-nowrap text-xs text-muted-foreground">{t('auth.orContinueWith')}</span>
             <div className="w-full border-t border-border/50" />

@@ -184,6 +184,7 @@ The API is served at `/api/v1`.
 - **Split-Screen Layout**: The frontend uses a split-screen layout for optimal study focus, dividing the screen between the deck management/listing and the active flashcard interaction area.
 - **Keyboard Navigation**: Support keyboard interactions across the app, specifically allowing users to submit inputs and forms by pressing `Enter`.
 - **Clear Interactive Cursors**: All clickable or interactive elements must use standard cursor pointers (e.g., `cursor-pointer`) to clearly indicate interactivity.
+- **Short viewports (`short` variant)**: `index.css` define `@custom-variant short (@media (max-height: 830px))`. El número sale de medir: la pantalla de acceso en su versión completa (título + separador + ritmo holgado) necesita 827px de viewport para no scrollear, y un portátil de 720p deja ~600px útiles por las barras del navegador. Por debajo de 830px `AuthContainer` acota el alto de la tarjeta (`100dvh - 5rem`), baja el padding del panel y los formularios ocultan el `h2` (el tab ya nombra la vista) y el separador "O continuar con"; en 1080p nada de eso se aplica. El panel conserva `overflow-y-auto` como red de seguridad para teclados móviles y Turnstile.
 
 ## 7. AI Agent Instructions
 - **Do not bypass the Architecture**: If you add a feature, create the Domain Port, implement the Infra Adapter, build the UseCase, and wire it in the HTTP Controller.

@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/*
+ * `short`: viewports bajos, típicos de portátiles.
+ *
+ * El número sale de medir, no de un gusto: el registro con el ritmo completo
+ * (título + separador + espaciado holgado) mide 827px de alto de viewport para
+ * entrar sin scroll interno. Un portátil de 720p deja ~600px útiles por las
+ * barras del navegador, así que por debajo de 830px se compacta la pantalla de
+ * acceso. En 1080p (940px útiles) el diseño completo sigue igual.
+ */
+@custom-variant short (@media (max-height: 830px));
+
 @theme {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
