@@ -83,7 +83,7 @@ export const es = {
   "up.countHint": "Elegí cualquier cantidad entre 1 y 100: cada tarjeta es una pregunta.",
   "up.countSliderAria": "Elegir la cantidad de tarjetas",
   "up.questionBank": "Modo banco de preguntas",
-  "up.questionBankHint": "Una tarjeta por cada pregunta numerada del PDF. La IA reformula el enunciado y la respuesta se toma tal cual del documento. La cantidad de tarjetas marca el tope de consignas incluidas.",
+  "up.questionBankHint": "Una tarjeta por cada pregunta numerada del PDF.",
   "up.questionBankEnabled": "Activado",
   "up.questionBankDisabled": "Desactivado",
   "up.highCountNotice": "Con más de 50 tarjetas la generación tarda más y consume más cuota de IA. Si el PDF es muy extenso puede llegar al tiempo límite y cortarse: para documentos largos elegí 50 o menos, o subí el examen por partes.",

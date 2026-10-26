@@ -85,7 +85,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "up.countHint": "Pick any number between 1 and 100: each card is one question.",
   "up.countSliderAria": "Choose the card count",
   "up.questionBank": "Question bank mode",
-  "up.questionBankHint": "One card per numbered question in the PDF. The AI rephrases the question and the answer is taken verbatim from the document. The card count caps how many questions are included.",
+  "up.questionBankHint": "One card per numbered question in the PDF.",
   "up.questionBankEnabled": "On",
   "up.questionBankDisabled": "Off",
   "up.highCountNotice": "With more than 50 cards generation takes longer and consumes more AI quota. A very long PDF can hit the time limit and get cut off: for long documents choose 50 or fewer, or upload the exam in parts.",
