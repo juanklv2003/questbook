@@ -1,9 +1,10 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { Check, ChevronDown } from "lucide-react"
+import { Check, ChevronDown, Plus, X } from "lucide-react"
 import { useLanguage } from "../../i18n/LanguageContext"
 import {
   LEGACY_DECK_COLORS,
+  deckColorPrefersDarkText,
   hexToHsv,
   hexToRgb,
   hsvToHex,
@@ -52,6 +53,12 @@ export interface DeckColorPickerProps {
   /** Id de la etiqueta externa que nombra este control. */
   labelId?: string
   disabled?: boolean
+  /** Colores guardados por el usuario (`#rrggbb`), de la más vieja a la nueva. */
+  savedColors?: string[]
+  /** Guarda el color actual en la lista. Sin esto no se muestra el botón. */
+  onSaveColor?: (hex: string) => void
+  /** Quita un color guardado. No cambia el color elegido para el mazo. */
+  onRemoveColor?: (hex: string) => void
 }
 
 function clampPercent(value: number): number {
@@ -67,7 +74,15 @@ function clampPercent(value: number): number {
  * hex nuevo, y el estado interno se resincroniza desde la prop sólo cuando el hex
  * cambió de verdad (si no, cada movimiento redondearía el tono y saltaría).
  */
-export function DeckColorPicker({ value, onChange, labelId, disabled = false }: DeckColorPickerProps) {
+export function DeckColorPicker({
+  value,
+  onChange,
+  labelId,
+  disabled = false,
+  savedColors,
+  onSaveColor,
+  onRemoveColor,
+}: DeckColorPickerProps) {
   const { t } = useLanguage()
   const [open, setOpen] = React.useState(false)
   const [hsv, setHsv] = React.useState<Hsv>(() => hexToHsv(pickerHex(value)))
@@ -226,6 +241,10 @@ export function DeckColorPicker({ value, onChange, labelId, disabled = false }: 
 
   const currentHex = hex
   const legacyValue = isLegacyDeckColor(value) ? value : undefined
+  const saved = savedColors ?? []
+  const isSaved = saved.includes(currentHex.toLowerCase())
+  // Un preset histórico ya está siempre disponible: no tiene sentido guardarlo.
+  const canSave = Boolean(onSaveColor) && !legacyValue && !isSaved
 
   return (
     <div ref={rootRef} className="relative">
@@ -352,18 +371,82 @@ export function DeckColorPicker({ value, onChange, labelId, disabled = false }: 
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 border-t pt-2">
+            {saved.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium text-muted-foreground">{t("up.colorSavedTitle")}</span>
+                <div className="flex flex-wrap gap-2" role="group" aria-label={t("up.colorSavedTitle")}>
+                  {saved.map((savedHex) => {
+                    const selected = currentHex.toLowerCase() === savedHex
+                    return (
+                      <span key={savedHex} className="relative inline-flex">
+                        <button
+                          type="button"
+                          onClick={() => onChange(savedHex)}
+                          aria-pressed={selected}
+                          aria-label={t("up.colorApplySaved", { hex: savedHex })}
+                          title={savedHex}
+                          className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ring-1 ring-black/10 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 ${
+                            selected ? "ring-2 ring-ring" : ""
+                          }`}
+                          style={{ backgroundColor: savedHex }}
+                        >
+                          {selected && (
+                            <Check
+                              aria-hidden="true"
+                              className={`h-4 w-4 drop-shadow ${
+                                deckColorPrefersDarkText(savedHex) ? "text-black" : "text-white"
+                              }`}
+                            />
+                          )}
+                        </button>
+                        {onRemoveColor && (
+                          <button
+                            type="button"
+                            onClick={() => onRemoveColor(savedHex)}
+                            aria-label={t("up.colorDeleteSaved", { hex: savedHex })}
+                            title={t("up.colorDeleteSaved", { hex: savedHex })}
+                            className="absolute -right-1 -top-1 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                          >
+                            <X className="h-2.5 w-2.5" aria-hidden="true" />
+                          </button>
+                        )}
+                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
               <code className="text-xs tabular-nums text-muted-foreground">{currentHex}</code>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false)
-                  triggerRef.current?.focus()
-                }}
-                className="cursor-pointer rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-              >
-                {t("up.colorClose")}
-              </button>
+              <div className="flex items-center gap-2">
+                {onSaveColor && (
+                  <button
+                    type="button"
+                    onClick={() => onSaveColor(currentHex)}
+                    disabled={!canSave}
+                    title={isSaved ? t("up.colorSaved") : undefined}
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+                  >
+                    {isSaved ? (
+                      <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : (
+                      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                    {isSaved ? t("up.colorSaved") : t("up.colorSave")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false)
+                    triggerRef.current?.focus()
+                  }}
+                  className="cursor-pointer rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                >
+                  {t("up.colorClose")}
+                </button>
+              </div>
             </div>
           </div>,
           document.body

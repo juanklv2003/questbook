@@ -12,6 +12,7 @@ import {
 } from "../../lib/uploadConfig"
 import { fetchPdfCharacterCount } from "../../lib/pdfTextStats"
 import { DeckColorPicker } from "../molecules/DeckColorPicker"
+import { useDeckSavedColors } from "../../hooks/useDeckSavedColors"
 
 export interface DeckUploaderProps {
   onUpload: (files: File[], options: DeckGenerationOptions) => void;
@@ -46,6 +47,7 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
   const [color, setColor] = React.useState<string>('primary');
   const [language, setLanguage] = React.useState<'en' | 'es'>('es');
   const [questionBank, setQuestionBank] = React.useState(false);
+  const { savedColors, saveColor, removeColor } = useDeckSavedColors();
   const [queue, setQueue] = React.useState<QueuedPdf[]>([]);
   const [textCap, setTextCap] = React.useState(() => getDeckSourceTextCap());
 
@@ -372,6 +374,9 @@ export function DeckUploader({ onUpload, isGenerating, progress, isAiProcessing 
             onChange={setColor}
             labelId="deck-color-label"
             disabled={isGenerating}
+            savedColors={savedColors}
+            onSaveColor={saveColor}
+            onRemoveColor={removeColor}
           />
         </div>
 
