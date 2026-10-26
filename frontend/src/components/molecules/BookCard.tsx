@@ -5,7 +5,7 @@ import { cn } from "../../lib/utils"
 import { BookOpen, Play, Pencil, ChevronLeft, ChevronRight, FileText } from "lucide-react"
 import { useLanguage } from "../../i18n/LanguageContext"
 import { DeckDeleteButton } from "../atoms/DeckDeleteButton"
-import { resolveDeckColor, type LegacyDeckColor } from "../../lib/deckColor"
+import { deckColorPrefersDarkText, resolveDeckColor, type LegacyDeckColor } from "../../lib/deckColor"
 
 export interface BookCardProps {
   deckId: string;
@@ -78,6 +78,9 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
   const { t } = useLanguage();
   const accent = accentColor ?? getAccentForDeck(name);
   const accentCss = resolveDeckColor(accent);
+  // Título legible sobre cualquier color de lomo: negro cuando el blanco baja
+  // de 3:1 de contraste (colores claros), blanco en el resto.
+  const darkText = deckColorPrefersDarkText(accent);
   // `.lomo`, bookmark y glow salen del mismo color elegido: un solo valor y el
   // resto se deriva con `color-mix()`, así un color libre (o un preset viejo)
   // pinta igual que los cinco fijos de antes.
@@ -210,10 +213,13 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
           )} style={spineStyle}>
             <div className="absolute left-1 top-0 bottom-0 w-px bg-white/20" />
             <div className="absolute left-2 top-0 bottom-0 w-px bg-white/10" />
-            <span className="text-[10px] font-semibold text-white/90 truncate flex-1 drop-shadow-sm">
+            <span className={cn(
+              "text-[10px] font-semibold truncate flex-1 drop-shadow-sm",
+              darkText ? "text-black" : "text-white/90"
+            )}>
               {name}
             </span>
-            <div className="flex items-center gap-1 text-[9px] text-white/70">
+            <div className={cn("flex items-center gap-1 text-[9px]", darkText ? "text-black/70" : "text-white/70")}>
               <BookOpen className="w-2.5 h-2.5" />
               <span>{flashcardsCount}</span>
             </div>
@@ -294,9 +300,10 @@ export function BookCard({ deckId, name, flashcardsCount, progressPercent, pdfSo
           <div className="w-4 h-0.5 bg-white/30 rounded-full" />
           <div className="flex-1 flex items-center justify-center overflow-hidden">
             <span className={cn(
-              "text-white font-semibold drop-shadow-sm",
+              "font-semibold drop-shadow-sm",
               "text-[10px] leading-none tracking-wide",
-              "max-h-full"
+              "max-h-full",
+              darkText ? "text-black" : "text-white"
             )} style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}>
               {name.length > 12 ? name.slice(0, 12) + "…" : name}
             </span>

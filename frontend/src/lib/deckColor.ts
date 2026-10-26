@@ -176,3 +176,36 @@ export function hsvToHex(hsv: Hsv): string {
 export function formatDeckColorHex(value?: string | null): string {
   return pickerHex(value).toLowerCase();
 }
+
+/** Luminancia relativa WCAG (0 = negro, 1 = blanco). */
+function relativeLuminance({ r, g, b }: Rgb): number {
+  const channel = (value: number) => {
+    const s = value / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+/**
+ * ¿El lomo pide texto negro? Se compara el contraste WCAG real: mientras el
+ * blanco aguante 3:1 (AA para texto grande) se mantiene el blanco de siempre;
+ * por debajo, el color es claro y el título pasa a negro.
+ *
+ * Así los cinco presets históricos conservan su look (el más flojo es ámbar con
+ * 3.19:1) y sólo los colores claros —beige, amarillo, celeste— cambian.
+ *
+ * Los nombres históricos se resuelven con su hex fijo (`LEGACY_HEX`), incluido
+ * `primary`, que es el mismo marrón que `hsl(var(--primary))` del tema.
+ */
+export function deckColorPrefersDarkText(value?: string | null): boolean {
+  const normalized = normalizeDeckColor(value);
+  const hex = !normalized
+    ? LEGACY_HEX[DEFAULT_DECK_COLOR]
+    : isHexColor(normalized)
+      ? normalized
+      : LEGACY_HEX[normalized as LegacyDeckColor];
+  const luminance = relativeLuminance(hexToRgb(hex));
+  const contrastWithWhite = 1.05 / (luminance + 0.05);
+  const contrastWithBlack = (luminance + 0.05) / 0.05;
+  return contrastWithWhite < 3 && contrastWithBlack > contrastWithWhite;
+}
