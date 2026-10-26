@@ -1,4 +1,5 @@
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { Check, ChevronDown } from "lucide-react"
 import { useLanguage } from "../../i18n/LanguageContext"
 import {
@@ -34,6 +35,16 @@ const PRESET_SWATCH: Record<LegacyDeckColor, string> = {
 const HUE_TRACK =
   "linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)"
 
+/**
+ * El panel va en un portal con `position: fixed`: dentro del drawer de crear
+ * mazo el contenedor tiene `overflow-y-auto` y un panel `absolute` quedaba
+ * recortado (se veía sólo la franja de arriba).
+ */
+const PANEL_GAP = 8
+const PANEL_MIN_WIDTH = 260
+/** Alto aproximado del panel, para decidir si conviene abrir hacia arriba. */
+const PANEL_PREFERRED_HEIGHT = 340
+
 export interface DeckColorPickerProps {
   /** `#rrggbb` o uno de los cinco nombres históricos. */
   value: string
@@ -61,20 +72,73 @@ export function DeckColorPicker({ value, onChange, labelId, disabled = false }: 
   const [open, setOpen] = React.useState(false)
   const [hsv, setHsv] = React.useState<Hsv>(() => hexToHsv(pickerHex(value)))
   const [dragging, setDragging] = React.useState(false)
+  const [panelStyle, setPanelStyle] = React.useState<React.CSSProperties>({})
 
   const rootRef = React.useRef<HTMLDivElement>(null)
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const areaRef = React.useRef<HTMLDivElement>(null)
+  const panelRef = React.useRef<HTMLDivElement>(null)
+
+  /**
+   * Ancla el panel al trigger midiendo el viewport: abre hacia abajo, o hacia
+   * arriba cuando no entra, y se limita al espacio real (con scroll interno).
+   */
+  const updatePanelPosition = React.useCallback(() => {
+    const trigger = triggerRef.current
+    if (!trigger) return
+    const rect = trigger.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const spaceBelow = viewportHeight - rect.bottom - PANEL_GAP
+    const spaceAbove = rect.top - PANEL_GAP
+    const opensUp = spaceBelow < PANEL_PREFERRED_HEIGHT && spaceAbove > spaceBelow
+    const width = Math.min(
+      Math.max(rect.width, PANEL_MIN_WIDTH),
+      Math.max(PANEL_MIN_WIDTH, viewportWidth - PANEL_GAP * 2)
+    )
+    const maxLeft = Math.max(PANEL_GAP, viewportWidth - width - PANEL_GAP)
+    const left = Math.min(Math.max(rect.left, PANEL_GAP), maxLeft)
+    setPanelStyle({
+      position: "fixed",
+      left,
+      width,
+      maxHeight: Math.max(180, opensUp ? spaceAbove : spaceBelow),
+      overflowY: "auto",
+      overscrollBehavior: "contain",
+      ...(opensUp
+        ? { bottom: viewportHeight - rect.top + PANEL_GAP }
+        : { top: rect.bottom + PANEL_GAP }),
+    })
+  }, [])
 
   React.useEffect(() => {
     const nextHex = pickerHex(value)
     setHsv((current) => (hsvToHex(current) === nextHex ? current : hexToHsv(nextHex)))
   }, [value])
 
+  // Posición inicial + seguimiento del scroll del drawer y del resize.
+  React.useLayoutEffect(() => {
+    if (!open) return
+    updatePanelPosition()
+    const onViewportChange = () => updatePanelPosition()
+    const onScroll = (event: Event) => {
+      const target = event.target
+      if (target instanceof Node && panelRef.current?.contains(target)) return
+      updatePanelPosition()
+    }
+    window.addEventListener("resize", onViewportChange)
+    window.addEventListener("scroll", onScroll, true)
+    return () => {
+      window.removeEventListener("resize", onViewportChange)
+      window.removeEventListener("scroll", onScroll, true)
+    }
+  }, [open, updatePanelPosition])
+
   React.useEffect(() => {
     if (!open) return
     const onPointerDown = (event: PointerEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) return
+      const target = event.target as Node
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return
       setOpen(false)
     }
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -190,109 +254,120 @@ export function DeckColorPicker({ value, onChange, labelId, disabled = false }: 
         />
       </button>
 
-      {open && (
-        <div
-          role="dialog"
-          aria-label={t("up.colorPanel")}
-          className="absolute left-0 right-0 z-50 mt-2 flex flex-col gap-3 rounded-xl border bg-popover p-3 text-popover-foreground shadow-xl"
-        >
+      {open &&
+        createPortal(
           <div
-            ref={areaRef}
-            role="slider"
-            tabIndex={0}
-            aria-label={t("up.colorDrag")}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(hsv.s)}
-            aria-valuetext={currentHex}
-            onPointerDown={handleAreaPointerDown}
-            onPointerMove={handleAreaPointerMove}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
-            onKeyDown={handleAreaKeyDown}
-            className="relative h-32 w-full cursor-crosshair touch-none rounded-lg ring-1 ring-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
-            style={{
-              backgroundImage: `linear-gradient(to top, #000, rgba(0,0,0,0)), linear-gradient(to right, #fff, rgba(255,255,255,0)), hsl(${hsv.h} 100% 50%)`,
-            }}
+            ref={panelRef}
+            role="dialog"
+            aria-label={t("up.colorPanel")}
+            style={panelStyle}
+            className="z-[60] flex flex-col gap-3 rounded-xl border bg-popover p-3 text-popover-foreground shadow-xl"
           >
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)]"
-              style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%`, backgroundColor: currentHex }}
-            />
-          </div>
-
-          <input
-            type="range"
-            min={0}
-            max={359}
-            value={Math.round(hsv.h)}
-            aria-label={t("up.colorHue")}
-            onChange={(event) => handleHueChange(Number(event.target.value))}
-            className="h-3 w-full cursor-pointer appearance-none rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
-            style={{ background: HUE_TRACK }}
-          />
-
-          <div className="flex items-end gap-2">
-            {(["r", "g", "b"] as const).map((channel) => (
-              <label key={channel} className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="text-[11px] font-medium uppercase text-muted-foreground">
-                  {channel}
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  max={255}
-                  value={rgb[channel]}
-                  aria-label={
-                    channel === "r" ? t("up.colorRed") : channel === "g" ? t("up.colorGreen") : t("up.colorBlue")
-                  }
-                  onChange={(event) => handleChannelChange(channel, event.target.value)}
-                  className="w-full rounded-md border bg-background px-2 py-1 text-sm tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                />
-              </label>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-muted-foreground">{t("up.colorPresets")}</span>
-            <div className="flex gap-2" role="group" aria-label={t("up.colorPresets")}>
-              {LEGACY_DECK_COLORS.map((preset) => {
-                const selected = legacyValue === preset
-                return (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => onChange(preset)}
-                    aria-pressed={selected}
-                    aria-label={t("up.colorOption", { label: t(PRESET_LABEL_KEY[preset]) })}
-                    className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ring-1 ring-black/10 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 ${
-                      selected ? "ring-2 ring-ring" : ""
-                    }`}
-                    style={{ backgroundColor: PRESET_SWATCH[preset] }}
-                  >
-                    {selected && <Check aria-hidden="true" className="h-4 w-4 text-white drop-shadow" />}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-2 border-t pt-2">
-            <code className="text-xs tabular-nums text-muted-foreground">{currentHex}</code>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                triggerRef.current?.focus()
+            <div
+              ref={areaRef}
+              role="slider"
+              tabIndex={0}
+              aria-label={t("up.colorDrag")}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(hsv.s)}
+              aria-valuetext={currentHex}
+              onPointerDown={handleAreaPointerDown}
+              onPointerMove={handleAreaPointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              onKeyDown={handleAreaKeyDown}
+              className="relative h-32 w-full cursor-crosshair touch-none rounded-lg ring-1 ring-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+              // El color base va en `backgroundColor`: un color sólido NO es una
+              // capa válida de `background-image` y, si va ahí, invalida la
+              // propiedad entera y el área queda blanca (sin gradientes).
+              style={{
+                backgroundColor: `hsl(${hsv.h} 100% 50%)`,
+                backgroundImage:
+                  "linear-gradient(to top, #000, rgba(0,0,0,0)), linear-gradient(to right, #fff, rgba(255,255,255,0))",
               }}
-              className="cursor-pointer rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
-              {t("up.colorClose")}
-            </button>
-          </div>
-        </div>
-      )}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)]"
+                style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%`, backgroundColor: currentHex }}
+              />
+            </div>
+
+            <input
+              type="range"
+              min={0}
+              max={359}
+              value={Math.round(hsv.h)}
+              aria-label={t("up.colorHue")}
+              onChange={(event) => handleHueChange(Number(event.target.value))}
+              // `appearance-none` borra el thumb nativo: hay que repintarlo o la
+              // barra queda sin handle visible.
+              className="h-3 w-full cursor-pointer appearance-none rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black/30 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black/30 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow"
+              style={{ background: HUE_TRACK }}
+            />
+
+            <div className="flex items-end gap-2">
+              {(["r", "g", "b"] as const).map((channel) => (
+                <label key={channel} className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="text-[11px] font-medium uppercase text-muted-foreground">
+                    {channel}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={255}
+                    value={rgb[channel]}
+                    aria-label={
+                      channel === "r" ? t("up.colorRed") : channel === "g" ? t("up.colorGreen") : t("up.colorBlue")
+                    }
+                    onChange={(event) => handleChannelChange(channel, event.target.value)}
+                    className="w-full rounded-md border bg-background px-2 py-1 text-sm tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium text-muted-foreground">{t("up.colorPresets")}</span>
+              <div className="flex gap-2" role="group" aria-label={t("up.colorPresets")}>
+                {LEGACY_DECK_COLORS.map((preset) => {
+                  const selected = legacyValue === preset
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => onChange(preset)}
+                      aria-pressed={selected}
+                      aria-label={t("up.colorOption", { label: t(PRESET_LABEL_KEY[preset]) })}
+                      className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ring-1 ring-black/10 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 ${
+                        selected ? "ring-2 ring-ring" : ""
+                      }`}
+                      style={{ backgroundColor: PRESET_SWATCH[preset] }}
+                    >
+                      {selected && <Check aria-hidden="true" className="h-4 w-4 text-white drop-shadow" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 border-t pt-2">
+              <code className="text-xs tabular-nums text-muted-foreground">{currentHex}</code>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false)
+                  triggerRef.current?.focus()
+                }}
+                className="cursor-pointer rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              >
+                {t("up.colorClose")}
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }
