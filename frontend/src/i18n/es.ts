@@ -106,7 +106,7 @@ export const es = {
   "up.colorBlue": "Azul",
   "up.colorPresets": "Colores rápidos",
   "up.colorClose": "Listo",
-  "up.blue": "Azul",
+  "up.brown": "Marrón",
   "up.violet": "Violeta",
   "up.green": "Verde",
   "up.amber": "Ámbar",

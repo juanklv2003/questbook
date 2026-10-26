@@ -15,8 +15,8 @@ import {
 } from "../../lib/deckColor"
 
 /** Etiqueta i18n de cada color histórico (los mismos nombres de siempre). */
-const PRESET_LABEL_KEY: Record<LegacyDeckColor, "up.blue" | "up.violet" | "up.green" | "up.amber" | "up.rose"> = {
-  primary: "up.blue",
+const PRESET_LABEL_KEY: Record<LegacyDeckColor, "up.brown" | "up.violet" | "up.green" | "up.amber" | "up.rose"> = {
+  primary: "up.brown",
   violet: "up.violet",
   emerald: "up.green",
   amber: "up.amber",

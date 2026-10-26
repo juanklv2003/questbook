@@ -108,7 +108,7 @@ export const en: { [K in keyof typeof es]: string } = {
   "up.colorBlue": "Blue",
   "up.colorPresets": "Quick colors",
   "up.colorClose": "Done",
-  "up.blue": "Blue",
+  "up.brown": "Brown",
   "up.violet": "Violet",
   "up.green": "Green",
   "up.amber": "Amber",
