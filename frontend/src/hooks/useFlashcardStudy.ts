@@ -484,12 +484,13 @@ export function useFlashcardStudy(
   const evaluar = async () => {
     if (!tarjetaActual) return;
 
-    if (studyMode === 'quick') {
+    // Sin respuesta escrita no hay nada que corregir: se revela la respuesta
+    // (mismo camino que el modo rápido) para que el usuario se autoevalúe con
+    // «Me la sé» / «No me la sé». Antes el Enter vacío no hacía nada.
+    if (studyMode === 'quick' || !respuestaUsuario.trim()) {
       setAnswerRevealed(true);
       return;
     }
-
-    if (!respuestaUsuario.trim()) return;
 
     try {
       const result = await evaluateAnswer(

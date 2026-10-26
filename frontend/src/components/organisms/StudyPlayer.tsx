@@ -118,7 +118,7 @@ export function StudyPlayer({
   };
 
   const inReview =
-    Boolean(evaluation) || (studyMode === "quick" && answerRevealed);
+    Boolean(evaluation) || answerRevealed;
 
   React.useEffect(() => {
     setIsFlipped(inReview);
@@ -202,14 +202,13 @@ export function StudyPlayer({
 
       if (e.key !== "Enter" || e.shiftKey) return;
       if (isTypingTarget(target)) return;
-      if (studyMode === "ai" && !userAnswer.trim()) return;
 
       e.preventDefault();
       onSubmit();
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [inReview, isEvaluating, userAnswer, studyMode, onSubmit, onNext, onDeferCard, deleteTarget]);
+  }, [inReview, isEvaluating, studyMode, onSubmit, onNext, onDeferCard, deleteTarget]);
 
   const reviewActions = (
     <div className="flex flex-col sm:flex-row gap-4">
@@ -394,9 +393,9 @@ export function StudyPlayer({
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         if (isEvaluating) return;
-                        if (userAnswer.trim()) {
-                          onSubmit();
-                        }
+                        // Con la caja vacía también: revela la respuesta para
+                        // autoevaluarse (no hay nada que mandar a la IA).
+                        onSubmit();
                       }
                     }}
                     disabled={isEvaluating}
